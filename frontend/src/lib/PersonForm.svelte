@@ -13,6 +13,12 @@
     gender: person?.gender || ''
   }
 
+  let isAlive = person ? !person.deathDate : true
+
+  $: if (isAlive) {
+    formData.deathDate = ''
+  }
+
   function handleSubmit() {
     const data = {
       ...formData,
@@ -32,6 +38,7 @@
       deathDate: '',
       gender: ''
     }
+    isAlive = true
   }
 </script>
 
@@ -78,13 +85,25 @@
     </div>
 
     <div class="form-group">
-      <label for="deathDate">Death Date</label>
-      <input
-        id="deathDate"
-        type="date"
-        bind:value={formData.deathDate}
-      />
+      <label>
+        <input
+          type="checkbox"
+          bind:checked={isAlive}
+        />
+        Still Alive
+      </label>
     </div>
+
+    {#if !isAlive}
+      <div class="form-group">
+        <label for="deathDate">Death Date</label>
+        <input
+          id="deathDate"
+          type="date"
+          bind:value={formData.deathDate}
+        />
+      </div>
+    {/if}
 
     <button type="submit" class="primary">
       {person ? 'Update' : 'Add'} Person
