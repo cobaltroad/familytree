@@ -63,6 +63,11 @@
     isModalOpen = true
   }
 
+  function handleOpenAddPersonModal() {
+    editingPerson = null
+    isModalOpen = true
+  }
+
   function handleModalClose() {
     isModalOpen = false
     editingPerson = null
@@ -145,6 +150,7 @@
       {people}
       {relationships}
       on:editPerson={handleEditPerson}
+      on:addPerson={handleOpenAddPersonModal}
     />
   {/if}
 
