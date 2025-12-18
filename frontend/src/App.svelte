@@ -9,12 +9,21 @@
   let relationships = []
   let loading = false
   let error = null
-  let currentView = 'list' // 'list' | 'tree'
   let editingPerson = null
   let isModalOpen = false
+  let currentPath = window.location.hash.slice(1) || '/'
+
+  // Handle route changes
+  function handleHashChange() {
+    currentPath = window.location.hash.slice(1) || '/'
+  }
 
   onMount(() => {
     loadData()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange)
+    }
   })
 
   async function loadData() {
@@ -33,10 +42,6 @@
     } finally {
       loading = false
     }
-  }
-
-  function handleViewChange(view) {
-    currentView = view
   }
 
   async function handleAddPerson(event) {
@@ -116,23 +121,7 @@
 <main>
   <h1>Family Tree</h1>
 
-  <!-- Tab Navigation -->
-  <div class="tabs">
-    <button
-      class:active={currentView === 'list'}
-      on:click={() => handleViewChange('list')}
-    >
-      List View
-    </button>
-    <button
-      class:active={currentView === 'tree'}
-      on:click={() => handleViewChange('tree')}
-    >
-      Tree View
-    </button>
-  </div>
-
-  {#if currentView === 'list'}
+  {#if currentPath === '/list'}
     <ListView
       {people}
       {relationships}
@@ -168,47 +157,5 @@
 <style>
   main {
     width: 100%;
-  }
-
-  .tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
-    border-bottom: 2px solid #ccc;
-  }
-
-  .tabs button {
-    padding: 0.75rem 1.5rem;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.2s;
-  }
-
-  .tabs button:hover {
-    background: rgba(0, 0, 0, 0.05);
-  }
-
-  .tabs button.active {
-    border-bottom-color: #4CAF50;
-    font-weight: bold;
-  }
-
-  @media (max-width: 768px) {
-    .tabs {
-      flex-direction: column;
-    }
-
-    .tabs button {
-      border-bottom: none;
-      border-left: 3px solid transparent;
-    }
-
-    .tabs button.active {
-      border-left-color: #4CAF50;
-      border-bottom-color: transparent;
-    }
   }
 </style>
