@@ -85,21 +85,24 @@
   }
 
   .close-button {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: none;
+    position: sticky;
+    top: 0;
+    float: right;
+    background: white;
     border: none;
     font-size: 2rem;
     line-height: 1;
     cursor: pointer;
     color: #666;
-    padding: 0.25rem 0.5rem;
-    z-index: 1;
+    padding: 0.5rem;
+    z-index: 10;
+    margin: 0.5rem 0.5rem 0 0;
+    border-radius: 4px;
   }
 
   .close-button:hover {
     color: #333;
+    background: #f5f5f5;
   }
 
   .delete-section {

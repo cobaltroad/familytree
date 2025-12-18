@@ -200,11 +200,6 @@
       <button type="submit" class="primary">
         {person ? 'Update' : 'Add'} Person
       </button>
-      {#if person}
-        <button type="button" on:click={clearForm}>
-          Cancel
-        </button>
-      {/if}
     </div>
   </form>
 
