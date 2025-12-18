@@ -3,6 +3,7 @@
   import { api } from './lib/api'
   import ListView from './lib/ListView.svelte'
   import TreeView from './lib/TreeView.svelte'
+  import PersonModal from './lib/PersonModal.svelte'
 
   let people = []
   let relationships = []
@@ -10,6 +11,7 @@
   let error = null
   let currentView = 'list' // 'list' | 'tree'
   let editingPerson = null
+  let isModalOpen = false
 
   onMount(() => {
     loadData()
@@ -58,7 +60,17 @@
 
   function handleEditPerson(event) {
     editingPerson = event.detail
-    currentView = 'list' // Switch to list view for editing
+    isModalOpen = true
+  }
+
+  function handleModalClose() {
+    isModalOpen = false
+    editingPerson = null
+  }
+
+  async function handleModalSubmit(event) {
+    await handleAddPerson(event)
+    handleModalClose()
   }
 
   async function handleDeletePerson(event) {
@@ -135,6 +147,13 @@
       on:editPerson={handleEditPerson}
     />
   {/if}
+
+  <PersonModal
+    person={editingPerson}
+    isOpen={isModalOpen}
+    on:close={handleModalClose}
+    on:submit={handleModalSubmit}
+  />
 </main>
 
 <style>
