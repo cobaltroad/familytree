@@ -40,19 +40,53 @@
       return child ? buildNodeTree(child) : null
     }).filter(Boolean)
 
-    // Get spouse
-    const spouseRel = relationships.find(rel =>
-      rel.type === 'spouse' && (rel.person1Id === person.id || rel.person2Id === person.id)
-    )
-    let spouse = null
-    if (spouseRel) {
-      const spouseId = spouseRel.person1Id === person.id ? spouseRel.person2Id : spouseRel.person1Id
-      spouse = people.find(p => p.id === spouseId)
+    // Find co-parent (other parent of the children)
+    // This could be a spouse OR just someone who shares children with this person
+    let coParent = null
+
+    if (childRels.length > 0) {
+      // Get the first child to check their other parent
+      const firstChildId = childRels[0].person2Id
+
+      // Find the other parent of this child (mother or father)
+      const otherParentRel = relationships.find(rel =>
+        rel.type === 'parentOf' &&
+        rel.person2Id === firstChildId &&
+        rel.person1Id !== person.id
+      )
+
+      if (otherParentRel) {
+        const coParentId = otherParentRel.person1Id
+
+        // Verify this person is co-parent of ALL children
+        const isCoParentOfAll = childRels.every(childRel => {
+          return relationships.some(rel =>
+            rel.type === 'parentOf' &&
+            rel.person1Id === coParentId &&
+            rel.person2Id === childRel.person2Id
+          )
+        })
+
+        if (isCoParentOfAll) {
+          coParent = people.find(p => p.id === coParentId)
+        }
+      }
+    }
+
+    // If no co-parent found from children, fall back to spouse relationship
+    if (!coParent) {
+      const spouseRel = relationships.find(rel =>
+        rel.type === 'spouse' && (rel.person1Id === person.id || rel.person2Id === person.id)
+      )
+      if (spouseRel) {
+        const spouseId = spouseRel.person1Id === person.id ? spouseRel.person2Id : spouseRel.person1Id
+        coParent = people.find(p => p.id === spouseId)
+      }
     }
 
     return {
       person,
-      spouse,
+      spouse: coParent, // Renamed conceptually - this is the co-parent (spouse or partner)
       children
     }
   }
