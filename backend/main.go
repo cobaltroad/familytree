@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -25,10 +26,11 @@ type Person struct {
 }
 
 type Relationship struct {
-	ID         int    `json:"id"`
-	Person1ID  int    `json:"person1Id"`
-	Person2ID  int    `json:"person2Id"`
-	Type       string `json:"type"` // parent, spouse, sibling
+	ID         int     `json:"id"`
+	Person1ID  int     `json:"person1Id"`
+	Person2ID  int     `json:"person2Id"`
+	Type       string  `json:"type"`                    // parentOf, spouse
+	ParentRole *string `json:"parentRole,omitempty"`    // mother, father, or null
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
@@ -37,12 +39,23 @@ type App struct {
 }
 
 // normalizeRelationship converts incoming relationships to storage format
-// "child" relationships are converted to "parentOf" with swapped person IDs
-func normalizeRelationship(person1ID, person2ID int, relType string) (int, int, string) {
-	if relType == "child" {
-		return person2ID, person1ID, "parentOf"
+// "mother" and "father" are converted to "parentOf" with appropriate parent_role
+func normalizeRelationship(person1ID, person2ID int, relType string) (int, int, string, *string) {
+	var parentRole *string
+
+	if relType == "mother" || relType == "father" {
+		// Person1 is mother/father of Person2
+		role := relType
+		parentRole = &role
+		return person1ID, person2ID, "parentOf", parentRole
 	}
-	return person1ID, person2ID, relType
+
+	// For backwards compatibility with old "child" type (if any)
+	if relType == "child" {
+		return person2ID, person1ID, "parentOf", nil
+	}
+
+	return person1ID, person2ID, relType, nil
 }
 
 // relationshipExists checks if a relationship already exists (including inverse for parentOf)
@@ -65,6 +78,29 @@ func (app *App) relationshipExists(person1ID, person2ID int, relType string) (bo
 		WHERE ((person1_id = ? AND person2_id = ?) OR (person1_id = ? AND person2_id = ?))
 		  AND type = ?
 	`, person1ID, person2ID, person2ID, person1ID, relType).Scan(&count)
+	return count > 0, err
+}
+
+// migrateToParentRoles adds parent_role column and removes sibling relationships
+func (app *App) migrateToParentRoles() error {
+	// Add column if it doesn't exist (will error if already exists, which is fine)
+	_, err := app.db.Exec(`ALTER TABLE relationships ADD COLUMN parent_role TEXT`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+		return err
+	}
+
+	// Delete all sibling relationships
+	_, err = app.db.Exec(`DELETE FROM relationships WHERE type = 'sibling'`)
+	return err
+}
+
+// hasParentOfRole checks if a person already has a parent of the specified role
+func (app *App) hasParentOfRole(childID int, role string) (bool, error) {
+	var count int
+	err := app.db.QueryRow(`
+		SELECT COUNT(*) FROM relationships
+		WHERE person2_id = ? AND type = 'parentOf' AND parent_role = ?
+	`, childID, role).Scan(&count)
 	return count > 0, err
 }
 
@@ -140,6 +176,13 @@ func (app *App) initDB() error {
 			return err
 		}
 	}
+
+	// Run migration to add parent_role column and remove sibling relationships
+	if err := app.migrateToParentRoles(); err != nil {
+		log.Printf("Migration warning: %v", err)
+		// Don't fail if migration has issues, just log
+	}
+
 	return nil
 }
 
@@ -258,7 +301,7 @@ func (app *App) deletePerson(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) getAllRelationships(w http.ResponseWriter, r *http.Request) {
-	rows, err := app.db.Query("SELECT id, person1_id, person2_id, type, created_at FROM relationships")
+	rows, err := app.db.Query("SELECT id, person1_id, person2_id, type, parent_role, created_at FROM relationships")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -268,7 +311,7 @@ func (app *App) getAllRelationships(w http.ResponseWriter, r *http.Request) {
 	var relationships []Relationship
 	for rows.Next() {
 		var rel Relationship
-		err := rows.Scan(&rel.ID, &rel.Person1ID, &rel.Person2ID, &rel.Type, &rel.CreatedAt)
+		err := rows.Scan(&rel.ID, &rel.Person1ID, &rel.Person2ID, &rel.Type, &rel.ParentRole, &rel.CreatedAt)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -287,14 +330,27 @@ func (app *App) createRelationship(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Normalize the relationship (convert "child" to "parentOf" with swapped IDs)
-	person1ID, person2ID, relType := normalizeRelationship(rel.Person1ID, rel.Person2ID, rel.Type)
+	// Normalize the relationship (convert "mother"/"father" to "parentOf" with parent_role)
+	person1ID, person2ID, relType, parentRole := normalizeRelationship(rel.Person1ID, rel.Person2ID, rel.Type)
 
 	// Validate relationship type
-	validTypes := map[string]bool{"parentOf": true, "spouse": true, "sibling": true}
+	validTypes := map[string]bool{"parentOf": true, "spouse": true}
 	if !validTypes[relType] {
-		http.Error(w, "Invalid relationship type. Must be: parentOf, spouse, or sibling", http.StatusBadRequest)
+		http.Error(w, "Invalid relationship type. Must be: mother, father, or spouse", http.StatusBadRequest)
 		return
+	}
+
+	// For parent relationships, validate that child doesn't already have a parent of this role
+	if relType == "parentOf" && parentRole != nil {
+		hasParent, err := app.hasParentOfRole(person2ID, *parentRole)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if hasParent {
+			http.Error(w, "Person already has a "+*parentRole, http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Check for duplicate/inverse relationships
@@ -309,8 +365,8 @@ func (app *App) createRelationship(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := app.db.Exec(
-		"INSERT INTO relationships (person1_id, person2_id, type) VALUES (?, ?, ?)",
-		person1ID, person2ID, relType,
+		"INSERT INTO relationships (person1_id, person2_id, type, parent_role) VALUES (?, ?, ?, ?)",
+		person1ID, person2ID, relType, parentRole,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -327,6 +383,7 @@ func (app *App) createRelationship(w http.ResponseWriter, r *http.Request) {
 	rel.Person1ID = person1ID
 	rel.Person2ID = person2ID
 	rel.Type = relType
+	rel.ParentRole = parentRole
 	rel.CreatedAt = time.Now()
 
 	w.Header().Set("Content-Type", "application/json")

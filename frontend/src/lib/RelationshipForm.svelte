@@ -55,10 +55,9 @@
 
       <select bind:value={formData.type} required>
         <option value="">relationship...</option>
-        <option value="parent">parent</option>
-        <option value="child">child</option>
+        <option value="mother">mother</option>
+        <option value="father">father</option>
         <option value="spouse">spouse</option>
-        <option value="sibling">sibling</option>
       </select>
 
       <span>of</span>
