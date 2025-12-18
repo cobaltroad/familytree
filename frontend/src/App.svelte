@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { api } from './lib/api'
   import ListView from './lib/ListView.svelte'
   import TreeView from './lib/TreeView.svelte'
@@ -63,7 +63,14 @@
     }
   }
 
-  function handleEditPerson(event) {
+  async function handleEditPerson(event) {
+    // If modal is already open, close it first and wait for Svelte to process
+    // This ensures the modal properly re-renders when clicking the same node twice
+    if (isModalOpen) {
+      isModalOpen = false
+      await tick()
+    }
+
     editingPerson = event.detail
     isModalOpen = true
   }
