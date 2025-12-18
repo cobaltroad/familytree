@@ -262,7 +262,7 @@
   .relationships-section h3 {
     margin-top: 0;
     margin-bottom: 1rem;
-    color: #333;
+    color: #666;
   }
 
   .relationship-category {
@@ -283,10 +283,8 @@
   }
 
   .relationship-list li {
-    padding: 0.5rem 0.75rem;
-    background: #f5f5f5;
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
+    padding: 0.5rem 0;
+    margin-bottom: 0.25rem;
     font-size: 0.9rem;
   }
 
