@@ -1,14 +1,14 @@
 <script>
   import { onMount } from 'svelte'
   import { api } from './lib/api'
-  import PersonForm from './lib/PersonForm.svelte'
-  import PersonList from './lib/PersonList.svelte'
-  import RelationshipForm from './lib/RelationshipForm.svelte'
+  import ListView from './lib/ListView.svelte'
+  import TreeView from './lib/TreeView.svelte'
 
   let people = []
   let relationships = []
   let loading = false
   let error = null
+  let currentView = 'list' // 'list' | 'tree'
 
   onMount(() => {
     loadData()
@@ -30,6 +30,10 @@
     } finally {
       loading = false
     }
+  }
+
+  function handleViewChange(view) {
+    currentView = view
   }
 
   async function handleAddPerson(event) {
@@ -77,30 +81,38 @@
 </script>
 
 <main>
-  <h1>FamilyTree</h1>
+  <h1>Family Tree</h1>
 
-  {#if error}
-    <div class="card" style="background-color: #dc3545; color: white;">
-      <p><strong>Error:</strong> {error}</p>
-      <p>Make sure the backend server is running on http://localhost:8080</p>
-      <button on:click={loadData}>Retry</button>
-    </div>
-  {/if}
+  <!-- Tab Navigation -->
+  <div class="tabs">
+    <button
+      class:active={currentView === 'list'}
+      on:click={() => handleViewChange('list')}
+    >
+      List View
+    </button>
+    <button
+      class:active={currentView === 'tree'}
+      on:click={() => handleViewChange('tree')}
+    >
+      Tree View
+    </button>
+  </div>
 
-  {#if loading}
-    <p>Loading...</p>
-  {:else}
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-      <PersonForm on:submit={handleAddPerson} />
-      <RelationshipForm {people} on:submit={handleAddRelationship} />
-    </div>
-
-    <PersonList
+  {#if currentView === 'list'}
+    <ListView
       {people}
       {relationships}
-      on:delete={handleDeletePerson}
+      {loading}
+      {error}
+      onRetry={loadData}
+      on:addPerson={handleAddPerson}
+      on:deletePerson={handleDeletePerson}
+      on:addRelationship={handleAddRelationship}
       on:deleteRelationship={handleDeleteRelationship}
     />
+  {:else}
+    <TreeView {people} {relationships} />
   {/if}
 </main>
 
@@ -109,9 +121,45 @@
     width: 100%;
   }
 
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #ccc;
+  }
+
+  .tabs button {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+
+  .tabs button:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .tabs button.active {
+    border-bottom-color: #4CAF50;
+    font-weight: bold;
+  }
+
   @media (max-width: 768px) {
-    main > div {
-      grid-template-columns: 1fr !important;
+    .tabs {
+      flex-direction: column;
+    }
+
+    .tabs button {
+      border-bottom: none;
+      border-left: 3px solid transparent;
+    }
+
+    .tabs button.active {
+      border-left-color: #4CAF50;
+      border-bottom-color: transparent;
     }
   }
 </style>
