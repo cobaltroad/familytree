@@ -153,6 +153,7 @@
     isOpen={isModalOpen}
     on:close={handleModalClose}
     on:submit={handleModalSubmit}
+    on:delete={handleDeletePerson}
   />
 </main>
 

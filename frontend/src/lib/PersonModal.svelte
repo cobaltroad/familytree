@@ -16,6 +16,13 @@
     closeModal()
   }
 
+  function handleDelete() {
+    if (person && confirm(`Are you sure you want to delete ${person.firstName} ${person.lastName}?`)) {
+      dispatch('delete', person.id)
+      closeModal()
+    }
+  }
+
   function handleBackdropClick(event) {
     if (event.target === event.currentTarget) {
       closeModal()
@@ -38,6 +45,13 @@
         &times;
       </button>
       <PersonForm {person} on:submit={handleSubmit} />
+      {#if person}
+        <div class="delete-section">
+          <button class="delete-button" on:click={handleDelete}>
+            Delete Person
+          </button>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
@@ -84,6 +98,28 @@
 
   .close-button:hover {
     color: #333;
+  }
+
+  .delete-section {
+    padding: 1rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .delete-button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+  }
+
+  .delete-button:hover {
+    background-color: #c82333;
   }
 
   @media (max-width: 768px) {
