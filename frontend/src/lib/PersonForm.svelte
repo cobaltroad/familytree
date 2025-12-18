@@ -2,8 +2,33 @@
   import { createEventDispatcher } from 'svelte'
 
   export let person = null
+  export let people = []
+  export let relationships = []
 
   const dispatch = createEventDispatcher()
+
+  let mother = null
+  let father = null
+
+  // Find the person's parents
+  $: if (person && relationships.length > 0) {
+    const motherRel = relationships.find(rel =>
+      rel.type === 'parentOf' &&
+      rel.person2Id === person.id &&
+      rel.parentType === 'mother'
+    )
+    const fatherRel = relationships.find(rel =>
+      rel.type === 'parentOf' &&
+      rel.person2Id === person.id &&
+      rel.parentType === 'father'
+    )
+
+    mother = motherRel ? people.find(p => p.id === motherRel.person1Id) : null
+    father = fatherRel ? people.find(p => p.id === fatherRel.person1Id) : null
+  } else {
+    mother = null
+    father = null
+  }
 
   let formData = {
     firstName: '',
@@ -107,6 +132,26 @@
         <option value="Other">Other</option>
       </select>
     </div>
+
+    {#if person}
+      <div class="form-group">
+        <label for="mother">Mother</label>
+        <select id="mother" disabled>
+          <option selected>
+            {mother ? `${mother.firstName} ${mother.lastName}` : '<unknown>'}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="father">Father</label>
+        <select id="father" disabled>
+          <option selected>
+            {father ? `${father.firstName} ${father.lastName}` : '<unknown>'}
+          </option>
+        </select>
+      </div>
+    {/if}
 
     <div class="form-group">
       <label for="birthDate">Birth Date</label>

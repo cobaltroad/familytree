@@ -150,6 +150,8 @@
 
   <PersonModal
     person={editingPerson}
+    {people}
+    {relationships}
     isOpen={isModalOpen}
     on:close={handleModalClose}
     on:submit={handleModalSubmit}

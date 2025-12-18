@@ -3,6 +3,8 @@
   import PersonForm from './PersonForm.svelte'
 
   export let person = null
+  export let people = []
+  export let relationships = []
   export let isOpen = false
 
   const dispatch = createEventDispatcher()
@@ -44,7 +46,7 @@
       <button class="close-button" on:click={closeModal} aria-label="Close modal">
         &times;
       </button>
-      <PersonForm {person} on:submit={handleSubmit} />
+      <PersonForm {person} {people} {relationships} on:submit={handleSubmit} />
       {#if person}
         <div class="delete-section">
           <button class="delete-button" on:click={handleDelete}>
