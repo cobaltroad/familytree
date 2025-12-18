@@ -1,5 +1,5 @@
 <script>
-  import { onMount, tick } from 'svelte'
+  import { onMount } from 'svelte'
   import { api } from './lib/api'
   import ListView from './lib/ListView.svelte'
   import TreeView from './lib/TreeView.svelte'
@@ -11,6 +11,7 @@
   let error = null
   let editingPerson = null
   let isModalOpen = false
+  let modalKey = 0 // Key to force modal component recreation
   let currentPath = window.location.hash.slice(1) || '/'
 
   // Handle route changes
@@ -63,21 +64,16 @@
     }
   }
 
-  async function handleEditPerson(event) {
-    // If modal is already open, close it first and wait for Svelte to process
-    // This ensures the modal properly re-renders when clicking the same node twice
-    if (isModalOpen) {
-      isModalOpen = false
-      await tick()
-    }
-
+  function handleEditPerson(event) {
     editingPerson = event.detail
     isModalOpen = true
+    modalKey += 1 // Increment key to force component recreation
   }
 
   function handleOpenAddPersonModal() {
     editingPerson = null
     isModalOpen = true
+    modalKey += 1 // Increment key to force component recreation
   }
 
   function handleModalClose() {
@@ -150,15 +146,17 @@
     />
   {/if}
 
-  <PersonModal
-    person={editingPerson}
-    {people}
-    {relationships}
-    isOpen={isModalOpen}
-    on:close={handleModalClose}
-    on:submit={handleModalSubmit}
-    on:delete={handleDeletePerson}
-  />
+  {#key modalKey}
+    <PersonModal
+      person={editingPerson}
+      {people}
+      {relationships}
+      isOpen={isModalOpen}
+      on:close={handleModalClose}
+      on:submit={handleModalSubmit}
+      on:delete={handleDeletePerson}
+    />
+  {/key}
 </main>
 
 <style>
