@@ -1,0 +1,19 @@
+# Backend
+backend/familytree.db
+backend/familytree
+
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/.svelte-kit
+
+# OS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode
+.idea
+*.iml
