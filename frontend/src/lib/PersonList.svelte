@@ -21,6 +21,25 @@
     const relatedId = rel.person1Id === personId ? rel.person2Id : rel.person1Id
     return people.find(p => p.id === relatedId)
   }
+
+  function formatRelationshipForPerson(rel, personId) {
+    const isFromPerson1 = rel.person1Id === personId
+    const relatedPerson = getRelatedPerson(rel, personId)
+
+    if (rel.type === 'parentOf') {
+      // If this person is person1, they are the parent
+      // If this person is person2, they are the child
+      const label = isFromPerson1 ? 'Parent of' : 'Child of'
+      return { label, person: relatedPerson }
+    } else if (rel.type === 'spouse') {
+      return { label: 'Spouse', person: relatedPerson }
+    } else if (rel.type === 'sibling') {
+      return { label: 'Sibling', person: relatedPerson }
+    }
+
+    // Fallback for unknown types
+    return { label: rel.type, person: relatedPerson }
+  }
 </script>
 
 <div class="card">
@@ -46,9 +65,9 @@
               <strong>Relationships:</strong>
               <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
                 {#each getRelationships(person.id) as rel}
-                  {@const related = getRelatedPerson(rel, person.id)}
+                  {@const formatted = formatRelationshipForPerson(rel, person.id)}
                   <li>
-                    {rel.type} - {related?.firstName} {related?.lastName}
+                    {formatted.label} - {formatted.person?.firstName} {formatted.person?.lastName}
                     <button
                       class="danger"
                       style="margin-left: 0.5rem; padding: 0.2em 0.5em; font-size: 0.8em;"

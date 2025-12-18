@@ -43,36 +43,30 @@
 <div class="card">
   <h2>Add Relationship</h2>
   <form on:submit|preventDefault={handleSubmit}>
-    <div class="form-group">
-      <label for="person1">Person 1 *</label>
-      <select id="person1" bind:value={formData.person1Id} required>
+    <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <select bind:value={formData.person1Id} required>
         <option value="">Select person...</option>
         {#each people as person}
-          <option value={person.id}>
-            {person.firstName} {person.lastName}
-          </option>
+          <option value={person.id}>{person.firstName} {person.lastName}</option>
         {/each}
       </select>
-    </div>
 
-    <div class="form-group">
-      <label for="type">Relationship Type *</label>
-      <select id="type" bind:value={formData.type} required>
-        <option value="">Select type...</option>
-        <option value="parent">Parent</option>
-        <option value="spouse">Spouse</option>
-        <option value="sibling">Sibling</option>
+      <span>is the</span>
+
+      <select bind:value={formData.type} required>
+        <option value="">relationship...</option>
+        <option value="parent">parent</option>
+        <option value="child">child</option>
+        <option value="spouse">spouse</option>
+        <option value="sibling">sibling</option>
       </select>
-    </div>
 
-    <div class="form-group">
-      <label for="person2">Person 2 *</label>
-      <select id="person2" bind:value={formData.person2Id} required>
+      <span>of</span>
+
+      <select bind:value={formData.person2Id} required>
         <option value="">Select person...</option>
         {#each people as person}
-          <option value={person.id}>
-            {person.firstName} {person.lastName}
-          </option>
+          <option value={person.id}>{person.firstName} {person.lastName}</option>
         {/each}
       </select>
     </div>

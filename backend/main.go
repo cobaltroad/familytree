@@ -36,6 +36,38 @@ type App struct {
 	db *sql.DB
 }
 
+// normalizeRelationship converts incoming relationships to storage format
+// "child" relationships are converted to "parentOf" with swapped person IDs
+func normalizeRelationship(person1ID, person2ID int, relType string) (int, int, string) {
+	if relType == "child" {
+		return person2ID, person1ID, "parentOf"
+	}
+	return person1ID, person2ID, relType
+}
+
+// relationshipExists checks if a relationship already exists (including inverse for parentOf)
+func (app *App) relationshipExists(person1ID, person2ID int, relType string) (bool, error) {
+	var count int
+
+	if relType == "parentOf" {
+		// Check for both the relationship and its inverse
+		err := app.db.QueryRow(`
+			SELECT COUNT(*) FROM relationships
+			WHERE (person1_id = ? AND person2_id = ? AND type = 'parentOf')
+			   OR (person1_id = ? AND person2_id = ? AND type = 'parentOf')
+		`, person1ID, person2ID, person2ID, person1ID).Scan(&count)
+		return count > 0, err
+	}
+
+	// For other relationship types, check both directions
+	err := app.db.QueryRow(`
+		SELECT COUNT(*) FROM relationships
+		WHERE ((person1_id = ? AND person2_id = ?) OR (person1_id = ? AND person2_id = ?))
+		  AND type = ?
+	`, person1ID, person2ID, person2ID, person1ID, relType).Scan(&count)
+	return count > 0, err
+}
+
 func main() {
 	db, err := sql.Open("sqlite3", "./familytree.db")
 	if err != nil {
@@ -255,17 +287,46 @@ func (app *App) createRelationship(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Normalize the relationship (convert "child" to "parentOf" with swapped IDs)
+	person1ID, person2ID, relType := normalizeRelationship(rel.Person1ID, rel.Person2ID, rel.Type)
+
+	// Validate relationship type
+	validTypes := map[string]bool{"parentOf": true, "spouse": true, "sibling": true}
+	if !validTypes[relType] {
+		http.Error(w, "Invalid relationship type. Must be: parentOf, spouse, or sibling", http.StatusBadRequest)
+		return
+	}
+
+	// Check for duplicate/inverse relationships
+	exists, err := app.relationshipExists(person1ID, person2ID, relType)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if exists {
+		http.Error(w, "This relationship already exists", http.StatusBadRequest)
+		return
+	}
+
 	result, err := app.db.Exec(
 		"INSERT INTO relationships (person1_id, person2_id, type) VALUES (?, ?, ?)",
-		rel.Person1ID, rel.Person2ID, rel.Type,
+		person1ID, person2ID, relType,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	rel.ID = int(id)
+	rel.Person1ID = person1ID
+	rel.Person2ID = person2ID
+	rel.Type = relType
 	rel.CreatedAt = time.Now()
 
 	w.Header().Set("Content-Type", "application/json")
