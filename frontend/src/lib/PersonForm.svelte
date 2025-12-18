@@ -20,12 +20,12 @@
     const motherRel = relationships.find(rel =>
       rel.type === 'parentOf' &&
       rel.person2Id === person.id &&
-      rel.parentType === 'mother'
+      rel.parentRole === 'mother'
     )
     const fatherRel = relationships.find(rel =>
       rel.type === 'parentOf' &&
       rel.person2Id === person.id &&
-      rel.parentType === 'father'
+      rel.parentRole === 'father'
     )
 
     personRelationships.mother = motherRel ? people.find(p => p.id === motherRel.person1Id) : null
