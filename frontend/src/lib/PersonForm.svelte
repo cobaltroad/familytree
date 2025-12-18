@@ -135,7 +135,7 @@
 
 <div class="card">
   <h2>{person ? 'Edit Person' : 'Add New Person'}</h2>
-  <form on:submit|preventDefault={handleSubmit}>
+  <form id="person-form" on:submit|preventDefault={handleSubmit}>
     <div class="form-group">
       <label for="firstName">First Name *</label>
       <input
@@ -195,12 +195,6 @@
         />
       </div>
     {/if}
-
-    <div style="display: flex; gap: 0.5rem;">
-      <button type="submit" class="primary">
-        {person ? 'Update' : 'Add'} Person
-      </button>
-    </div>
   </form>
 
   {#if person}

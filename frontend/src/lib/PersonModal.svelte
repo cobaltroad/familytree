@@ -47,13 +47,16 @@
         &times;
       </button>
       <PersonForm {person} {people} {relationships} on:submit={handleSubmit} />
-      {#if person}
-        <div class="delete-section">
+      <div class="button-section">
+        <button type="submit" form="person-form" class="update-button">
+          {person ? 'Update' : 'Add'} Person
+        </button>
+        {#if person}
           <button class="delete-button" on:click={handleDelete}>
             Delete Person
           </button>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
   </div>
 {/if}
@@ -105,11 +108,27 @@
     background: #f5f5f5;
   }
 
-  .delete-section {
+  .button-section {
     padding: 1rem;
     border-top: 1px solid #e0e0e0;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .update-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+  }
+
+  .update-button:hover {
+    background-color: #45a049;
   }
 
   .delete-button {
