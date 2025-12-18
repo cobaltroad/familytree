@@ -1,9 +1,12 @@
 <script>
   import { onMount, afterUpdate } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import * as d3 from 'd3'
 
   export let people = []
   export let relationships = []
+
+  const dispatch = createEventDispatcher()
 
   let svgElement
   let width = 1200
@@ -162,6 +165,11 @@
       .attr('stroke', d => d.data.person.deathDate ? '#666' : '#333')
       .attr('stroke-width', 2)
       .attr('stroke-dasharray', d => d.data.person.deathDate ? '5,5' : '0')
+      .style('cursor', 'pointer')
+      .on('click', (event, d) => {
+        event.stopPropagation()
+        dispatch('editPerson', d.data.person)
+      })
 
     // Add person name
     nodes.append('text')
@@ -198,6 +206,11 @@
           .attr('stroke', d.data.spouse.deathDate ? '#666' : '#333')
           .attr('stroke-width', 2)
           .attr('stroke-dasharray', d.data.spouse.deathDate ? '5,5' : '0')
+          .style('cursor', 'pointer')
+          .on('click', (event) => {
+            event.stopPropagation()
+            dispatch('editPerson', d.data.spouse)
+          })
 
         // Marriage line
         spouseG.append('line')

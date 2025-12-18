@@ -6,14 +6,26 @@
   const dispatch = createEventDispatcher()
 
   let formData = {
-    firstName: person?.firstName || '',
-    lastName: person?.lastName || '',
-    birthDate: person?.birthDate || '',
-    deathDate: person?.deathDate || '',
-    gender: person?.gender || ''
+    firstName: '',
+    lastName: '',
+    birthDate: '',
+    deathDate: '',
+    gender: ''
   }
 
-  let isAlive = person ? !person.deathDate : true
+  let isAlive = true
+
+  // Reactive update when person prop changes
+  $: if (person) {
+    formData = {
+      firstName: person.firstName || '',
+      lastName: person.lastName || '',
+      birthDate: person.birthDate || '',
+      deathDate: person.deathDate || '',
+      gender: person.gender || ''
+    }
+    isAlive = !person.deathDate
+  }
 
   $: if (isAlive) {
     formData.deathDate = ''
@@ -26,11 +38,32 @@
       deathDate: formData.deathDate || null,
       gender: formData.gender || null
     }
-    dispatch('submit', data)
+
+    if (person) {
+      // Include ID for update
+      dispatch('submit', { ...data, id: person.id })
+    } else {
+      dispatch('submit', data)
+    }
+
     resetForm()
   }
 
   function resetForm() {
+    if (!person) {
+      formData = {
+        firstName: '',
+        lastName: '',
+        birthDate: '',
+        deathDate: '',
+        gender: ''
+      }
+      isAlive = true
+    }
+  }
+
+  export function clearForm() {
+    person = null
     formData = {
       firstName: '',
       lastName: '',
@@ -69,9 +102,9 @@
       <label for="gender">Gender</label>
       <select id="gender" bind:value={formData.gender}>
         <option value="">Select...</option>
-        <option value="male">Male</option>
-        <option value="female">Female</option>
-        <option value="other">Other</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Other">Other</option>
       </select>
     </div>
 
@@ -105,8 +138,15 @@
       </div>
     {/if}
 
-    <button type="submit" class="primary">
-      {person ? 'Update' : 'Add'} Person
-    </button>
+    <div style="display: flex; gap: 0.5rem;">
+      <button type="submit" class="primary">
+        {person ? 'Update' : 'Add'} Person
+      </button>
+      {#if person}
+        <button type="button" on:click={clearForm}>
+          Cancel
+        </button>
+      {/if}
+    </div>
   </form>
 </div>

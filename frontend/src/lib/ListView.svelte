@@ -8,6 +8,7 @@
   export let relationships = []
   export let loading = false
   export let error = null
+  export let editingPerson = null
   export let onRetry = () => {}
 
   const dispatch = createEventDispatcher()
@@ -25,7 +26,10 @@
   <p>Loading...</p>
 {:else}
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-    <PersonForm on:submit={(e) => dispatch('addPerson', e.detail)} />
+    <PersonForm
+      person={editingPerson}
+      on:submit={(e) => dispatch('addPerson', e.detail)}
+    />
     <RelationshipForm {people} on:submit={(e) => dispatch('addRelationship', e.detail)} />
   </div>
 

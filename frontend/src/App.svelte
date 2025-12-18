@@ -9,6 +9,7 @@
   let loading = false
   let error = null
   let currentView = 'list' // 'list' | 'tree'
+  let editingPerson = null
 
   onMount(() => {
     loadData()
@@ -38,11 +39,26 @@
 
   async function handleAddPerson(event) {
     try {
-      const newPerson = await api.createPerson(event.detail)
-      people = [...people, newPerson]
+      const personData = event.detail
+
+      if (personData.id) {
+        // Update existing person
+        const updatedPerson = await api.updatePerson(personData.id, personData)
+        people = people.map(p => p.id === updatedPerson.id ? updatedPerson : p)
+        editingPerson = null
+      } else {
+        // Create new person
+        const newPerson = await api.createPerson(personData)
+        people = [...people, newPerson]
+      }
     } catch (err) {
-      alert('Failed to add person: ' + err.message)
+      alert('Failed to save person: ' + err.message)
     }
+  }
+
+  function handleEditPerson(event) {
+    editingPerson = event.detail
+    currentView = 'list' // Switch to list view for editing
   }
 
   async function handleDeletePerson(event) {
@@ -105,6 +121,7 @@
       {relationships}
       {loading}
       {error}
+      editingPerson={editingPerson}
       onRetry={loadData}
       on:addPerson={handleAddPerson}
       on:deletePerson={handleDeletePerson}
@@ -112,7 +129,11 @@
       on:deleteRelationship={handleDeleteRelationship}
     />
   {:else}
-    <TreeView {people} {relationships} />
+    <TreeView
+      {people}
+      {relationships}
+      on:editPerson={handleEditPerson}
+    />
   {/if}
 </main>
 
