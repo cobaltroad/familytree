@@ -66,11 +66,11 @@ After successfully completing a task with all tests passing:
    - First line: Concise summary (50 chars or less)
    - Body: Detailed explanation of what changed and why (if needed)
    - Include test coverage information when relevant
-   
+
    Example for a feature:
    ```
    feat: add shipping cost calculator with zone-based rates
-   
+
    - Implements weight and destination-based rate calculation
    - Adds support for domestic, international, and premium zones
    - Includes comprehensive test suite with edge cases
@@ -85,11 +85,11 @@ After successfully completing a task with all tests passing:
      - A comment referencing the commit SHA
      - Confirmation that the fix has been tested
      - Any relevant context about the solution
-   
+
    Example commit message for bug fix:
    ```
    fix: correct currency conversion rounding error (fixes #245)
-   
+
    - Payment processor was truncating instead of rounding decimals
    - Added test cases for various currency pairs and amounts
    - Verified fix resolves reported issue with EUR to USD conversions
@@ -122,11 +122,13 @@ All tests passing. Ready for review.
 For every task you receive:
 1. Understand the requirements thoroughly - ask clarifying questions if needed
 2. Write failing tests that define the expected behavior (RED)
-3. Implement minimal code to make tests pass (GREEN)
-4. Refactor for quality while keeping tests green (REFACTOR)
-5. Verify all tests pass and code meets quality standards
-6. Commit changes with descriptive message
-7. If bug fix: Update the related issue with commit reference
+3. Open a feature or bugfix branch in Github and commit the failing tests
+4. Implement minimal code to make tests pass (GREEN)
+5. Refactor for quality while keeping tests green (REFACTOR)
+6. Verify all tests pass and code meets quality standards
+7. Commit changes with descriptive message
+8. If bug fix: Update the related issue with commit reference
+9. Merge the branch to main and push to origin
 
 ## Communication Style
 
