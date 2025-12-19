@@ -9,11 +9,27 @@
   import RadialView from './lib/RadialView.svelte'
   import ViewSwitcher from './lib/ViewSwitcher.svelte'
   import PersonModal from './lib/PersonModal.svelte'
+  import * as familyStore from './stores/familyStore.js'
 
   let people = []
   let relationships = []
   let loading = false
   let error = null
+
+  // Sync local state with stores (Phase 1.1: backward compatible approach)
+  // This allows components to gradually migrate to using stores
+  $: familyStore.people.set(people)
+  $: familyStore.relationships.set(relationships)
+  $: familyStore.loading.set(loading)
+  $: familyStore.error.set(error)
+
+  // Expose stores to DevTools in development mode
+  if (import.meta.env.DEV) {
+    if (!window.__SVELTE_STORES__) {
+      window.__SVELTE_STORES__ = {}
+    }
+    window.__SVELTE_STORES__.familyStore = familyStore
+  }
   let editingPerson = null
   let isModalOpen = false
   let modalKey = 0 // Key to force modal component recreation
