@@ -131,39 +131,22 @@
     }
     isAlive = true
   }
+
+  // Format date as "DD MMM YYYY" (e.g., "15 May 1990")
+  function formatDate(dateStr) {
+    if (!dateStr) return ''
+    const date = new Date(dateStr + 'T00:00:00') // Parse as local date
+    const day = date.getDate()
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const month = monthNames[date.getMonth()]
+    const year = date.getFullYear()
+    return `${day} ${month} ${year}`
+  }
 </script>
 
 <div class="card">
   <h2>{person ? 'Edit Person' : 'Add New Person'}</h2>
-
-  <!-- Person Information Display: Shows read-only demographic info when editing existing person -->
-  {#if person}
-    <div class="person-info">
-      <h3>Person Information</h3>
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="info-label">Name:</span>
-          <span class="info-value">{person.firstName} {person.lastName}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">Gender:</span>
-          <span class="info-value">{person.gender || 'Not specified'}</span>
-        </div>
-        {#if person.birthDate}
-          <div class="info-item">
-            <span class="info-label">Birth Date:</span>
-            <span class="info-value">{person.birthDate}</span>
-          </div>
-        {/if}
-        {#if person.deathDate}
-          <div class="info-item">
-            <span class="info-label">Death Date:</span>
-            <span class="info-value">{person.deathDate}</span>
-          </div>
-        {/if}
-      </div>
-    </div>
-  {/if}
 
   <form id="person-form" on:submit|preventDefault={handleSubmit}>
     <div class="form-group">
@@ -187,13 +170,49 @@
     </div>
 
     <div class="form-group">
-      <label for="gender">Gender</label>
-      <select id="gender" bind:value={formData.gender}>
-        <option value="">Select...</option>
-        <option value="Male">Male</option>
-        <option value="Female">Female</option>
-        <option value="Other">Other</option>
-      </select>
+      <label>Gender</label>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input
+            type="radio"
+            name="gender"
+            value="female"
+            checked={formData.gender === 'female'}
+            on:change={() => formData.gender = 'female'}
+          />
+          female
+        </label>
+        <label class="radio-label">
+          <input
+            type="radio"
+            name="gender"
+            value="male"
+            checked={formData.gender === 'male'}
+            on:change={() => formData.gender = 'male'}
+          />
+          male
+        </label>
+        <label class="radio-label">
+          <input
+            type="radio"
+            name="gender"
+            value="other"
+            checked={formData.gender === 'other'}
+            on:change={() => formData.gender = 'other'}
+          />
+          other
+        </label>
+        <label class="radio-label">
+          <input
+            type="radio"
+            name="gender"
+            value=""
+            checked={formData.gender === ''}
+            on:change={() => formData.gender = ''}
+          />
+          unspecified
+        </label>
+      </div>
     </div>
 
     <div class="form-group">
@@ -277,45 +296,6 @@
 </div>
 
 <style>
-  .person-info {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background-color: #f8f9fa;
-    border-radius: 6px;
-    border: 1px solid #e0e0e0;
-  }
-
-  .person-info h3 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    color: #666;
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 0.75rem;
-  }
-
-  .info-item {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-  }
-
-  .info-label {
-    font-weight: 600;
-    color: #555;
-    font-size: 0.9rem;
-  }
-
-  .info-value {
-    color: #333;
-    font-size: 0.9rem;
-  }
-
   .relationships-section {
     margin-top: 2rem;
     padding-top: 1.5rem;
@@ -361,5 +341,27 @@
     font-style: italic;
     margin: 0;
     font-size: 0.9rem;
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: normal;
+  }
+
+  .radio-label:has(input[type="radio"]:checked) {
+    font-weight: bold;
+  }
+
+  .radio-label input[type="radio"] {
+    cursor: pointer;
   }
 </style>
