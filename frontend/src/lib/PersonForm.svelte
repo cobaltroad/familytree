@@ -1,11 +1,15 @@
 <script>
   import { createEventDispatcher } from 'svelte'
+  import QuickAddChild from './QuickAddChild.svelte'
 
   export let person = null
   export let people = []
   export let relationships = []
 
   const dispatch = createEventDispatcher()
+
+  // State for showing/hiding quick add child form
+  let showQuickAddChild = false
 
   let personRelationships = {
     mother: null,
@@ -142,6 +146,19 @@
     const month = monthNames[date.getMonth()]
     const year = date.getFullYear()
     return `${day} ${month} ${year}`
+  }
+
+  function handleShowQuickAddChild() {
+    showQuickAddChild = true
+  }
+
+  function handleQuickAddChildSubmit(event) {
+    dispatch('addChild', event.detail)
+    showQuickAddChild = false
+  }
+
+  function handleQuickAddChildCancel() {
+    showQuickAddChild = false
   }
 </script>
 
@@ -290,6 +307,24 @@
         {:else}
           <p class="no-relationships">No children</p>
         {/if}
+
+        {#if !showQuickAddChild}
+          <button
+            type="button"
+            class="add-child-button"
+            on:click={handleShowQuickAddChild}
+          >
+            + Add Child
+          </button>
+        {/if}
+
+        {#if showQuickAddChild}
+          <QuickAddChild
+            parent={person}
+            on:submit={handleQuickAddChildSubmit}
+            on:cancel={handleQuickAddChildCancel}
+          />
+        {/if}
       </div>
     </div>
   {/if}
@@ -363,5 +398,21 @@
 
   .radio-label input[type="radio"] {
     cursor: pointer;
+  }
+
+  .add-child-button {
+    margin-top: 0.75rem;
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+  }
+
+  .add-child-button:hover {
+    background-color: #1976d2;
   }
 </style>

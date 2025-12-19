@@ -25,6 +25,11 @@
     }
   }
 
+  function handleAddChild(event) {
+    dispatch('addChild', event.detail)
+    // Note: We don't close the modal here - it stays open to show the new child
+  }
+
   function handleBackdropClick(event) {
     if (event.target === event.currentTarget) {
       closeModal()
@@ -46,7 +51,7 @@
       <button class="close-button" on:click={closeModal} aria-label="Close modal">
         &times;
       </button>
-      <PersonForm {person} {people} {relationships} on:submit={handleSubmit} />
+      <PersonForm {person} {people} {relationships} on:submit={handleSubmit} on:addChild={handleAddChild} />
       <div class="button-section">
         <button type="submit" form="person-form" class="update-button">
           {person ? 'Update' : 'Add'} Person

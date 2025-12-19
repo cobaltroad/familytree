@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { api } from './lib/api'
+  import { addChildWithRelationship } from './lib/quickAddChildUtils.js'
   import ListView from './lib/ListView.svelte'
   import TreeView from './lib/TreeView.svelte'
   import TimelineView from './lib/TimelineView.svelte'
@@ -17,6 +18,8 @@
   let isModalOpen = false
   let modalKey = 0 // Key to force modal component recreation
   let currentPath = window.location.hash.slice(1) || '/'
+  let successMessage = null
+  let successTimeout = null
 
   // Normalize path (treat '/' as '/tree')
   $: normalizedPath = currentPath === '/' ? '/tree' : currentPath
@@ -126,10 +129,57 @@
       alert('Failed to delete relationship: ' + err.message)
     }
   }
+
+  async function handleAddChild(event) {
+    const { childData, parentId, parentRole } = event.detail
+
+    try {
+      const result = await addChildWithRelationship(api, childData, parentId, parentRole)
+
+      if (result.success) {
+        // Update state with new person and relationship
+        people = [...people, result.person]
+        relationships = [...relationships, result.relationship]
+
+        // Show success notification
+        showSuccessMessage(`Child ${result.person.firstName} ${result.person.lastName} added successfully!`)
+
+        // Update the editing person to reflect new data (refresh modal)
+        // This ensures the children list updates in the modal
+        editingPerson = people.find(p => p.id === parentId)
+        modalKey += 1 // Force modal refresh
+      } else {
+        alert('Failed to add child: ' + result.error)
+      }
+    } catch (err) {
+      alert('Failed to add child: ' + err.message)
+    }
+  }
+
+  function showSuccessMessage(message) {
+    // Clear any existing timeout
+    if (successTimeout) {
+      clearTimeout(successTimeout)
+    }
+
+    successMessage = message
+
+    // Auto-hide after 3 seconds
+    successTimeout = setTimeout(() => {
+      successMessage = null
+    }, 3000)
+  }
 </script>
 
 <main>
   <h1>Family Tree</h1>
+
+  <!-- Success notification -->
+  {#if successMessage}
+    <div class="success-notification">
+      {successMessage}
+    </div>
+  {/if}
 
   <!-- Only show ViewSwitcher when not in list view -->
   {#if normalizedPath !== '/list'}
@@ -196,6 +246,7 @@
       on:close={handleModalClose}
       on:submit={handleModalSubmit}
       on:delete={handleDeletePerson}
+      on:addChild={handleAddChild}
     />
   {/key}
 </main>
@@ -203,5 +254,29 @@
 <style>
   main {
     width: 100%;
+  }
+
+  .success-notification {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
   }
 </style>

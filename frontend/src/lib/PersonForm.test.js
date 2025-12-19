@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest'
 
 /**
  * This function replicates the relationship finding logic from PersonForm.svelte
- * We extract it here for testing purposes to verify the bug and fix.
+ * This is the FIXED version (Issue #1 was resolved)
  */
 function findParentRelationships(person, relationships, people) {
   if (!person || !relationships || relationships.length === 0) {
@@ -19,18 +19,18 @@ function findParentRelationships(person, relationships, people) {
     }
   }
 
-  // Find mother - BUG: uses rel.parentType instead of rel.parentRole
+  // Find mother - FIXED: uses rel.parentRole
   const motherRel = relationships.find(rel =>
     rel.type === 'parentOf' &&
     rel.person2Id === person.id &&
-    rel.parentType === 'mother'  // BUG: Should be parentRole
+    rel.parentRole === 'mother'  // FIXED: Uses correct field
   )
 
-  // Find father - BUG: uses rel.parentType instead of rel.parentRole
+  // Find father - FIXED: uses rel.parentRole
   const fatherRel = relationships.find(rel =>
     rel.type === 'parentOf' &&
     rel.person2Id === person.id &&
-    rel.parentType === 'father'  // BUG: Should be parentRole
+    rel.parentRole === 'father'  // FIXED: Uses correct field
   )
 
   const mother = motherRel ? people.find(p => p.id === motherRel.person1Id) : null
@@ -65,7 +65,7 @@ describe('PersonForm - Parent Relationship Display Bug', () => {
   const childPerson = { id: 3, firstName: 'Alice', lastName: 'Doe' }
 
   it('should find mother when relationship uses parentRole field', () => {
-    // RED: This test will FAIL because the code uses parentType instead of parentRole
+    // This test verifies the fix for Issue #1
     const { mother } = findParentRelationships(childPerson, mockRelationships, mockPeople)
 
     expect(mother).not.toBeNull()
@@ -74,7 +74,7 @@ describe('PersonForm - Parent Relationship Display Bug', () => {
   })
 
   it('should find father when relationship uses parentRole field', () => {
-    // RED: This test will FAIL because the code uses parentType instead of parentRole
+    // This test verifies the fix for Issue #1
     const { father } = findParentRelationships(childPerson, mockRelationships, mockPeople)
 
     expect(father).not.toBeNull()
