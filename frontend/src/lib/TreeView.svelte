@@ -2,6 +2,8 @@
   import { onMount, afterUpdate } from 'svelte'
   import { createEventDispatcher } from 'svelte'
   import * as d3 from 'd3'
+  import { getNodeColor, findRootPeople, buildDescendantTree } from './treeHelpers.js'
+  import { createZoomBehavior } from './d3Helpers.js'
 
   export let people = []
   export let relationships = []
@@ -17,81 +19,14 @@
   }
 
   function buildTreeData() {
-    // Find root people (those without parents)
-    const rootPeople = people.filter(person => {
-      const hasParent = relationships.some(rel =>
-        rel.type === 'parentOf' && rel.person2Id === person.id
-      )
-      return !hasParent
-    })
+    // Find root people (those without parents) using helper
+    const rootPeople = findRootPeople(people, relationships)
 
-    // If no roots found, use all people (shouldn't happen with valid data)
+    // If no roots found, use first person (shouldn't happen with valid data)
     const roots = rootPeople.length > 0 ? rootPeople : people.slice(0, 1)
 
-    // Build tree structure for each root
-    return roots.map(root => buildNodeTree(root))
-  }
-
-  function buildNodeTree(person) {
-    // Get children
-    const childRels = relationships.filter(rel =>
-      rel.type === 'parentOf' && rel.person1Id === person.id
-    )
-
-    const children = childRels.map(rel => {
-      const child = people.find(p => p.id === rel.person2Id)
-      return child ? buildNodeTree(child) : null
-    }).filter(Boolean)
-
-    // Find co-parent (other parent of the children)
-    // This could be a spouse OR just someone who shares children with this person
-    let coParent = null
-
-    if (childRels.length > 0) {
-      // Get the first child to check their other parent
-      const firstChildId = childRels[0].person2Id
-
-      // Find the other parent of this child (mother or father)
-      const otherParentRel = relationships.find(rel =>
-        rel.type === 'parentOf' &&
-        rel.person2Id === firstChildId &&
-        rel.person1Id !== person.id
-      )
-
-      if (otherParentRel) {
-        const coParentId = otherParentRel.person1Id
-
-        // Verify this person is co-parent of ALL children
-        const isCoParentOfAll = childRels.every(childRel => {
-          return relationships.some(rel =>
-            rel.type === 'parentOf' &&
-            rel.person1Id === coParentId &&
-            rel.person2Id === childRel.person2Id
-          )
-        })
-
-        if (isCoParentOfAll) {
-          coParent = people.find(p => p.id === coParentId)
-        }
-      }
-    }
-
-    // If no co-parent found from children, fall back to spouse relationship
-    if (!coParent) {
-      const spouseRel = relationships.find(rel =>
-        rel.type === 'spouse' && (rel.person1Id === person.id || rel.person2Id === person.id)
-      )
-      if (spouseRel) {
-        const spouseId = spouseRel.person1Id === person.id ? spouseRel.person2Id : spouseRel.person1Id
-        coParent = people.find(p => p.id === spouseId)
-      }
-    }
-
-    return {
-      person,
-      spouse: coParent, // Renamed conceptually - this is the co-parent (spouse or partner)
-      children
-    }
+    // Build tree structure for each root using helper
+    return roots.map(root => buildDescendantTree(root, people, relationships))
   }
 
   function renderTree() {
@@ -124,14 +59,8 @@
     const g = svg.append('g')
       .attr('transform', 'translate(50, 50)')
 
-    // Add zoom behavior
-    const zoom = d3.zoom()
-      .scaleExtent([0.5, 2])
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform)
-      })
-
-    svg.call(zoom)
+    // Add zoom behavior using helper
+    createZoomBehavior(svg, g, [0.5, 2])
 
     // Draw links (lines between parent and child)
     g.selectAll('.link')
@@ -242,13 +171,6 @@
             return death ? `${birth} - ${death}` : birth
           })
       })
-  }
-
-  function getNodeColor(person) {
-    // Color by gender
-    if (person.gender === 'Male') return '#AED6F1'      // Light blue
-    if (person.gender === 'Female') return '#F8BBD0'   // Light pink
-    return '#E0E0E0'                                    // Gray for unknown
   }
 
   onMount(() => {

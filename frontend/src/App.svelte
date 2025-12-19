@@ -3,6 +3,10 @@
   import { api } from './lib/api'
   import ListView from './lib/ListView.svelte'
   import TreeView from './lib/TreeView.svelte'
+  import TimelineView from './lib/TimelineView.svelte'
+  import PedigreeView from './lib/PedigreeView.svelte'
+  import RadialView from './lib/RadialView.svelte'
+  import ViewSwitcher from './lib/ViewSwitcher.svelte'
   import PersonModal from './lib/PersonModal.svelte'
 
   let people = []
@@ -13,6 +17,9 @@
   let isModalOpen = false
   let modalKey = 0 // Key to force modal component recreation
   let currentPath = window.location.hash.slice(1) || '/'
+
+  // Normalize path (treat '/' as '/tree')
+  $: normalizedPath = currentPath === '/' ? '/tree' : currentPath
 
   // Handle route changes
   function handleHashChange() {
@@ -124,7 +131,12 @@
 <main>
   <h1>Family Tree</h1>
 
-  {#if currentPath === '/list'}
+  <!-- Only show ViewSwitcher when not in list view -->
+  {#if normalizedPath !== '/list'}
+    <ViewSwitcher currentPath={normalizedPath} />
+  {/if}
+
+  {#if normalizedPath === '/list'}
     <ListView
       {people}
       {relationships}
@@ -137,7 +149,36 @@
       on:addRelationship={handleAddRelationship}
       on:deleteRelationship={handleDeleteRelationship}
     />
+  {:else if normalizedPath === '/tree'}
+    <TreeView
+      {people}
+      {relationships}
+      on:editPerson={handleEditPerson}
+      on:addPerson={handleOpenAddPersonModal}
+    />
+  {:else if normalizedPath === '/timeline'}
+    <TimelineView
+      {people}
+      {relationships}
+      on:editPerson={handleEditPerson}
+      on:addPerson={handleOpenAddPersonModal}
+    />
+  {:else if normalizedPath === '/pedigree'}
+    <PedigreeView
+      {people}
+      {relationships}
+      on:editPerson={handleEditPerson}
+      on:addPerson={handleOpenAddPersonModal}
+    />
+  {:else if normalizedPath === '/radial'}
+    <RadialView
+      {people}
+      {relationships}
+      on:editPerson={handleEditPerson}
+      on:addPerson={handleOpenAddPersonModal}
+    />
   {:else}
+    <!-- Default to tree view for unknown routes -->
     <TreeView
       {people}
       {relationships}
