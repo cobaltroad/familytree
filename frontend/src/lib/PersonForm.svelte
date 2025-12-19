@@ -135,6 +135,36 @@
 
 <div class="card">
   <h2>{person ? 'Edit Person' : 'Add New Person'}</h2>
+
+  <!-- Person Information Display: Shows read-only demographic info when editing existing person -->
+  {#if person}
+    <div class="person-info">
+      <h3>Person Information</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Name:</span>
+          <span class="info-value">{person.firstName} {person.lastName}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Gender:</span>
+          <span class="info-value">{person.gender || 'Not specified'}</span>
+        </div>
+        {#if person.birthDate}
+          <div class="info-item">
+            <span class="info-label">Birth Date:</span>
+            <span class="info-value">{person.birthDate}</span>
+          </div>
+        {/if}
+        {#if person.deathDate}
+          <div class="info-item">
+            <span class="info-label">Death Date:</span>
+            <span class="info-value">{person.deathDate}</span>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
   <form id="person-form" on:submit|preventDefault={handleSubmit}>
     <div class="form-group">
       <label for="firstName">First Name *</label>
@@ -247,6 +277,45 @@
 </div>
 
 <style>
+  .person-info {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+  }
+
+  .person-info h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #666;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .info-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .info-label {
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
+  }
+
+  .info-value {
+    color: #333;
+    font-size: 0.9rem;
+  }
+
   .relationships-section {
     margin-top: 2rem;
     padding-top: 1.5rem;
