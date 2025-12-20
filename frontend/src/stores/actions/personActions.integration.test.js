@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { get } from 'svelte/store'
-import { people, error } from '../familyStore.js'
+import { people } from '../familyStore.js'
+import { notifications } from '../notificationStore.js'
 import { peopleById, relationshipsByPerson } from '../derivedStores.js'
 import { updatePerson, createPerson, deletePerson } from './personActions.js'
 import { api } from '../../lib/api.js'
@@ -18,7 +19,7 @@ describe('personActions - Integration Tests', () => {
   beforeEach(() => {
     // Reset stores to initial state
     people.set([])
-    error.set(null)
+    notifications.set([])
 
     // Clear all mocks
     vi.clearAllMocks()
@@ -356,7 +357,10 @@ describe('personActions - Integration Tests', () => {
 
       // ASSERT - Should rollback
       expect(get(people)[0].firstName).toBe('John')
-      expect(get(error)).toBe('Failed to update person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to update person')
 
       // Second attempt succeeds
       api.updatePerson.mockResolvedValueOnce({ id: 1, firstName: 'Jane', lastName: 'Doe' })
@@ -365,7 +369,11 @@ describe('personActions - Integration Tests', () => {
 
       // ASSERT - Should succeed
       expect(get(people)[0].firstName).toBe('Jane')
-      expect(get(error)).toBe(null)
+      // Previous error notification should still be there (notifications persist until auto-dismissed)
+      // But no NEW error notification should be added
+      const finalErrorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(finalErrorNotifications.length).toBe(1)
+      expect(finalErrorNotifications[0].message).toBe('Failed to update person')
     })
 
     it('should allow retry after failed create', async () => {
@@ -380,7 +388,10 @@ describe('personActions - Integration Tests', () => {
 
       // ASSERT - Temp person should be removed
       expect(get(people)).toHaveLength(0)
-      expect(get(error)).toBe('Failed to create person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to create person')
 
       // Second attempt succeeds
       api.createPerson.mockResolvedValueOnce({ id: 1, firstName: 'John', lastName: 'Doe' })
@@ -390,7 +401,11 @@ describe('personActions - Integration Tests', () => {
       // ASSERT - Should succeed
       expect(get(people)).toHaveLength(1)
       expect(get(people)[0].id).toBe(1)
-      expect(get(error)).toBe(null)
+      // Previous error notification should still be there (notifications persist until auto-dismissed)
+      // But no NEW error notification should be added
+      const finalErrorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(finalErrorNotifications.length).toBe(1)
+      expect(finalErrorNotifications[0].message).toBe('Failed to create person')
     })
 
     it('should allow retry after failed delete', async () => {
@@ -406,7 +421,10 @@ describe('personActions - Integration Tests', () => {
 
       // ASSERT - Person should be restored
       expect(get(people)).toHaveLength(1)
-      expect(get(error)).toBe('Failed to delete person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to delete person')
 
       // Second attempt succeeds
       api.deletePerson.mockResolvedValueOnce()
@@ -415,7 +433,11 @@ describe('personActions - Integration Tests', () => {
 
       // ASSERT - Should succeed
       expect(get(people)).toHaveLength(0)
-      expect(get(error)).toBe(null)
+      // Previous error notification should still be there (notifications persist until auto-dismissed)
+      // But no NEW error notification should be added
+      const finalErrorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(finalErrorNotifications.length).toBe(1)
+      expect(finalErrorNotifications[0].message).toBe('Failed to delete person')
     })
   })
 

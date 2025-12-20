@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte'
+  import { error as errorNotification } from '../stores/notificationStore.js'
 
   export let people = []
 
@@ -13,12 +14,12 @@
 
   function handleSubmit() {
     if (!formData.person1Id || !formData.person2Id || !formData.type) {
-      alert('Please fill in all fields')
+      errorNotification('Please fill in all fields')
       return
     }
 
     if (formData.person1Id === formData.person2Id) {
-      alert('Cannot create a relationship with the same person')
+      errorNotification('Cannot create a relationship with the same person')
       return
     }
 

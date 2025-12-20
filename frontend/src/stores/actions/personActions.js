@@ -7,7 +7,8 @@
  */
 
 import { get } from 'svelte/store'
-import { people, error } from '../familyStore.js'
+import { people } from '../familyStore.js'
+import { error as errorNotification } from '../notificationStore.js'
 import { api } from '../../lib/api.js'
 
 /**
@@ -38,13 +39,12 @@ function replacePersonAtIndex(peopleArray, index, newPerson) {
 }
 
 /**
- * Clears any previous error and returns current people state.
+ * Returns current people state.
  * Helper function to reduce code duplication across actions.
  *
  * @returns {Array} Current people array
  */
 function initializeAction() {
-  error.set(null)
   return get(people)
 }
 
@@ -71,7 +71,7 @@ export async function updatePerson(personId, updatedData) {
     try {
       await api.updatePerson(personId, updatedData)
     } catch (err) {
-      error.set('Failed to update person')
+      errorNotification('Failed to update person')
     }
     return
   }
@@ -96,7 +96,7 @@ export async function updatePerson(personId, updatedData) {
     // Rollback to original state on error
     const rollbackPeople = replacePersonAtIndex(currentPeople, originalPersonIndex, originalPerson)
     people.set(rollbackPeople)
-    error.set('Failed to update person')
+    errorNotification('Failed to update person')
   }
 }
 
@@ -135,7 +135,7 @@ export async function createPerson(personData) {
   } catch (err) {
     // Remove temporary person on error (rollback to original state)
     people.set(currentPeople)
-    error.set('Failed to create person')
+    errorNotification('Failed to create person')
   }
 }
 
@@ -160,7 +160,7 @@ export async function deletePerson(personId) {
     try {
       await api.deletePerson(personId)
     } catch (err) {
-      error.set('Failed to delete person')
+      errorNotification('Failed to delete person')
     }
     return
   }
@@ -180,6 +180,6 @@ export async function deletePerson(personId) {
     // Restore person at original position on error
     const rollbackPeople = replacePersonAtIndex(currentPeople, personIndex, deletedPerson)
     people.set(rollbackPeople)
-    error.set('Failed to delete person')
+    errorNotification('Failed to delete person')
   }
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { get } from 'svelte/store'
-import { people, error } from '../familyStore.js'
+import { people } from '../familyStore.js'
+import { notifications } from '../notificationStore.js'
 import { updatePerson, createPerson, deletePerson } from './personActions.js'
 import { api } from '../../lib/api.js'
 
@@ -17,7 +18,7 @@ describe('personActions - Optimistic Update Pattern', () => {
   beforeEach(() => {
     // Reset stores to initial state
     people.set([])
-    error.set(null)
+    notifications.set([])
 
     // Clear all mocks
     vi.clearAllMocks()
@@ -79,8 +80,11 @@ describe('personActions - Optimistic Update Pattern', () => {
       const currentPeople = get(people)
       expect(currentPeople).toEqual([originalPerson])
 
-      // Error should be set
-      expect(get(error)).toBe('Failed to update person')
+      // Error notification should be created
+      const currentNotifications = get(notifications)
+      expect(currentNotifications.length).toBe(1)
+      expect(currentNotifications[0].type).toBe('error')
+      expect(currentNotifications[0].message).toBe('Failed to update person')
     })
 
     it('should update with server data on successful API call', async () => {
@@ -99,14 +103,15 @@ describe('personActions - Optimistic Update Pattern', () => {
       // ASSERT - Should use server data (which may include additional fields)
       const currentPeople = get(people)
       expect(currentPeople).toEqual([serverResponse])
-      expect(get(error)).toBe(null)
+      // No error notifications should be present
+      expect(get(notifications).filter(n => n.type === 'error').length).toBe(0)
     })
 
-    it('should clear error on successful update', async () => {
+    it('should not add error notification on successful update', async () => {
       // ARRANGE
       const originalPerson = { id: 1, firstName: 'John', lastName: 'Doe' }
       people.set([originalPerson])
-      error.set('Previous error')
+      notifications.set([{ id: 'prev', message: 'Previous error', type: 'error' }])
 
       const updatedData = { firstName: 'Jane' }
       api.updatePerson.mockResolvedValue({ id: 1, firstName: 'Jane', lastName: 'Doe' })
@@ -115,7 +120,11 @@ describe('personActions - Optimistic Update Pattern', () => {
       await updatePerson(1, updatedData)
 
       // ASSERT
-      expect(get(error)).toBe(null)
+      // Previous error notification should still be there (notifications persist until auto-dismissed)
+      // But no NEW error notification should be added
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Previous error')
     })
 
     it('should handle update of non-existent person gracefully', async () => {
@@ -130,7 +139,10 @@ describe('personActions - Optimistic Update Pattern', () => {
 
       // ASSERT - Original data should remain unchanged
       expect(get(people)).toEqual([{ id: 1, firstName: 'John', lastName: 'Doe' }])
-      expect(get(error)).toBe('Failed to update person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to update person')
     })
 
     it('should preserve other people when updating one person', async () => {
@@ -253,13 +265,16 @@ describe('personActions - Optimistic Update Pattern', () => {
       expect(currentPeople).toHaveLength(1)
       expect(currentPeople[0]).toEqual({ id: 1, firstName: 'Existing', lastName: 'Person' })
 
-      expect(get(error)).toBe('Failed to create person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to create person')
     })
 
-    it('should clear error on successful creation', async () => {
+    it('should not add error notification on successful creation', async () => {
       // ARRANGE
       people.set([])
-      error.set('Previous error')
+      notifications.set([{ id: 'prev', message: 'Previous error', type: 'error' }])
 
       const newPersonData = { firstName: 'John', lastName: 'Doe' }
       api.createPerson.mockResolvedValue({ id: 1, firstName: 'John', lastName: 'Doe' })
@@ -268,7 +283,11 @@ describe('personActions - Optimistic Update Pattern', () => {
       await createPerson(newPersonData)
 
       // ASSERT
-      expect(get(error)).toBe(null)
+      // Previous error notification should still be there (notifications persist until auto-dismissed)
+      // But no NEW error notification should be added
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Previous error')
     })
 
     it('should preserve existing people when adding new person', async () => {
@@ -398,7 +417,10 @@ describe('personActions - Optimistic Update Pattern', () => {
       expect(currentPeople).toContainEqual(person1)
       expect(currentPeople).toContainEqual(person2)
 
-      expect(get(error)).toBe('Failed to delete person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to delete person')
     })
 
     it('should restore person at original position on rollback', async () => {
@@ -433,14 +455,15 @@ describe('personActions - Optimistic Update Pattern', () => {
       const currentPeople = get(people)
       expect(currentPeople).toHaveLength(1)
       expect(currentPeople[0]).toEqual(person2)
-      expect(get(error)).toBe(null)
+      // No error notifications should be present
+      expect(get(notifications).filter(n => n.type === 'error').length).toBe(0)
     })
 
-    it('should clear error on successful deletion', async () => {
+    it('should not add error notification on successful deletion', async () => {
       // ARRANGE
       const person = { id: 1, firstName: 'John', lastName: 'Doe' }
       people.set([person])
-      error.set('Previous error')
+      notifications.set([{ id: 'prev', message: 'Previous error', type: 'error' }])
 
       api.deletePerson.mockResolvedValue()
 
@@ -448,7 +471,11 @@ describe('personActions - Optimistic Update Pattern', () => {
       await deletePerson(1)
 
       // ASSERT
-      expect(get(error)).toBe(null)
+      // Previous error notification should still be there (notifications persist until auto-dismissed)
+      // But no NEW error notification should be added
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Previous error')
     })
 
     it('should handle deletion of non-existent person gracefully', async () => {
@@ -463,7 +490,10 @@ describe('personActions - Optimistic Update Pattern', () => {
 
       // ASSERT - Original data should remain
       expect(get(people)).toEqual([person])
-      expect(get(error)).toBe('Failed to delete person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to delete person')
     })
 
     it('should delete person with perceived latency less than 50ms', async () => {
@@ -582,7 +612,10 @@ describe('personActions - Optimistic Update Pattern', () => {
       await updatePerson(1, { firstName: 'Jane' })
 
       // ASSERT
-      expect(get(error)).toBe('Failed to update person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to update person')
     })
 
     it('should set clear error message on create failure', async () => {
@@ -595,7 +628,10 @@ describe('personActions - Optimistic Update Pattern', () => {
       await createPerson({ firstName: 'John', lastName: 'Doe' })
 
       // ASSERT
-      expect(get(error)).toBe('Failed to create person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to create person')
     })
 
     it('should set clear error message on delete failure', async () => {
@@ -609,7 +645,10 @@ describe('personActions - Optimistic Update Pattern', () => {
       await deletePerson(1)
 
       // ASSERT
-      expect(get(error)).toBe('Failed to delete person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to delete person')
     })
 
     it('should not leave stale data after rollback', async () => {
@@ -638,7 +677,8 @@ describe('personActions - Optimistic Update Pattern', () => {
       await updatePerson(1, { firstName: 'Jane' })
 
       expect(get(people)[0].firstName).toBe('Jane')
-      expect(get(error)).toBe(null)
+      // No error notifications should be present
+      expect(get(notifications).filter(n => n.type === 'error').length).toBe(0)
 
       // Second update fails
       api.updatePerson.mockRejectedValueOnce(new Error('Failed'))
@@ -646,7 +686,10 @@ describe('personActions - Optimistic Update Pattern', () => {
 
       // ASSERT - Should rollback to state after first update
       expect(get(people)[0].firstName).toBe('Jane')
-      expect(get(error)).toBe('Failed to update person')
+      // Error notification should be created
+      const errorNotifications = get(notifications).filter(n => n.type === 'error')
+      expect(errorNotifications.length).toBe(1)
+      expect(errorNotifications[0].message).toBe('Failed to update person')
     })
   })
 

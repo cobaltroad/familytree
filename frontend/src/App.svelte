@@ -9,7 +9,9 @@
   import RadialView from './lib/RadialView.svelte'
   import ViewSwitcher from './lib/ViewSwitcher.svelte'
   import PersonModal from './lib/PersonModal.svelte'
+  import Notification from './lib/components/Notification.svelte'
   import * as familyStore from './stores/familyStore.js'
+  import { success, error as errorNotification } from './stores/notificationStore.js'
 
   let people = []
   let relationships = []
@@ -86,7 +88,7 @@
         people = [...people, newPerson]
       }
     } catch (err) {
-      alert('Failed to save person: ' + err.message)
+      errorNotification('Failed to save person: ' + err.message)
     }
   }
 
@@ -123,7 +125,7 @@
         r.person1Id !== id && r.person2Id !== id
       )
     } catch (err) {
-      alert('Failed to delete person: ' + err.message)
+      errorNotification('Failed to delete person: ' + err.message)
     }
   }
 
@@ -132,7 +134,7 @@
       const newRel = await api.createRelationship(event.detail)
       relationships = [...relationships, newRel]
     } catch (err) {
-      alert('Failed to add relationship: ' + err.message)
+      errorNotification('Failed to add relationship: ' + err.message)
     }
   }
 
@@ -142,7 +144,7 @@
       await api.deleteRelationship(id)
       relationships = relationships.filter(r => r.id !== id)
     } catch (err) {
-      alert('Failed to delete relationship: ' + err.message)
+      errorNotification('Failed to delete relationship: ' + err.message)
     }
   }
 
@@ -165,10 +167,10 @@
         editingPerson = people.find(p => p.id === parentId)
         modalKey += 1 // Force modal refresh
       } else {
-        alert('Failed to add child: ' + result.error)
+        errorNotification('Failed to add child: ' + result.error)
       }
     } catch (err) {
-      alert('Failed to add child: ' + err.message)
+      errorNotification('Failed to add child: ' + err.message)
     }
   }
 
@@ -189,6 +191,9 @@
 
 <main>
   <h1>Family Tree</h1>
+
+  <!-- Toast Notifications -->
+  <Notification />
 
   <!-- Success notification -->
   {#if successMessage}

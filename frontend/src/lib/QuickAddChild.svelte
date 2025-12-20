@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte'
   import { determineParentRole, prepareChildFormData } from './quickAddChildUtils.js'
+  import { error as errorNotification } from '../stores/notificationStore.js'
 
   export let parent = null
   export let onCancel = null
@@ -30,7 +31,7 @@
   function handleSubmit() {
     // Validate that parent role is selected (if it wasn't auto-determined)
     if (!selectedParentRole) {
-      alert('Please select parent role (Mother or Father)')
+      errorNotification('Please select parent role (Mother or Father)')
       return
     }
 
