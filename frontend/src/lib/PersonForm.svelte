@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import QuickAddChild from './QuickAddChild.svelte'
   import { people as peopleStore, relationships as relationshipsStore } from '../stores/familyStore.js'
+  import { createPersonRelationships } from '../stores/derivedStores.js'
 
   export let person = null
   export let people = []
@@ -17,60 +18,72 @@
   // State for showing/hiding quick add child form
   let showQuickAddChild = false
 
-  let personRelationships = {
+  // Use derived store for O(1) relationship lookups when stores are available
+  // Falls back to manual computation for backward compatibility with prop-based approach
+  $: personRelStore = person?.id && $peopleStore.length > 0 ? createPersonRelationships(person.id) : null
+  $: derivedRels = personRelStore ? $personRelStore : null
+
+  // Fallback: Manual computation for prop-based approach (backward compatibility)
+  $: manualRels = person && !derivedRels ? computeRelationshipsManually(person, activePeople, activeRelationships) : null
+
+  // Final relationships: prefer derived store, fallback to manual computation
+  $: personRelationships = derivedRels || manualRels || {
     mother: null,
     father: null,
     siblings: [],
     children: []
   }
 
-  // Find all relationships for this person
-  $: if (person && activeRelationships.length > 0) {
+  // Manual computation for backward compatibility (used when stores are not available)
+  function computeRelationshipsManually(person, people, relationships) {
+    if (!person || relationships.length === 0) {
+      return {
+        mother: null,
+        father: null,
+        siblings: [],
+        children: []
+      }
+    }
+
     // Find parents
-    const motherRel = activeRelationships.find(rel =>
+    const motherRel = relationships.find(rel =>
       rel.type === 'parentOf' &&
       rel.person2Id === person.id &&
       rel.parentRole === 'mother'
     )
-    const fatherRel = activeRelationships.find(rel =>
+    const fatherRel = relationships.find(rel =>
       rel.type === 'parentOf' &&
       rel.person2Id === person.id &&
       rel.parentRole === 'father'
     )
 
-    personRelationships.mother = motherRel ? activePeople.find(p => p.id === motherRel.person1Id) : null
-    personRelationships.father = fatherRel ? activePeople.find(p => p.id === fatherRel.person1Id) : null
+    const mother = motherRel ? people.find(p => p.id === motherRel.person1Id) : null
+    const father = fatherRel ? people.find(p => p.id === fatherRel.person1Id) : null
 
     // Find children
-    const childRels = activeRelationships.filter(rel =>
+    const childRels = relationships.filter(rel =>
       rel.type === 'parentOf' && rel.person1Id === person.id
     )
-    personRelationships.children = childRels
-      .map(rel => activePeople.find(p => p.id === rel.person2Id))
+    const children = childRels
+      .map(rel => people.find(p => p.id === rel.person2Id))
       .filter(Boolean)
 
     // Find siblings (people who share at least one parent)
     const parentIds = [motherRel?.person1Id, fatherRel?.person1Id].filter(Boolean)
+    let siblings = []
     if (parentIds.length > 0) {
-      const siblingRels = activeRelationships.filter(rel =>
+      const siblingRels = relationships.filter(rel =>
         rel.type === 'parentOf' &&
         parentIds.includes(rel.person1Id) &&
         rel.person2Id !== person.id
       )
       const siblingIds = [...new Set(siblingRels.map(rel => rel.person2Id))]
-      personRelationships.siblings = siblingIds
-        .map(id => activePeople.find(p => p.id === id))
+      siblings = siblingIds
+        .map(id => people.find(p => p.id === id))
         .filter(Boolean)
-    } else {
-      personRelationships.siblings = []
     }
-  } else {
-    personRelationships = {
-      mother: null,
-      father: null,
-      siblings: [],
-      children: []
-    }
+
+    return { mother, father, siblings, children }
   }
 
   let formData = {
