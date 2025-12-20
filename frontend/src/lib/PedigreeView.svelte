@@ -1,16 +1,18 @@
 <script>
   import { onMount, afterUpdate } from 'svelte'
   import * as d3 from 'd3'
-  import { getNodeColor, findRootPeople, buildAncestorTree } from './treeHelpers.js'
-  import { createZoomBehavior } from './d3Helpers.js'
+  import { getNodeColor, buildAncestorTree } from './treeHelpers.js'
+  import { createZoomBehavior, updatePedigreeNodes, updateTreeLinks } from './d3Helpers.js'
   import { modal } from '../stores/modalStore.js'
   import { people, relationships } from '../stores/familyStore.js'
   import { rootPeople } from '../stores/derivedStores.js'
 
   let svgElement
+  let svg, g, zoom
   let width = 1200
   let height = 800
   let focusPersonId = null
+  let initialized = false
 
   // Default focus person to first root
   $: if ($people.length > 0 && !focusPersonId) {
@@ -20,15 +22,35 @@
 
   $: focusPerson = $people.find(p => p.id === focusPersonId)
 
-  $: if (focusPerson) {
-    renderPedigree()
+  // Initialize D3 structure on mount
+  onMount(() => {
+    if (!svgElement) return
+
+    svg = d3.select(svgElement)
+      .attr('width', width)
+      .attr('height', height)
+
+    g = svg.append('g')
+      .attr('transform', 'translate(100, 50)')
+
+    // Add zoom behavior
+    zoom = createZoomBehavior(svg, g, [0.5, 2])
+
+    initialized = true
+
+    // Initial render
+    if (focusPerson) {
+      updatePedigree()
+    }
+  })
+
+  // Update pedigree when focus person or data changes
+  $: if (focusPerson && initialized && g) {
+    updatePedigree()
   }
 
-  function renderPedigree() {
-    if (!svgElement || !focusPerson) return
-
-    // Clear existing content
-    d3.select(svgElement).selectAll('*').remove()
+  function updatePedigree() {
+    if (!g || !focusPerson) return
 
     // Build ancestor tree (parents as children in tree structure)
     const ancestorTree = buildAncestorTree(focusPerson, $people, $relationships, 5)
@@ -45,111 +67,28 @@
 
     const treeNodes = treeLayout(hierarchy)
 
-    // Create SVG with zoom
-    const svg = d3.select(svgElement)
-      .attr('width', width)
-      .attr('height', height)
-
-    const g = svg.append('g')
-      .attr('transform', 'translate(100, 50)')
-
-    // Add zoom behavior
-    createZoomBehavior(svg, g, [0.5, 2])
-
     // Invert y-coordinates so ancestors appear above
     treeNodes.each(d => {
       d.y = height - 150 - d.y
     })
 
-    // Draw links
-    g.selectAll('.link')
-      .data(treeNodes.links())
-      .enter()
-      .append('path')
-      .attr('class', 'link')
-      .attr('d', d3.linkVertical()
-        .x(d => d.x)
-        .y(d => d.y))
-      .attr('fill', 'none')
-      .attr('stroke', '#ccc')
-      .attr('stroke-width', 2)
+    // Update links using enter/update/exit pattern
+    updateTreeLinks(g, treeNodes.links(), { transitionDuration: 300 })
 
-    // Draw nodes
-    const nodes = g.selectAll('.node')
-      .data(treeNodes.descendants())
-      .enter()
-      .append('g')
-      .attr('class', 'node')
-      .attr('transform', d => `translate(${d.x},${d.y})`)
-
-    // Compact rectangles (80x40 vs 120x60)
-    nodes.append('rect')
-      .attr('width', 80)
-      .attr('height', 40)
-      .attr('x', -40)
-      .attr('y', -20)
-      .attr('rx', 4)
-      .attr('fill', d => getNodeColor(d.data.person))
-      .attr('stroke', d => {
-        // Highlight focus person
-        if (d.data.person.id === focusPersonId) return '#4CAF50'
-        return d.data.person.deathDate ? '#666' : '#333'
-      })
-      .attr('stroke-width', d => d.data.person.id === focusPersonId ? 3 : 2)
-      .attr('stroke-dasharray', d => d.data.person.deathDate ? '3,3' : '0')
-      .style('cursor', 'pointer')
-      .on('click', (event, d) => {
-        event.stopPropagation()
-        modal.open(d.data.person.id, 'edit')
-      })
-
-    // Add person name (compact)
-    nodes.append('text')
-      .attr('dy', -2)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '10px')
-      .attr('font-weight', 'bold')
-      .text(d => {
-        const p = d.data.person
-        // Shorten long names
-        const firstName = p.firstName.length > 8 ? p.firstName.substring(0, 7) + '.' : p.firstName
-        const lastName = p.lastName.length > 8 ? p.lastName.substring(0, 7) + '.' : p.lastName
-        return `${firstName} ${lastName}`
-      })
-
-    // Add birth year (compact)
-    nodes.append('text')
-      .attr('dy', 8)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '9px')
-      .text(d => {
-        const birth = d.data.person.birthDate ? new Date(d.data.person.birthDate).getFullYear() : '?'
-        const death = d.data.person.deathDate ? new Date(d.data.person.deathDate).getFullYear() : ''
-        return death ? `${birth}–${death}` : birth
-      })
-
-    // Add generation labels
-    nodes.append('text')
-      .attr('x', -45)
-      .attr('y', 0)
-      .attr('dy', '0.35em')
-      .attr('text-anchor', 'end')
-      .attr('font-size', '8px')
-      .attr('fill', '#999')
-      .text(d => `G${d.depth}`)
+    // Update nodes using enter/update/exit pattern
+    updatePedigreeNodes(
+      g,
+      treeNodes.descendants(),
+      getNodeColor,
+      (person) => modal.open(person.id, 'edit'),
+      focusPersonId,
+      {
+        transitionDuration: 300,
+        nodeWidth: 80,
+        nodeHeight: 40
+      }
+    )
   }
-
-  onMount(() => {
-    if (focusPerson) {
-      renderPedigree()
-    }
-  })
-
-  afterUpdate(() => {
-    if (focusPerson) {
-      renderPedigree()
-    }
-  })
 </script>
 
 <div class="pedigree-container">

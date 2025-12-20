@@ -1,16 +1,18 @@
 <script>
   import { onMount, afterUpdate } from 'svelte'
   import * as d3 from 'd3'
-  import { getNodeColor, findRootPeople, buildAncestorTree } from './treeHelpers.js'
-  import { createZoomBehavior } from './d3Helpers.js'
+  import { getNodeColor, buildAncestorTree } from './treeHelpers.js'
+  import { createZoomBehavior, updateRadialNodes, updateRadialLinks } from './d3Helpers.js'
   import { modal } from '../stores/modalStore.js'
   import { people, relationships } from '../stores/familyStore.js'
   import { rootPeople } from '../stores/derivedStores.js'
 
   let svgElement
+  let svg, g, zoom
   let width = 1000
   let height = 1000
   let focusPersonId = null
+  let initialized = false
 
   // Default focus person to first root
   $: if ($people.length > 0 && !focusPersonId) {
@@ -20,15 +22,35 @@
 
   $: focusPerson = $people.find(p => p.id === focusPersonId)
 
-  $: if (focusPerson) {
-    renderRadial()
+  // Initialize D3 structure on mount
+  onMount(() => {
+    if (!svgElement) return
+
+    svg = d3.select(svgElement)
+      .attr('width', width)
+      .attr('height', height)
+
+    g = svg.append('g')
+      .attr('transform', `translate(${width / 2}, ${height / 2})`)
+
+    // Add zoom behavior
+    zoom = createZoomBehavior(svg, g, [0.5, 3])
+
+    initialized = true
+
+    // Initial render
+    if (focusPerson) {
+      updateRadial()
+    }
+  })
+
+  // Update radial view when focus person or data changes
+  $: if (focusPerson && initialized && g) {
+    updateRadial()
   }
 
-  function renderRadial() {
-    if (!svgElement || !focusPerson) return
-
-    // Clear existing content
-    d3.select(svgElement).selectAll('*').remove()
+  function updateRadial() {
+    if (!g || !focusPerson) return
 
     // Build ancestor tree
     const ancestorTree = buildAncestorTree(focusPerson, $people, $relationships, 5)
@@ -49,146 +71,74 @@
 
     const treeNodes = treeLayout(hierarchy)
 
-    // Create SVG with zoom
-    const svg = d3.select(svgElement)
-      .attr('width', width)
-      .attr('height', height)
+    // Update links using enter/update/exit pattern
+    updateRadialLinks(g, treeNodes.links(), { transitionDuration: 300 })
 
-    const g = svg.append('g')
-      .attr('transform', `translate(${width / 2}, ${height / 2})`)
+    // Update nodes using enter/update/exit pattern
+    updateRadialNodes(
+      g,
+      treeNodes.descendants(),
+      getNodeColor,
+      (person) => modal.open(person.id, 'edit'),
+      focusPersonId,
+      { transitionDuration: 300 }
+    )
 
-    // Add zoom behavior
-    createZoomBehavior(svg, g, [0.5, 3])
-
-    // Draw radial links
-    g.selectAll('.link')
-      .data(treeNodes.links())
-      .enter()
-      .append('path')
-      .attr('class', 'link')
-      .attr('d', d3.linkRadial()
-        .angle(d => d.x)
-        .radius(d => d.y))
-      .attr('fill', 'none')
-      .attr('stroke', '#ccc')
-      .attr('stroke-width', 2)
-
-    // Draw nodes
-    const nodes = g.selectAll('.node')
-      .data(treeNodes.descendants())
-      .enter()
-      .append('g')
-      .attr('class', 'node')
-      .attr('transform', d => {
-        const angle = d.x - Math.PI / 2
-        const x = d.y * Math.cos(angle)
-        const y = d.y * Math.sin(angle)
-        return `translate(${x},${y})`
-      })
-
-    // Add circles for person nodes
-    nodes.append('circle')
-      .attr('r', d => d.depth === 0 ? 40 : 25) // Larger circle for focus person
-      .attr('fill', d => getNodeColor(d.data.person))
-      .attr('stroke', d => {
-        if (d.data.person.id === focusPersonId) return '#4CAF50'
-        return d.data.person.deathDate ? '#666' : '#333'
-      })
-      .attr('stroke-width', d => d.data.person.id === focusPersonId ? 3 : 2)
-      .attr('stroke-dasharray', d => d.data.person.deathDate ? '3,3' : '0')
-      .style('cursor', 'pointer')
-      .on('click', (event, d) => {
-        event.stopPropagation()
-        modal.open(d.data.person.id, 'edit')
-      })
-
-    // Add person names with smart rotation
-    nodes.append('text')
-      .attr('dy', '0.31em')
-      .attr('x', d => {
-        if (d.depth === 0) return 0 // Center text for focus person
-        return d.x < Math.PI ? 6 : -6
-      })
-      .attr('y', d => d.depth === 0 ? 50 : 0) // Below focus person
-      .attr('text-anchor', d => {
-        if (d.depth === 0) return 'middle'
-        return d.x < Math.PI ? 'start' : 'end'
-      })
-      .attr('transform', d => {
-        if (d.depth === 0) return '' // No rotation for focus person
-        const angle = d.x * 180 / Math.PI
-        // Rotate text to be readable (not upside-down)
-        if (d.x < Math.PI) {
-          return `rotate(${angle - 90})`
-        } else {
-          return `rotate(${angle + 90})`
-        }
-      })
-      .attr('font-size', d => d.depth === 0 ? '14px' : '11px')
-      .attr('font-weight', d => d.depth === 0 ? 'bold' : 'normal')
-      .text(d => {
-        const p = d.data.person
-        if (d.depth === 0) {
-          return `${p.firstName} ${p.lastName}`
-        }
-        // Compact names for outer rings
-        const firstName = p.firstName.length > 10 ? p.firstName.substring(0, 9) + '.' : p.firstName
-        return `${firstName} ${p.lastName.charAt(0)}.`
-      })
-
-    // Add year labels
-    nodes.filter(d => d.depth > 0).append('text')
-      .attr('dy', '1.5em')
-      .attr('x', d => d.x < Math.PI ? 6 : -6)
-      .attr('text-anchor', d => d.x < Math.PI ? 'start' : 'end')
-      .attr('transform', d => {
-        const angle = d.x * 180 / Math.PI
-        if (d.x < Math.PI) {
-          return `rotate(${angle - 90})`
-        } else {
-          return `rotate(${angle + 90})`
-        }
-      })
-      .attr('font-size', '9px')
-      .attr('fill', '#666')
-      .text(d => {
-        const birth = d.data.person.birthDate ? new Date(d.data.person.birthDate).getFullYear() : '?'
-        return birth
-      })
-
-    // Add generation ring labels
-    for (let i = 1; i <= maxDepth; i++) {
-      const ringRadius = (radius / maxDepth) * i
-
-      g.append('circle')
-        .attr('r', ringRadius)
-        .attr('fill', 'none')
-        .attr('stroke', '#e0e0e0')
-        .attr('stroke-width', 1)
-        .attr('stroke-dasharray', '2,2')
-
-      g.append('text')
-        .attr('x', 0)
-        .attr('y', -ringRadius)
-        .attr('dy', '-0.3em')
-        .attr('text-anchor', 'middle')
-        .attr('font-size', '10px')
-        .attr('fill', '#999')
-        .text(`Generation ${i}`)
-    }
+    // Update generation rings
+    updateGenerationRings(maxDepth, radius)
   }
 
-  onMount(() => {
-    if (focusPerson) {
-      renderRadial()
-    }
-  })
+  function updateGenerationRings(maxDepth, radius) {
+    if (!g) return
 
-  afterUpdate(() => {
-    if (focusPerson) {
-      renderRadial()
-    }
-  })
+    // Bind ring data
+    const ringData = Array.from({ length: maxDepth }, (_, i) => i + 1)
+
+    const rings = g.selectAll('.generation-ring')
+      .data(ringData)
+
+    // EXIT
+    rings.exit()
+      .transition()
+      .duration(300)
+      .style('opacity', 0)
+      .remove()
+
+    // ENTER
+    const enterRings = rings.enter()
+      .append('g')
+      .attr('class', 'generation-ring')
+      .style('opacity', 0)
+
+    enterRings.append('circle')
+      .attr('class', 'ring-circle')
+      .attr('fill', 'none')
+      .attr('stroke', '#e0e0e0')
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '2,2')
+
+    enterRings.append('text')
+      .attr('class', 'ring-label')
+      .attr('x', 0)
+      .attr('dy', '-0.3em')
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '10px')
+      .attr('fill', '#999')
+
+    // MERGE and UPDATE
+    const mergedRings = rings.merge(enterRings)
+
+    mergedRings.transition()
+      .duration(300)
+      .style('opacity', 1)
+
+    mergedRings.select('.ring-circle')
+      .attr('r', (d, i) => (radius / maxDepth) * (i + 1))
+
+    mergedRings.select('.ring-label')
+      .attr('y', (d, i) => -(radius / maxDepth) * (i + 1))
+      .text((d, i) => `Generation ${i + 1}`)
+  }
 </script>
 
 <div class="radial-container">
