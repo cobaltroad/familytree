@@ -6,6 +6,9 @@ backend/familytree
 frontend/node_modules
 frontend/dist
 frontend/.svelte-kit
+frontend/coverage
+
+scripts/
 
 # OS
 .DS_Store
