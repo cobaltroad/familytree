@@ -37,25 +37,66 @@ The relationship system has evolved and uses a normalized storage approach:
 ### Frontend Architecture
 - **Svelte 4** with Vite build system
 - **Hash-based routing**: Multiple visualization views with shared navigation
-- **State management**: All data flows through `App.svelte`, which manages people, relationships, and modal state
-- **D3.js v7.9.0** for all tree visualizations with zoom/pan capabilities
+- **State management**: Reactive Svelte stores for all application state (people, relationships, modal, notifications)
+- **D3.js v7.9.0** for all tree visualizations with optimized enter/update/exit pattern and zoom/pan preservation
 - **Shared utilities**: `treeHelpers.js` and `d3Helpers.js` provide reusable functions across all views
+
+### State Management with Svelte Stores
+
+The application uses a comprehensive reactive store architecture (see `frontend/src/stores/`):
+
+#### Core Stores (`familyStore.js`)
+- **people**: Writable store containing all person data
+- **relationships**: Writable store containing all relationship data
+- **loading**: Boolean state for API operations
+- **error**: Error message state
+
+#### Derived Stores (`derivedStores.js`)
+Computed stores that automatically update when core stores change:
+- **peopleById**: Map for O(1) person lookups by ID
+- **relationshipsByPerson**: Map for O(1) relationship lookups
+- **familyTree**: Pre-computed descendant tree structure
+- **rootPeople**: People without parents (tree roots)
+- **createPersonRelationships(personId)**: Factory function for person-specific relationships (mother, father, siblings, children)
+
+#### Modal Store (`modalStore.js`)
+Centralized modal state management:
+- **open(personId, mode)**: Open modal for viewing/editing
+- **openNew()**: Open modal for adding new person
+- **close()**: Close modal
+
+#### Notification Store (`notificationStore.js`)
+Non-blocking toast notifications:
+- **success(message)**: Green success toast (3s auto-dismiss)
+- **error(message)**: Red error toast (5s auto-dismiss)
+- **info(message)**: Blue info toast (3s auto-dismiss)
+
+#### Action Creators (`stores/actions/personActions.js`)
+Optimistic update pattern for CRUD operations:
+- **createPerson(data)**: Create with temporary ID, replace on success
+- **updatePerson(id, updates)**: Update immediately, rollback on error
+- **deletePerson(id)**: Remove immediately, restore on error
+
+See `frontend/src/stores/actions/README.md` for detailed optimistic update documentation.
 
 ### Component Structure
 
 #### Core Components
-- **App.svelte**: Root component, manages routing, data fetching, and modal state
+- **App.svelte**: Root component, manages routing and initial data loading (simplified to ~80 LOC)
 - **ViewSwitcher.svelte**: Navigation tabs for switching between visualization views
-- **PersonModal.svelte**: Modal dialog for editing/adding people (shared across all views)
-- **PersonForm.svelte**: Form inside modal that displays relationship info (parents, siblings, children)
+- **PersonModal.svelte**: Modal dialog for editing/adding people, uses `$modal` store for state
+- **PersonForm.svelte**: Form inside modal that displays relationship info using derived stores
+- **Notification.svelte**: Toast notification component for non-blocking user feedback
 
 #### Visualization Views
-All views support clicking nodes/bars to open PersonModal and have floating "+" button to add people.
+All views access stores directly (no prop drilling), support clicking nodes/bars to open PersonModal via `modal.open()`, and have floating "+" button to add people.
 
 - **TreeView.svelte** (`#/` or `#/tree`): Default hierarchical tree view
   - Descendants flow downward from root ancestors
   - Displays spouses/co-parents horizontally
-  - Uses D3 tree layout with zoom/pan
+  - Uses D3 tree layout with optimized enter/update/exit pattern
+  - Preserves zoom/pan state during updates
+  - Smooth 300ms transitions for changes
 
 - **TimelineView.svelte** (`#/timeline`): Chronological lifespan view
   - Horizontal bars showing birth to death (or present)
@@ -67,6 +108,7 @@ All views support clicking nodes/bars to open PersonModal and have floating "+" 
   - Focus person selector (dropdown)
   - Ancestors expand upward in compact boxes (80x40)
   - Generation labels (G0=focus, G1=parents, G2=grandparents, etc.)
+  - Uses D3 enter/update/exit for incremental updates
   - Limited to 4-5 generations for performance
 
 - **RadialView.svelte** (`#/radial`): Circular fan chart
@@ -74,6 +116,7 @@ All views support clicking nodes/bars to open PersonModal and have floating "+" 
   - Ancestors in concentric rings (generations)
   - Radial tree layout with smart text rotation
   - Focus person selector (dropdown)
+  - D3 optimization for smooth updates
   - Limited to 5 generations
 
 - **ListView.svelte** (`#/list`): Admin view with forms
@@ -82,10 +125,12 @@ All views support clicking nodes/bars to open PersonModal and have floating "+" 
   - No ViewSwitcher (use direct link or back navigation)
 
 ### Key UI Patterns
-- Clicking a tree node opens **PersonModal** (does not navigate away from tree)
-- Floating "+" button in tree view opens modal to add new person
-- Modal displays computed relationships: parents (from parent_role), siblings (shared parents), and children
+- Clicking a tree node calls `modal.open(personId, 'edit')` to open **PersonModal**
+- Floating "+" button calls `modal.openNew()` to add new person
+- Modal displays computed relationships from derived stores: parents, siblings, and children
 - Modal has sticky close button that stays visible when scrolling
+- **Optimistic updates**: UI updates immediately, shows toast notification, rolls back on error
+- **Toast notifications**: Non-blocking feedback in top-right corner (success=green, error=red, info=blue)
 - Update button (bottom left) and Delete button (bottom right) in modal footer
 
 ### Shared Utilities
@@ -105,15 +150,70 @@ All views support clicking nodes/bars to open PersonModal and have floating "+" 
   - `renderPersonNode(...)`: Consistent node rendering across views
   - `polarToCartesian(angle, radius)`: Coordinate conversion for radial layout
   - `renderRadialPersonNode(...)`: Radial-specific node rendering
+  - `updateTreeNodes(...)`: Enter/update/exit pattern for tree nodes
+  - `updateTreeLinks(...)`: Enter/update/exit pattern for tree links
+  - `updatePedigreeNodes(...)`: Optimized updates for pedigree view
+  - `updateRadialNodes(...)`: Optimized updates for radial view
+  - `updateRadialLinks(...)`: Optimized links for radial view
 
 ### Data Flow
-1. `App.svelte` fetches all people and relationships on mount via `api.js`
-2. Components receive data as props and dispatch events upward (`editPerson`, `addPerson`)
-3. Tree views use shared helpers to build tree structures:
-   - TreeView: `findRootPeople()` + `buildDescendantTree()` (downward)
-   - PedigreeView/RadialView: `buildAncestorTree()` (upward)
-4. Parent relationships (mother/father) are identified by `type: "parentOf"` and `parent_role` field
-5. When creating relationships via frontend, use `"mother"` or `"father"` as the type - backend handles normalization
+
+**Store-Based Reactive Architecture:**
+
+1. **Initial Load**: `App.svelte` fetches all people and relationships on mount, populates core stores
+   ```javascript
+   onMount(async () => {
+     const [peopleData, relationshipsData] = await Promise.all([
+       api.getPeople(),
+       api.getRelationships()
+     ])
+     people.set(peopleData)
+     relationships.set(relationshipsData)
+   })
+   ```
+
+2. **Reactive Updates**: All components subscribe to stores using `$` syntax
+   ```javascript
+   // Components automatically re-render when stores change
+   $: treeData = $familyTree
+   $: currentPerson = $peopleById.get(personId)
+   ```
+
+3. **CRUD Operations**: Use action creators with optimistic updates
+   ```javascript
+   import { createPerson, updatePerson, deletePerson } from './stores/actions/personActions.js'
+
+   // UI updates immediately, rolls back on error
+   await updatePerson(personId, { firstName: 'Jane' })
+   ```
+
+4. **Derived Computations**: Derived stores automatically recompute when dependencies change
+   - `peopleById`: O(1) lookups (no array.find())
+   - `familyTree`: Pre-computed tree structure
+   - `createPersonRelationships()`: Reactive relationship data
+
+5. **Tree Building**: Tree views use shared helpers with derived store data
+   - TreeView: Uses `$familyTree` derived store (descendants)
+   - PedigreeView/RadialView: Uses `buildAncestorTree()` with `$rootPeople`
+
+6. **Modal Interactions**: Components call modal store methods directly
+   ```javascript
+   import { modal } from './stores/modalStore.js'
+
+   // Open modal from any component
+   modal.open(personId, 'edit')
+   ```
+
+7. **Notifications**: Action creators show toast notifications
+   ```javascript
+   notifications.success('Person updated successfully')
+   notifications.error('Failed to update person')
+   ```
+
+8. **D3 Updates**: Views use enter/update/exit pattern for incremental rendering
+   - Only changed nodes update (not entire tree)
+   - Zoom/pan state preserved
+   - Smooth 300ms transitions
 
 ### Routing
 Hash-based routing in `App.svelte`:
@@ -135,6 +235,28 @@ ViewSwitcher navigation appears on all views except List view.
 - Gender values are stored lowercase in the database
 - Gender determines node color in all tree visualizations
 - Selected gender radio button text appears bold
+
+### Architecture Documentation
+
+For detailed information about the reactive architecture migration:
+- **`REACTIVE_ARCHITECTURE_EXPLORATION.md`**: Comprehensive technical analysis of the migration (1965 lines)
+- **`frontend/src/stores/actions/README.md`**: Optimistic update pattern documentation
+- **`STORE_TEST_COVERAGE.md`**: Complete test coverage report
+- **`PHASE_1_1_IMPLEMENTATION_SUMMARY.md`**: Phase 1.1 implementation details
+
+The application has evolved through a 6-phase reactive architecture migration (Issues #26-34):
+- **Phase 1**: Core Svelte stores foundation
+- **Phase 2**: Derived stores and O(1) performance optimizations
+- **Phase 3**: Optimistic updates and toast notifications
+- **Phase 4**: Modal state refactoring (eliminated modalKey workaround)
+- **Phase 5**: Removed prop drilling (App.svelte simplified from 253 to 81 LOC)
+- **Phase 6**: D3.js optimization with enter/update/exit pattern
+
+**Performance Improvements:**
+- Person lookups: O(n) → O(1) via derived stores
+- CRUD operations: 300ms perceived latency → <50ms with optimistic updates
+- Tree re-renders: Full destroy/rebuild → Incremental updates (83-97% faster)
+- App.svelte: 253 LOC → 81 LOC (68% reduction)
 
 ### Known Issues
 See GitHub issues for resolved and current bugs:
