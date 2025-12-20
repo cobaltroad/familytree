@@ -4,9 +4,8 @@
   import { getNodeColor, findRootPeople, buildAncestorTree } from './treeHelpers.js'
   import { createZoomBehavior } from './d3Helpers.js'
   import { modal } from '../stores/modalStore.js'
-
-  export let people = []
-  export let relationships = []
+  import { people, relationships } from '../stores/familyStore.js'
+  import { rootPeople } from '../stores/derivedStores.js'
 
   let svgElement
   let width = 1200
@@ -14,12 +13,12 @@
   let focusPersonId = null
 
   // Default focus person to first root
-  $: if (people.length > 0 && !focusPersonId) {
-    const roots = findRootPeople(people, relationships)
-    focusPersonId = roots.length > 0 ? roots[0].id : people[0].id
+  $: if ($people.length > 0 && !focusPersonId) {
+    const roots = $rootPeople
+    focusPersonId = roots.length > 0 ? roots[0].id : $people[0].id
   }
 
-  $: focusPerson = people.find(p => p.id === focusPersonId)
+  $: focusPerson = $people.find(p => p.id === focusPersonId)
 
   $: if (focusPerson) {
     renderPedigree()
@@ -32,7 +31,7 @@
     d3.select(svgElement).selectAll('*').remove()
 
     // Build ancestor tree (parents as children in tree structure)
-    const ancestorTree = buildAncestorTree(focusPerson, people, relationships, 5)
+    const ancestorTree = buildAncestorTree(focusPerson, $people, $relationships, 5)
 
     if (!ancestorTree) return
 
@@ -158,7 +157,7 @@
     <label class="control-group">
       <span>Focus Person:</span>
       <select bind:value={focusPersonId}>
-        {#each people as person}
+        {#each $people as person}
           <option value={person.id}>
             {person.firstName} {person.lastName}
           </option>
@@ -179,7 +178,7 @@
     </div>
   </div>
 
-  {#if people.length === 0}
+  {#if $people.length === 0}
     <div class="empty-state">
       <p>No family members to display. Add people in the List View first.</p>
     </div>

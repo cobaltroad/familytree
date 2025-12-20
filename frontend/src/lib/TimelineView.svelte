@@ -3,9 +3,7 @@
   import * as d3 from 'd3'
   import { getNodeColor, formatLifespan, assignGenerations } from './treeHelpers.js'
   import { modal } from '../stores/modalStore.js'
-
-  export let people = []
-  export let relationships = []
+  import { people, relationships } from '../stores/familyStore.js'
 
   let svgElement
   let width = 1200
@@ -14,14 +12,14 @@
   let showDeceased = true
   let showLiving = true
 
-  $: filteredPeople = people.filter(p => {
+  $: filteredPeople = $people.filter(p => {
     if (!p.birthDate) return false
     if (!showDeceased && p.deathDate) return false
     if (!showLiving && !p.deathDate) return false
     return true
   })
 
-  $: excludedCount = people.filter(p => !p.birthDate).length
+  $: excludedCount = $people.filter(p => !p.birthDate).length
 
   $: if (filteredPeople.length > 0) {
     renderTimeline()
@@ -52,7 +50,7 @@
     // Sort people based on groupBy setting
     let sortedPeople
     if (groupBy === 'generation') {
-      const peopleWithGen = assignGenerations(filteredPeople, relationships)
+      const peopleWithGen = assignGenerations(filteredPeople, $relationships)
       sortedPeople = peopleWithGen.sort((a, b) => {
         if (a.generation !== b.generation) return a.generation - b.generation
         return new Date(a.birthDate) - new Date(b.birthDate)
@@ -166,7 +164,7 @@
 
     // Generation labels if grouping by generation
     if (groupBy === 'generation') {
-      const peopleWithGen = assignGenerations(sortedPeople, relationships)
+      const peopleWithGen = assignGenerations(sortedPeople, $relationships)
       let lastGen = -1
       let genY = 50
 

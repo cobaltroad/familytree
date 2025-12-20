@@ -4,27 +4,20 @@
   import { getNodeColor, findRootPeople, buildDescendantTree } from './treeHelpers.js'
   import { createZoomBehavior } from './d3Helpers.js'
   import { modal } from '../stores/modalStore.js'
-
-  export let people = []
-  export let relationships = []
+  import { people, relationships } from '../stores/familyStore.js'
+  import { familyTree } from '../stores/derivedStores.js'
 
   let svgElement
   let width = 1200
   let height = 800
 
-  $: if (people.length > 0) {
+  $: if ($people.length > 0) {
     renderTree()
   }
 
   function buildTreeData() {
-    // Find root people (those without parents) using helper
-    const rootPeople = findRootPeople(people, relationships)
-
-    // If no roots found, use first person (shouldn't happen with valid data)
-    const roots = rootPeople.length > 0 ? rootPeople : people.slice(0, 1)
-
-    // Build tree structure for each root using helper
-    return roots.map(root => buildDescendantTree(root, people, relationships))
+    // Use derived store for optimized tree structure
+    return $familyTree
   }
 
   function renderTree() {
@@ -181,7 +174,7 @@
 </script>
 
 <div class="tree-container">
-  {#if people.length === 0}
+  {#if $people.length === 0}
     <p>No family members to display. Add people in the List View first.</p>
   {:else}
     <svg bind:this={svgElement}></svg>
