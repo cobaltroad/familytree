@@ -6,6 +6,7 @@ import { writable } from 'svelte/store'
  * Manages feature flags with localStorage persistence:
  * - collapsibleModal: Toggle between PersonModal and PersonModal_Collapsible
  * - twoColumnModal: Toggle two-column split modal layout (PersonModal_TwoColumn)
+ * - hybridModal: Toggle hybrid responsive modal (PersonModal_Hybrid) with card-based relationships
  *
  * This enables A/B testing, gradual rollouts, and easy feature toggling
  * during development and QA.
@@ -16,7 +17,8 @@ const STORAGE_KEY = 'featureFlags'
 // Default flag values
 const DEFAULT_FLAGS = {
   collapsibleModal: false,
-  twoColumnModal: false
+  twoColumnModal: false,
+  hybridModal: false
 }
 
 // Load flags from localStorage or use defaults

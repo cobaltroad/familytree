@@ -26,6 +26,26 @@ describe('featureFlags', () => {
       expect(value).toHaveProperty('collapsibleModal')
     })
 
+    it('should initialize with twoColumnModal disabled by default', () => {
+      const value = get(featureFlags)
+      expect(value.twoColumnModal).toBe(false)
+    })
+
+    it('should have twoColumnModal property in initial state', () => {
+      const value = get(featureFlags)
+      expect(value).toHaveProperty('twoColumnModal')
+    })
+
+    it('should initialize with hybridModal disabled by default', () => {
+      const value = get(featureFlags)
+      expect(value.hybridModal).toBe(false)
+    })
+
+    it('should have hybridModal property in initial state', () => {
+      const value = get(featureFlags)
+      expect(value).toHaveProperty('hybridModal')
+    })
+
     it('should load flags from localStorage on initialization', () => {
       // This test verifies that if we had previously saved flags,
       // they would be loaded when the store initializes
@@ -52,11 +72,25 @@ describe('featureFlags', () => {
       expect(value.collapsibleModal).toBe(true)
     })
 
+    it('should enable hybridModal flag', () => {
+      enableFlag('hybridModal')
+
+      const value = get(featureFlags)
+      expect(value.hybridModal).toBe(true)
+    })
+
     it('should persist enabled flag to localStorage', () => {
       enableFlag('collapsibleModal')
 
       const stored = JSON.parse(localStorage.getItem('featureFlags'))
       expect(stored.collapsibleModal).toBe(true)
+    })
+
+    it('should persist enabled hybridModal flag to localStorage', () => {
+      enableFlag('hybridModal')
+
+      const stored = JSON.parse(localStorage.getItem('featureFlags'))
+      expect(stored.hybridModal).toBe(true)
     })
 
     it('should notify subscribers when flag is enabled', () => {
@@ -99,12 +133,28 @@ describe('featureFlags', () => {
       expect(value.collapsibleModal).toBe(false)
     })
 
+    it('should disable hybridModal flag', () => {
+      enableFlag('hybridModal')
+      disableFlag('hybridModal')
+
+      const value = get(featureFlags)
+      expect(value.hybridModal).toBe(false)
+    })
+
     it('should persist disabled flag to localStorage', () => {
       enableFlag('collapsibleModal')
       disableFlag('collapsibleModal')
 
       const stored = JSON.parse(localStorage.getItem('featureFlags'))
       expect(stored.collapsibleModal).toBe(false)
+    })
+
+    it('should persist disabled hybridModal flag to localStorage', () => {
+      enableFlag('hybridModal')
+      disableFlag('hybridModal')
+
+      const stored = JSON.parse(localStorage.getItem('featureFlags'))
+      expect(stored.hybridModal).toBe(false)
     })
 
     it('should notify subscribers when flag is disabled', () => {
@@ -140,6 +190,15 @@ describe('featureFlags', () => {
     it('should return true for enabled flag', () => {
       enableFlag('collapsibleModal')
       expect(isEnabled('collapsibleModal')).toBe(true)
+    })
+
+    it('should return false for disabled hybridModal flag', () => {
+      expect(isEnabled('hybridModal')).toBe(false)
+    })
+
+    it('should return true for enabled hybridModal flag', () => {
+      enableFlag('hybridModal')
+      expect(isEnabled('hybridModal')).toBe(true)
     })
 
     it('should reflect changes immediately after enableFlag()', () => {

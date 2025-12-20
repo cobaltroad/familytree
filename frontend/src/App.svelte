@@ -10,6 +10,7 @@
   import PersonModal from './lib/PersonModal.svelte'
   import PersonModal_Collapsible from './lib/PersonModal_Collapsible.svelte'
   import PersonModal_TwoColumn from './lib/PersonModal_TwoColumn.svelte'
+  import PersonModal_Hybrid from './lib/PersonModal_Hybrid.svelte'
   import Notification from './lib/components/Notification.svelte'
   import * as familyStore from './stores/familyStore.js'
   import { featureFlags } from './lib/featureFlags.js'
@@ -74,7 +75,9 @@
     <TreeView />
   {/if}
 
-  {#if $featureFlags.twoColumnModal}
+  {#if $featureFlags.hybridModal}
+    <PersonModal_Hybrid />
+  {:else if $featureFlags.twoColumnModal}
     <PersonModal_TwoColumn />
   {:else if $featureFlags.collapsibleModal}
     <PersonModal_Collapsible />
