@@ -9,6 +9,7 @@
   import ViewSwitcher from './lib/ViewSwitcher.svelte'
   import PersonModal from './lib/PersonModal.svelte'
   import PersonModal_Collapsible from './lib/PersonModal_Collapsible.svelte'
+  import PersonModal_TwoColumn from './lib/PersonModal_TwoColumn.svelte'
   import Notification from './lib/components/Notification.svelte'
   import * as familyStore from './stores/familyStore.js'
   import { featureFlags } from './lib/featureFlags.js'
@@ -73,7 +74,9 @@
     <TreeView />
   {/if}
 
-  {#if $featureFlags.collapsibleModal}
+  {#if $featureFlags.twoColumnModal}
+    <PersonModal_TwoColumn />
+  {:else if $featureFlags.collapsibleModal}
     <PersonModal_Collapsible />
   {:else}
     <PersonModal />
