@@ -1,14 +1,12 @@
 <script>
   import { onMount, afterUpdate } from 'svelte'
-  import { createEventDispatcher } from 'svelte'
   import * as d3 from 'd3'
   import { getNodeColor, findRootPeople, buildAncestorTree } from './treeHelpers.js'
   import { createZoomBehavior } from './d3Helpers.js'
+  import { modal } from '../stores/modalStore.js'
 
   export let people = []
   export let relationships = []
-
-  const dispatch = createEventDispatcher()
 
   let svgElement
   let width = 1000
@@ -102,7 +100,7 @@
       .style('cursor', 'pointer')
       .on('click', (event, d) => {
         event.stopPropagation()
-        dispatch('editPerson', d.data.person)
+        modal.open(d.data.person.id, 'edit')
       })
 
     // Add person names with smart rotation
@@ -230,7 +228,7 @@
     <div class="radial-view">
       <svg bind:this={svgElement}></svg>
     </div>
-    <button class="fab" on:click={() => dispatch('addPerson')} aria-label="Add Person">
+    <button class="fab" on:click={() => modal.openNew()} aria-label="Add Person">
       +
     </button>
   {/if}

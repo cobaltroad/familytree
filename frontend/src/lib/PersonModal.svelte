@@ -1,27 +1,45 @@
 <script>
   import { createEventDispatcher } from 'svelte'
   import PersonForm from './PersonForm.svelte'
-
-  export let person = null
-  export let people = []
-  export let relationships = []
-  export let isOpen = false
+  import { modal } from '../stores/modalStore.js'
+  import { peopleById } from '../stores/derivedStores.js'
+  import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
+  import { error as errorNotification } from '../stores/notificationStore.js'
 
   const dispatch = createEventDispatcher()
 
+  // Get person data from store based on modal state
+  $: person = $modal.personId ? $peopleById.get($modal.personId) : null
+
   function closeModal() {
-    dispatch('close')
+    modal.close()
   }
 
-  function handleSubmit(event) {
-    dispatch('submit', event.detail)
-    closeModal()
-  }
+  async function handleSubmit(event) {
+    const personData = event.detail
 
-  function handleDelete() {
-    if (person && confirm(`Are you sure you want to delete ${person.firstName} ${person.lastName}?`)) {
-      dispatch('delete', person.id)
+    try {
+      if (personData.id) {
+        // Update existing person
+        await updatePerson(personData.id, personData)
+      } else {
+        // Create new person
+        await createPerson(personData)
+      }
       closeModal()
+    } catch (err) {
+      errorNotification('Failed to save person: ' + err.message)
+    }
+  }
+
+  async function handleDelete() {
+    if (person && confirm(`Are you sure you want to delete ${person.firstName} ${person.lastName}?`)) {
+      try {
+        await deletePerson(person.id)
+        closeModal()
+      } catch (err) {
+        errorNotification('Failed to delete person: ' + err.message)
+      }
     }
   }
 
@@ -45,13 +63,13 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-{#if isOpen}
+{#if $modal.isOpen}
   <div class="modal-backdrop" on:click={handleBackdropClick}>
     <div class="modal-content">
       <button class="close-button" on:click={closeModal} aria-label="Close modal">
         &times;
       </button>
-      <PersonForm {person} {people} {relationships} on:submit={handleSubmit} on:addChild={handleAddChild} />
+      <PersonForm {person} on:submit={handleSubmit} on:addChild={handleAddChild} />
       <div class="button-section">
         <button type="submit" form="person-form" class="update-button">
           {person ? 'Update' : 'Add'} Person

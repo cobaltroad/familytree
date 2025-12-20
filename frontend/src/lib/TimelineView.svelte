@@ -1,13 +1,11 @@
 <script>
   import { onMount, afterUpdate } from 'svelte'
-  import { createEventDispatcher } from 'svelte'
   import * as d3 from 'd3'
   import { getNodeColor, formatLifespan, assignGenerations } from './treeHelpers.js'
+  import { modal } from '../stores/modalStore.js'
 
   export let people = []
   export let relationships = []
-
-  const dispatch = createEventDispatcher()
 
   let svgElement
   let width = 1200
@@ -128,7 +126,7 @@
       .style('cursor', 'pointer')
       .on('click', (event, d) => {
         event.stopPropagation()
-        dispatch('editPerson', d)
+        modal.open(d.id, 'edit')
       })
       .on('mouseover', function() {
         d3.select(this).attr('opacity', 0.8)
@@ -243,7 +241,7 @@
     </div>
   {/if}
 
-  <button class="fab" on:click={() => dispatch('addPerson')} aria-label="Add Person">
+  <button class="fab" on:click={() => modal.openNew()} aria-label="Add Person">
     +
   </button>
 </div>

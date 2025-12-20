@@ -32,9 +32,6 @@
     }
     window.__SVELTE_STORES__.familyStore = familyStore
   }
-  let editingPerson = null
-  let isModalOpen = false
-  let modalKey = 0 // Key to force modal component recreation
   let currentPath = window.location.hash.slice(1) || '/'
   let successMessage = null
   let successTimeout = null
@@ -81,7 +78,6 @@
         // Update existing person
         const updatedPerson = await api.updatePerson(personData.id, personData)
         people = people.map(p => p.id === updatedPerson.id ? updatedPerson : p)
-        editingPerson = null
       } else {
         // Create new person
         const newPerson = await api.createPerson(personData)
@@ -90,28 +86,6 @@
     } catch (err) {
       errorNotification('Failed to save person: ' + err.message)
     }
-  }
-
-  function handleEditPerson(event) {
-    editingPerson = event.detail
-    isModalOpen = true
-    modalKey += 1 // Increment key to force component recreation
-  }
-
-  function handleOpenAddPersonModal() {
-    editingPerson = null
-    isModalOpen = true
-    modalKey += 1 // Increment key to force component recreation
-  }
-
-  function handleModalClose() {
-    isModalOpen = false
-    editingPerson = null
-  }
-
-  async function handleModalSubmit(event) {
-    await handleAddPerson(event)
-    handleModalClose()
   }
 
   async function handleDeletePerson(event) {
@@ -161,11 +135,6 @@
 
         // Show success notification
         showSuccessMessage(`Child ${result.person.firstName} ${result.person.lastName} added successfully!`)
-
-        // Update the editing person to reflect new data (refresh modal)
-        // This ensures the children list updates in the modal
-        editingPerson = people.find(p => p.id === parentId)
-        modalKey += 1 // Force modal refresh
       } else {
         errorNotification('Failed to add child: ' + result.error)
       }
@@ -213,7 +182,6 @@
       {relationships}
       {loading}
       {error}
-      editingPerson={editingPerson}
       onRetry={loadData}
       on:addPerson={handleAddPerson}
       on:deletePerson={handleDeletePerson}
@@ -224,52 +192,33 @@
     <TreeView
       {people}
       {relationships}
-      on:editPerson={handleEditPerson}
-      on:addPerson={handleOpenAddPersonModal}
     />
   {:else if normalizedPath === '/timeline'}
     <TimelineView
       {people}
       {relationships}
-      on:editPerson={handleEditPerson}
-      on:addPerson={handleOpenAddPersonModal}
     />
   {:else if normalizedPath === '/pedigree'}
     <PedigreeView
       {people}
       {relationships}
-      on:editPerson={handleEditPerson}
-      on:addPerson={handleOpenAddPersonModal}
     />
   {:else if normalizedPath === '/radial'}
     <RadialView
       {people}
       {relationships}
-      on:editPerson={handleEditPerson}
-      on:addPerson={handleOpenAddPersonModal}
     />
   {:else}
     <!-- Default to tree view for unknown routes -->
     <TreeView
       {people}
       {relationships}
-      on:editPerson={handleEditPerson}
-      on:addPerson={handleOpenAddPersonModal}
     />
   {/if}
 
-  {#key modalKey}
-    <PersonModal
-      person={editingPerson}
-      {people}
-      {relationships}
-      isOpen={isModalOpen}
-      on:close={handleModalClose}
-      on:submit={handleModalSubmit}
-      on:delete={handleDeletePerson}
-      on:addChild={handleAddChild}
-    />
-  {/key}
+  <PersonModal
+    on:addChild={handleAddChild}
+  />
 </main>
 
 <style>
