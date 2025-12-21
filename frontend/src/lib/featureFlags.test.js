@@ -16,34 +16,9 @@ describe('featureFlags', () => {
   })
 
   describe('initial state', () => {
-    it('should initialize with collapsibleModal disabled by default', () => {
+    it('should initialize with empty flags object', () => {
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(false)
-    })
-
-    it('should have collapsibleModal property in initial state', () => {
-      const value = get(featureFlags)
-      expect(value).toHaveProperty('collapsibleModal')
-    })
-
-    it('should initialize with twoColumnModal disabled by default', () => {
-      const value = get(featureFlags)
-      expect(value.twoColumnModal).toBe(false)
-    })
-
-    it('should have twoColumnModal property in initial state', () => {
-      const value = get(featureFlags)
-      expect(value).toHaveProperty('twoColumnModal')
-    })
-
-    it('should initialize with hybridModal disabled by default', () => {
-      const value = get(featureFlags)
-      expect(value.hybridModal).toBe(false)
-    })
-
-    it('should have hybridModal property in initial state', () => {
-      const value = get(featureFlags)
-      expect(value).toHaveProperty('hybridModal')
+      expect(value).toEqual({})
     })
 
     it('should load flags from localStorage on initialization', () => {
@@ -52,45 +27,30 @@ describe('featureFlags', () => {
       // The actual test for this is covered by the persistence tests
       const value = get(featureFlags)
       expect(value).toBeDefined()
-      expect(value).toHaveProperty('collapsibleModal')
     })
 
     it('should handle corrupted localStorage data gracefully', () => {
       localStorage.setItem('featureFlags', 'invalid json{')
 
-      // Should not throw and should use defaults
+      // Should not throw and should use defaults (empty object)
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(false)
+      expect(value).toEqual({})
     })
   })
 
   describe('enableFlag()', () => {
-    it('should enable collapsibleModal flag', () => {
-      enableFlag('collapsibleModal')
+    it('should enable a custom feature flag', () => {
+      enableFlag('customFeature')
 
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(true)
-    })
-
-    it('should enable hybridModal flag', () => {
-      enableFlag('hybridModal')
-
-      const value = get(featureFlags)
-      expect(value.hybridModal).toBe(true)
+      expect(value.customFeature).toBe(true)
     })
 
     it('should persist enabled flag to localStorage', () => {
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
 
       const stored = JSON.parse(localStorage.getItem('featureFlags'))
-      expect(stored.collapsibleModal).toBe(true)
-    })
-
-    it('should persist enabled hybridModal flag to localStorage', () => {
-      enableFlag('hybridModal')
-
-      const stored = JSON.parse(localStorage.getItem('featureFlags'))
-      expect(stored.hybridModal).toBe(true)
+      expect(stored.customFeature).toBe(true)
     })
 
     it('should notify subscribers when flag is enabled', () => {
@@ -99,119 +59,93 @@ describe('featureFlags', () => {
         capturedValue = value
       })
 
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
 
-      expect(capturedValue.collapsibleModal).toBe(true)
+      expect(capturedValue.customFeature).toBe(true)
 
       unsubscribe()
     })
 
     it('should be idempotent when enabling same flag multiple times', () => {
-      enableFlag('collapsibleModal')
-      enableFlag('collapsibleModal')
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
+      enableFlag('customFeature')
+      enableFlag('customFeature')
 
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(true)
+      expect(value.customFeature).toBe(true)
     })
 
-    it('should ignore unknown flag names gracefully', () => {
-      // Should not throw
-      enableFlag('unknownFlag')
+    it('should allow enabling any flag dynamically', () => {
+      enableFlag('newFlag')
 
       const value = get(featureFlags)
-      expect(value).not.toHaveProperty('unknownFlag')
+      expect(value.newFlag).toBe(true)
     })
   })
 
   describe('disableFlag()', () => {
-    it('should disable collapsibleModal flag', () => {
-      enableFlag('collapsibleModal')
-      disableFlag('collapsibleModal')
+    it('should disable a custom feature flag', () => {
+      enableFlag('customFeature')
+      disableFlag('customFeature')
 
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(false)
-    })
-
-    it('should disable hybridModal flag', () => {
-      enableFlag('hybridModal')
-      disableFlag('hybridModal')
-
-      const value = get(featureFlags)
-      expect(value.hybridModal).toBe(false)
+      expect(value.customFeature).toBe(false)
     })
 
     it('should persist disabled flag to localStorage', () => {
-      enableFlag('collapsibleModal')
-      disableFlag('collapsibleModal')
+      enableFlag('customFeature')
+      disableFlag('customFeature')
 
       const stored = JSON.parse(localStorage.getItem('featureFlags'))
-      expect(stored.collapsibleModal).toBe(false)
-    })
-
-    it('should persist disabled hybridModal flag to localStorage', () => {
-      enableFlag('hybridModal')
-      disableFlag('hybridModal')
-
-      const stored = JSON.parse(localStorage.getItem('featureFlags'))
-      expect(stored.hybridModal).toBe(false)
+      expect(stored.customFeature).toBe(false)
     })
 
     it('should notify subscribers when flag is disabled', () => {
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
 
       let capturedValue
       const unsubscribe = featureFlags.subscribe(value => {
         capturedValue = value
       })
 
-      disableFlag('collapsibleModal')
+      disableFlag('customFeature')
 
-      expect(capturedValue.collapsibleModal).toBe(false)
+      expect(capturedValue.customFeature).toBe(false)
 
       unsubscribe()
     })
 
     it('should be idempotent when disabling same flag multiple times', () => {
-      disableFlag('collapsibleModal')
-      disableFlag('collapsibleModal')
-      disableFlag('collapsibleModal')
+      disableFlag('customFeature')
+      disableFlag('customFeature')
+      disableFlag('customFeature')
 
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(false)
+      expect(value.customFeature).toBe(false)
     })
   })
 
   describe('isEnabled()', () => {
     it('should return false for disabled flag', () => {
-      expect(isEnabled('collapsibleModal')).toBe(false)
+      expect(isEnabled('customFeature')).toBe(false)
     })
 
     it('should return true for enabled flag', () => {
-      enableFlag('collapsibleModal')
-      expect(isEnabled('collapsibleModal')).toBe(true)
-    })
-
-    it('should return false for disabled hybridModal flag', () => {
-      expect(isEnabled('hybridModal')).toBe(false)
-    })
-
-    it('should return true for enabled hybridModal flag', () => {
-      enableFlag('hybridModal')
-      expect(isEnabled('hybridModal')).toBe(true)
+      enableFlag('customFeature')
+      expect(isEnabled('customFeature')).toBe(true)
     })
 
     it('should reflect changes immediately after enableFlag()', () => {
-      expect(isEnabled('collapsibleModal')).toBe(false)
-      enableFlag('collapsibleModal')
-      expect(isEnabled('collapsibleModal')).toBe(true)
+      expect(isEnabled('customFeature')).toBe(false)
+      enableFlag('customFeature')
+      expect(isEnabled('customFeature')).toBe(true)
     })
 
     it('should reflect changes immediately after disableFlag()', () => {
-      enableFlag('collapsibleModal')
-      expect(isEnabled('collapsibleModal')).toBe(true)
-      disableFlag('collapsibleModal')
-      expect(isEnabled('collapsibleModal')).toBe(false)
+      enableFlag('customFeature')
+      expect(isEnabled('customFeature')).toBe(true)
+      disableFlag('customFeature')
+      expect(isEnabled('customFeature')).toBe(false)
     })
 
     it('should return false for unknown flag names', () => {
@@ -220,17 +154,18 @@ describe('featureFlags', () => {
   })
 
   describe('resetFlags()', () => {
-    it('should reset all flags to default state', () => {
-      enableFlag('collapsibleModal')
+    it('should reset all flags to default state (empty object)', () => {
+      enableFlag('customFeature')
+      enableFlag('anotherFlag')
 
       resetFlags()
 
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(false)
+      expect(value).toEqual({})
     })
 
     it('should clear localStorage when resetting', () => {
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
       expect(localStorage.getItem('featureFlags')).not.toBe(null)
 
       resetFlags()
@@ -239,7 +174,7 @@ describe('featureFlags', () => {
     })
 
     it('should notify subscribers when flags are reset', () => {
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
 
       let capturedValue
       const unsubscribe = featureFlags.subscribe(value => {
@@ -248,7 +183,7 @@ describe('featureFlags', () => {
 
       resetFlags()
 
-      expect(capturedValue.collapsibleModal).toBe(false)
+      expect(capturedValue).toEqual({})
 
       unsubscribe()
     })
@@ -264,13 +199,13 @@ describe('featureFlags', () => {
       // Initial subscription counts as first update
       expect(updateCount).toBe(1)
 
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
       expect(updateCount).toBe(2)
 
-      disableFlag('collapsibleModal')
+      disableFlag('customFeature')
       expect(updateCount).toBe(3)
 
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
       expect(updateCount).toBe(4)
 
       unsubscribe()
@@ -281,10 +216,10 @@ describe('featureFlags', () => {
       const unsubscribe1 = featureFlags.subscribe(v => { value1 = v })
       const unsubscribe2 = featureFlags.subscribe(v => { value2 = v })
 
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
 
-      expect(value1.collapsibleModal).toBe(true)
-      expect(value2.collapsibleModal).toBe(true)
+      expect(value1.customFeature).toBe(true)
+      expect(value2.customFeature).toBe(true)
 
       unsubscribe1()
       unsubscribe2()
@@ -293,63 +228,63 @@ describe('featureFlags', () => {
 
   describe('localStorage persistence', () => {
     it('should persist flag changes across multiple operations', () => {
-      enableFlag('collapsibleModal')
-      disableFlag('collapsibleModal')
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
+      disableFlag('customFeature')
+      enableFlag('customFeature')
 
       const stored = JSON.parse(localStorage.getItem('featureFlags'))
-      expect(stored.collapsibleModal).toBe(true)
+      expect(stored.customFeature).toBe(true)
     })
 
     it('should maintain flag state after multiple enable/disable cycles', () => {
       for (let i = 0; i < 5; i++) {
-        enableFlag('collapsibleModal')
-        disableFlag('collapsibleModal')
+        enableFlag('customFeature')
+        disableFlag('customFeature')
       }
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
 
-      expect(isEnabled('collapsibleModal')).toBe(true)
+      expect(isEnabled('customFeature')).toBe(true)
 
       const stored = JSON.parse(localStorage.getItem('featureFlags'))
-      expect(stored.collapsibleModal).toBe(true)
+      expect(stored.customFeature).toBe(true)
     })
   })
 
   describe('integration scenarios', () => {
     it('should support developer toggling feature flag in console', () => {
       // Developer enables flag in console
-      enableFlag('collapsibleModal')
-      expect(isEnabled('collapsibleModal')).toBe(true)
+      enableFlag('customFeature')
+      expect(isEnabled('customFeature')).toBe(true)
 
       // Application uses reactive store
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(true)
+      expect(value.customFeature).toBe(true)
 
       // Developer disables flag
-      disableFlag('collapsibleModal')
-      expect(isEnabled('collapsibleModal')).toBe(false)
+      disableFlag('customFeature')
+      expect(isEnabled('customFeature')).toBe(false)
     })
 
     it('should persist flag state across page reloads (simulated)', () => {
-      enableFlag('collapsibleModal')
+      enableFlag('customFeature')
 
       // Simulate page reload by getting fresh localStorage value
       const storedFlags = JSON.parse(localStorage.getItem('featureFlags'))
-      expect(storedFlags.collapsibleModal).toBe(true)
+      expect(storedFlags.customFeature).toBe(true)
     })
 
     it('should support QA testing workflow: enable -> test -> disable', () => {
       // QA enables feature flag
-      enableFlag('collapsibleModal')
-      expect(isEnabled('collapsibleModal')).toBe(true)
+      enableFlag('customFeature')
+      expect(isEnabled('customFeature')).toBe(true)
 
       // QA performs testing (feature is enabled)
       const value = get(featureFlags)
-      expect(value.collapsibleModal).toBe(true)
+      expect(value.customFeature).toBe(true)
 
       // QA disables after testing
-      disableFlag('collapsibleModal')
-      expect(isEnabled('collapsibleModal')).toBe(false)
+      disableFlag('customFeature')
+      expect(isEnabled('customFeature')).toBe(false)
     })
   })
 })

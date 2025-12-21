@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/svelte'
-import PersonModal_Hybrid from './PersonModal_Hybrid.svelte'
+import PersonModal from './PersonModal.svelte'
 import { modal } from '../stores/modalStore.js'
 import { people, relationships } from '../stores/familyStore.js'
 import { get } from 'svelte/store'
 
-describe('PersonModal_Hybrid', () => {
+describe('PersonModal', () => {
   const mockPeople = [
     { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: '1949-01-01' },
     { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'female', birthDate: '1952-02-02' },
@@ -31,7 +31,7 @@ describe('PersonModal_Hybrid', () => {
     it('should render when modal is open', () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const modalBackdrop = container.querySelector('.modal-backdrop')
       expect(modalBackdrop).toBeTruthy()
@@ -40,7 +40,7 @@ describe('PersonModal_Hybrid', () => {
     it('should not render when modal is closed', () => {
       modal.close()
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const modalBackdrop = container.querySelector('.modal-backdrop')
       expect(modalBackdrop).toBeFalsy()
@@ -49,7 +49,7 @@ describe('PersonModal_Hybrid', () => {
     it('should show edit person title when editing', () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       expect(container.textContent).toContain('Edit Person')
     })
@@ -57,7 +57,7 @@ describe('PersonModal_Hybrid', () => {
     it('should show "Add New Person" when creating', () => {
       modal.openNew()
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       expect(container.textContent).toContain('Add New Person')
     })
@@ -68,7 +68,7 @@ describe('PersonModal_Hybrid', () => {
       global.innerWidth = 1920
 
       modal.open(3, 'edit')
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       // Should have TwoColumnLayout or two-column structure
       expect(container).toBeTruthy()
@@ -78,7 +78,7 @@ describe('PersonModal_Hybrid', () => {
       global.innerWidth = 375
 
       modal.open(3, 'edit')
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       // Should have collapsible section or mobile layout
       expect(container).toBeTruthy()
@@ -91,7 +91,7 @@ describe('PersonModal_Hybrid', () => {
 
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       // Should show parents in card format
       expect(container.textContent).toContain('John Doe') // Father
@@ -103,7 +103,7 @@ describe('PersonModal_Hybrid', () => {
 
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const cards = container.querySelectorAll('.relationship-card, .card[role="button"]')
       expect(cards.length).toBeGreaterThan(0)
@@ -116,7 +116,7 @@ describe('PersonModal_Hybrid', () => {
 
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       // Should have parent selectors for mother and father
       const selects = container.querySelectorAll('select')
@@ -128,7 +128,7 @@ describe('PersonModal_Hybrid', () => {
     it('should close when close button is clicked', async () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const closeButton = container.querySelector('.close-button, button[aria-label*="Close"]')
       await fireEvent.click(closeButton)
@@ -139,7 +139,7 @@ describe('PersonModal_Hybrid', () => {
     it('should close when Escape key is pressed', async () => {
       modal.open(3, 'edit')
 
-      render(PersonModal_Hybrid)
+      render(PersonModal)
 
       await fireEvent.keyDown(window, { key: 'Escape' })
 
@@ -149,7 +149,7 @@ describe('PersonModal_Hybrid', () => {
     it('should close when backdrop is clicked', async () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const backdrop = container.querySelector('.modal-backdrop')
       await fireEvent.click(backdrop)
@@ -160,7 +160,7 @@ describe('PersonModal_Hybrid', () => {
     it('should not close when modal content is clicked', async () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const modalContent = container.querySelector('.modal-content')
       await fireEvent.click(modalContent)
@@ -173,7 +173,7 @@ describe('PersonModal_Hybrid', () => {
     it('should have submit button', () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const submitButton = container.querySelector('button[type="submit"], .update-button')
       expect(submitButton).toBeTruthy()
@@ -182,7 +182,7 @@ describe('PersonModal_Hybrid', () => {
     it('should have delete button when editing', () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const deleteButton = container.querySelector('.delete-button')
       expect(deleteButton).toBeTruthy()
@@ -191,7 +191,7 @@ describe('PersonModal_Hybrid', () => {
     it('should not have delete button when creating', () => {
       modal.openNew()
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const deleteButton = container.querySelector('.delete-button')
       expect(deleteButton).toBeFalsy()
@@ -202,7 +202,7 @@ describe('PersonModal_Hybrid', () => {
     it('should have proper ARIA roles', () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       expect(container).toBeTruthy()
     })
@@ -210,7 +210,7 @@ describe('PersonModal_Hybrid', () => {
     it('should be keyboard navigable', () => {
       modal.open(3, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       const focusableElements = container.querySelectorAll('button, input, select, [tabindex="0"]')
       expect(focusableElements.length).toBeGreaterThan(0)
@@ -226,7 +226,7 @@ describe('PersonModal_Hybrid', () => {
 
       modal.open(99, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       expect(container.textContent).toContain('Edit Person')
     })
@@ -234,7 +234,7 @@ describe('PersonModal_Hybrid', () => {
     it('should handle invalid person ID gracefully', () => {
       modal.open(999, 'edit')
 
-      const { container } = render(PersonModal_Hybrid)
+      const { container } = render(PersonModal)
 
       expect(container).toBeTruthy()
     })

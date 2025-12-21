@@ -3,10 +3,8 @@ import { writable } from 'svelte/store'
 /**
  * Feature Flags Store - Centralized feature flag management
  *
- * Manages feature flags with localStorage persistence:
- * - collapsibleModal: Toggle between PersonModal and PersonModal_Collapsible
- * - twoColumnModal: Toggle two-column split modal layout (PersonModal_TwoColumn)
- * - hybridModal: Toggle hybrid responsive modal (PersonModal_Hybrid) with card-based relationships
+ * Manages feature flags with localStorage persistence.
+ * Flags are dynamic and can be enabled/disabled at runtime.
  *
  * This enables A/B testing, gradual rollouts, and easy feature toggling
  * during development and QA.
@@ -14,12 +12,8 @@ import { writable } from 'svelte/store'
 
 const STORAGE_KEY = 'featureFlags'
 
-// Default flag values
-const DEFAULT_FLAGS = {
-  collapsibleModal: false,
-  twoColumnModal: false,
-  hybridModal: false
-}
+// Default flag values (empty - no predefined flags)
+const DEFAULT_FLAGS = {}
 
 // Load flags from localStorage or use defaults
 function loadFlags() {
@@ -53,32 +47,26 @@ function createFeatureFlagsStore() {
     subscribe,
 
     /**
-     * Enable a feature flag
+     * Enable a feature flag (dynamically creates flag if it doesn't exist)
      * @param {string} flagName - Name of the flag to enable
      */
     enable: (flagName) => {
       update(flags => {
-        if (flags.hasOwnProperty(flagName)) {
-          const newFlags = { ...flags, [flagName]: true }
-          saveFlags(newFlags)
-          return newFlags
-        }
-        return flags
+        const newFlags = { ...flags, [flagName]: true }
+        saveFlags(newFlags)
+        return newFlags
       })
     },
 
     /**
-     * Disable a feature flag
+     * Disable a feature flag (dynamically creates flag if it doesn't exist)
      * @param {string} flagName - Name of the flag to disable
      */
     disable: (flagName) => {
       update(flags => {
-        if (flags.hasOwnProperty(flagName)) {
-          const newFlags = { ...flags, [flagName]: false }
-          saveFlags(newFlags)
-          return newFlags
-        }
-        return flags
+        const newFlags = { ...flags, [flagName]: false }
+        saveFlags(newFlags)
+        return newFlags
       })
     },
 
