@@ -35,6 +35,7 @@ import { buildDescendantTree } from '../lib/treeHelpers.js'
  * @property {Person|null} father - Father of the person (null if not found)
  * @property {Person[]} siblings - Array of siblings (people who share at least one parent)
  * @property {Person[]} children - Array of children
+ * @property {Person[]} spouses - Array of spouses
  */
 
 /**
@@ -137,7 +138,7 @@ export const familyTree = derived(
 
 /**
  * Factory function that creates a derived store for a specific person's relationships.
- * Returns a store that provides mother, father, siblings, and children for the given person.
+ * Returns a store that provides mother, father, siblings, children, and spouses for the given person.
  * Uses O(1) lookups from peopleById and relationshipsByPerson for efficiency.
  *
  * @param {number} personId - ID of the person to get relationships for
@@ -147,7 +148,7 @@ export const familyTree = derived(
  * import { createPersonRelationships } from './stores/derivedStores.js'
  *
  * const personRels = createPersonRelationships(42)
- * const { mother, father, siblings, children } = $personRels
+ * const { mother, father, siblings, children, spouses } = $personRels
  */
 export function createPersonRelationships(personId) {
   return derived(
@@ -210,11 +211,25 @@ export function createPersonRelationships(personId) {
         }
       })
 
+      // Find spouses
+      const spouses = []
+      rels.forEach(rel => {
+        if (rel.type === 'spouse') {
+          // Determine which person is the spouse (the one that's not personId)
+          const spouseId = rel.person1Id === personId ? rel.person2Id : rel.person1Id
+          const spouse = $peopleById.get(spouseId)
+          if (spouse) {
+            spouses.push(spouse)
+          }
+        }
+      })
+
       return {
         mother,
         father,
         siblings,
-        children
+        children,
+        spouses
       }
     }
   )

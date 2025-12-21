@@ -5,15 +5,16 @@
   import PersonFormFields from './components/PersonFormFields.svelte'
   import RelationshipCard from './components/RelationshipCard.svelte'
   import RelationshipCardGrid from './components/RelationshipCardGrid.svelte'
-  import InlineParentSelector from './components/InlineParentSelector.svelte'
   import QuickAddChild from './QuickAddChild.svelte'
   import QuickAddParent from './QuickAddParent.svelte'
+  import QuickAddSpouse from './QuickAddSpouse.svelte'
   import { modal } from '../stores/modalStore.js'
   import { peopleById, createPersonRelationships } from '../stores/derivedStores.js'
   import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
   import { error as errorNotification, success as successNotification } from '../stores/notificationStore.js'
   import { addChildWithRelationship } from './quickAddChildUtils.js'
   import { addParentWithRelationship } from './quickAddParentUtils.js'
+  import { addSpouseWithRelationship } from './quickAddSpouseUtils.js'
   import { api } from './api.js'
   import { people, relationships } from '../stores/familyStore.js'
 
@@ -25,6 +26,9 @@
   // Quick Add Parent state
   let showQuickAddMother = false
   let showQuickAddFather = false
+
+  // Quick Add Spouse state
+  let showQuickAddSpouse = false
 
   // Responsive breakpoint detection
   let windowWidth = 0
@@ -83,19 +87,6 @@
     if (event.key === 'Escape') {
       closeModal()
     }
-  }
-
-  // Inline parent editing handlers
-  async function handleParentSelect(event) {
-    // This would create/update parent relationship
-    // For now, just show success message
-    successNotification(`Parent relationship updated`)
-  }
-
-  async function handleParentRemove(event) {
-    // This would remove parent relationship
-    // For now, just show success message
-    successNotification(`Parent relationship removed`)
   }
 
   // Quick Add Child handlers
@@ -186,6 +177,41 @@
       errorNotification('Failed to add parent: ' + err.message)
     }
   }
+
+  // Quick Add Spouse handlers
+  function toggleQuickAddSpouse() {
+    showQuickAddSpouse = !showQuickAddSpouse
+  }
+
+  function handleQuickAddSpouseCancel() {
+    showQuickAddSpouse = false
+  }
+
+  async function handleQuickAddSpouseSubmit(event) {
+    const { spouseData, personId } = event.detail
+
+    try {
+      // Use atomic spouse creation with bidirectional relationships
+      const result = await addSpouseWithRelationship(api, spouseData, personId)
+
+      if (result.success) {
+        // Update stores with new spouse and both relationships
+        people.update(currentPeople => [...currentPeople, result.person])
+        relationships.update(currentRelationships => [...currentRelationships, ...result.relationships])
+
+        // Show success notification
+        successNotification('Spouse added successfully')
+
+        // Hide the form
+        showQuickAddSpouse = false
+      } else {
+        // Show error notification
+        errorNotification(result.error || 'Failed to add spouse')
+      }
+    } catch (err) {
+      errorNotification('Failed to add spouse: ' + err.message)
+    }
+  }
 </script>
 
 <svelte:window bind:innerWidth={windowWidth} on:keydown={handleKeydown} />
@@ -208,24 +234,6 @@
           <div slot="right">
             {#if person && personRelationships}
               <h2>Relationships</h2>
-
-              <!-- Parent Selection -->
-              <div class="parent-selection">
-                <InlineParentSelector
-                  parentRole="mother"
-                  currentParentId={$personRelationships.mother?.id || null}
-                  excludePersonId={person.id}
-                  on:select={handleParentSelect}
-                  on:remove={handleParentRemove}
-                />
-                <InlineParentSelector
-                  parentRole="father"
-                  currentParentId={$personRelationships.father?.id || null}
-                  excludePersonId={person.id}
-                  on:select={handleParentSelect}
-                  on:remove={handleParentRemove}
-                />
-              </div>
 
               <!-- Parent Cards -->
               <RelationshipCardGrid title="Parents" count={($personRelationships.mother ? 1 : 0) + ($personRelationships.father ? 1 : 0)}>
@@ -302,6 +310,39 @@
                 {/each}
               </RelationshipCardGrid>
 
+              <!-- Spouse Cards -->
+              <RelationshipCardGrid title="Spouses" count={$personRelationships.spouses.length}>
+                {#each $personRelationships.spouses as spouse (spouse.id)}
+                  <RelationshipCard
+                    person={spouse}
+                    relationshipType="Spouse"
+                    on:click={handleCardClick}
+                  />
+                {/each}
+              </RelationshipCardGrid>
+
+              <!-- Add Spouse Button (always visible, supports multiple spouses) -->
+              <button
+                type="button"
+                class="add-spouse-button"
+                data-testid="add-spouse-button"
+                on:click={toggleQuickAddSpouse}
+              >
+                {showQuickAddSpouse ? 'Cancel' : ($personRelationships.spouses.length > 0 ? '+ Add Another Spouse' : '+ Add Spouse')}
+              </button>
+
+              <!-- Quick Add Spouse Form -->
+              {#if showQuickAddSpouse}
+                <div data-testid="quick-add-spouse-form">
+                  <QuickAddSpouse
+                    person={person}
+                    onCancel={handleQuickAddSpouseCancel}
+                    on:submit={handleQuickAddSpouseSubmit}
+                    on:cancel={handleQuickAddSpouseCancel}
+                  />
+                </div>
+              {/if}
+
               <!-- Children Cards -->
               <RelationshipCardGrid title="Children" count={$personRelationships.children.length}>
                 {#each $personRelationships.children as child (child.id)}
@@ -351,23 +392,6 @@
 
         {#if person && personRelationships}
           <CollapsibleSection title="Parents" expanded={false} count={($personRelationships.mother ? 1 : 0) + ($personRelationships.father ? 1 : 0)}>
-            <div class="parent-selection">
-              <InlineParentSelector
-                parentRole="mother"
-                currentParentId={$personRelationships.mother?.id || null}
-                excludePersonId={person.id}
-                on:select={handleParentSelect}
-                on:remove={handleParentRemove}
-              />
-              <InlineParentSelector
-                parentRole="father"
-                currentParentId={$personRelationships.father?.id || null}
-                excludePersonId={person.id}
-                on:select={handleParentSelect}
-                on:remove={handleParentRemove}
-              />
-            </div>
-
             <div class="mobile-cards">
               {#if $personRelationships.mother}
                 <RelationshipCard
@@ -442,6 +466,40 @@
                 />
               {/each}
             </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Spouses" expanded={false} count={$personRelationships.spouses.length}>
+            <div class="mobile-cards">
+              {#each $personRelationships.spouses as spouse (spouse.id)}
+                <RelationshipCard
+                  person={spouse}
+                  relationshipType="Spouse"
+                  on:click={handleCardClick}
+                />
+              {/each}
+            </div>
+
+            <!-- Add Spouse Button (Mobile) -->
+            <button
+              type="button"
+              class="add-spouse-button mobile"
+              data-testid="add-spouse-button"
+              on:click={toggleQuickAddSpouse}
+            >
+              {showQuickAddSpouse ? 'Cancel' : ($personRelationships.spouses.length > 0 ? '+ Add Another Spouse' : '+ Add Spouse')}
+            </button>
+
+            <!-- Quick Add Spouse Form (Mobile) -->
+            {#if showQuickAddSpouse}
+              <div data-testid="quick-add-spouse-form">
+                <QuickAddSpouse
+                  person={person}
+                  onCancel={handleQuickAddSpouseCancel}
+                  on:submit={handleQuickAddSpouseSubmit}
+                  on:cancel={handleQuickAddSpouseCancel}
+                />
+              </div>
+            {/if}
           </CollapsibleSection>
 
           <CollapsibleSection title="Children" expanded={false} count={$personRelationships.children.length} data-testid="collapsible-children">
@@ -563,13 +621,6 @@
     color: #333;
   }
 
-  .parent-selection {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: #f9f9f9;
-    border-radius: 4px;
-  }
-
   .mobile-cards {
     display: flex;
     flex-direction: column;
@@ -682,6 +733,33 @@
   }
 
   .add-parent-button.mobile {
+    margin-top: 0.75rem;
+  }
+
+  .add-spouse-button {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    background-color: #9C27B0;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .add-spouse-button:hover {
+    background-color: #7B1FA2;
+  }
+
+  .add-spouse-button:focus {
+    outline: 2px solid #9C27B0;
+    outline-offset: 2px;
+  }
+
+  .add-spouse-button.mobile {
     margin-top: 0.75rem;
   }
 

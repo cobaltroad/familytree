@@ -110,17 +110,75 @@ describe('PersonModal', () => {
     })
   })
 
-  describe('inline parent editing', () => {
-    it('should render InlineParentSelector components', () => {
-      global.innerWidth = 1920 // Desktop mode to show selectors
+  describe('parent display', () => {
+    it('should show parent names when parents exist', () => {
+      global.innerWidth = 1920 // Desktop mode to show cards
 
       modal.open(3, 'edit')
 
       const { container } = render(PersonModal)
 
-      // Should have parent selectors for mother and father
-      const selects = container.querySelectorAll('select')
-      expect(selects.length).toBeGreaterThanOrEqual(2)
+      // Should show parent names (read-only)
+      expect(container.textContent).toContain('John Doe') // Father
+      expect(container.textContent).toContain('Jane Smith') // Mother
+    })
+
+    it('should show Add Mother button when mother does not exist', () => {
+      // Set up data: person with no mother
+      people.set([
+        { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: '1949-01-01' },
+        { id: 3, firstName: 'Alice', lastName: 'Doe', gender: 'female', birthDate: '1980-03-03' }
+      ])
+      relationships.set([
+        { id: 1, person1Id: 1, person2Id: 3, type: 'parentOf', parentRole: 'father' }
+      ])
+
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const addMotherButton = container.querySelector('[data-testid="add-mother-button"]')
+      expect(addMotherButton).toBeTruthy()
+      expect(addMotherButton.textContent).toContain('Add Mother')
+    })
+
+    it('should show Add Father button when father does not exist', () => {
+      // Set up data: person with no father
+      people.set([
+        { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'female', birthDate: '1952-02-02' },
+        { id: 3, firstName: 'Alice', lastName: 'Doe', gender: 'female', birthDate: '1980-03-03' }
+      ])
+      relationships.set([
+        { id: 2, person1Id: 2, person2Id: 3, type: 'parentOf', parentRole: 'mother' }
+      ])
+
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const addFatherButton = container.querySelector('[data-testid="add-father-button"]')
+      expect(addFatherButton).toBeTruthy()
+      expect(addFatherButton.textContent).toContain('Add Father')
+    })
+
+    it('should not show parent dropdown selectors', () => {
+      global.innerWidth = 1920 // Desktop mode
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      // Should NOT have dropdown selectors for mother and father
+      // We don't count form selects, just check there are no parent selectors
+      const parentSelection = container.querySelector('.parent-selection')
+      if (parentSelection) {
+        const selects = parentSelection.querySelectorAll('select')
+        expect(selects.length).toBe(0)
+      }
     })
   })
 
