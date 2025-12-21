@@ -64,7 +64,7 @@
   <form on:submit|preventDefault={handleSubmit}>
     <!-- Parent Role Selection (only shown if gender is 'other' or unspecified) -->
     {#if !autoParentRole}
-      <div class="form-group">
+      <div class="form-group" data-testid="parent-role-selector">
         <label>Parent Role *</label>
         <div class="radio-group">
           <label class="radio-label">
@@ -92,7 +92,7 @@
         </div>
       </div>
     {:else}
-      <div class="auto-role-notice">
+      <div class="auto-role-notice" data-testid="auto-role-notice">
         This child will be added as <strong>{autoParentRole === 'mother' ? 'Mother' : 'Father'}</strong>
       </div>
     {/if}
@@ -195,10 +195,10 @@
     {/if}
 
     <div class="button-group">
-      <button type="submit" class="add-button">
+      <button type="submit" class="add-button" data-testid="quick-add-child-submit">
         Add Child
       </button>
-      <button type="button" class="cancel-button" on:click={handleCancel}>
+      <button type="button" class="cancel-button" data-testid="quick-add-child-cancel" on:click={handleCancel}>
         Cancel
       </button>
     </div>

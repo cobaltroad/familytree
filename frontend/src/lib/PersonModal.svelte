@@ -6,12 +6,19 @@
   import RelationshipCard from './components/RelationshipCard.svelte'
   import RelationshipCardGrid from './components/RelationshipCardGrid.svelte'
   import InlineParentSelector from './components/InlineParentSelector.svelte'
+  import QuickAddChild from './QuickAddChild.svelte'
   import { modal } from '../stores/modalStore.js'
   import { peopleById, createPersonRelationships } from '../stores/derivedStores.js'
   import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
   import { error as errorNotification, success as successNotification } from '../stores/notificationStore.js'
+  import { addChildWithRelationship } from './quickAddChildUtils.js'
+  import { api } from './api.js'
+  import { people, relationships } from '../stores/familyStore.js'
 
   const dispatch = createEventDispatcher()
+
+  // Quick Add Child state
+  let showQuickAddChild = false
 
   // Responsive breakpoint detection
   let windowWidth = 0
@@ -83,6 +90,41 @@
     // This would remove parent relationship
     // For now, just show success message
     successNotification(`Parent relationship removed`)
+  }
+
+  // Quick Add Child handlers
+  function toggleQuickAddChild() {
+    showQuickAddChild = !showQuickAddChild
+  }
+
+  function handleQuickAddChildCancel() {
+    showQuickAddChild = false
+  }
+
+  async function handleQuickAddChildSubmit(event) {
+    const { childData, parentId, parentRole } = event.detail
+
+    try {
+      // Use atomic child creation with relationship
+      const result = await addChildWithRelationship(api, childData, parentId, parentRole)
+
+      if (result.success) {
+        // Update stores with new child and relationship
+        people.update(currentPeople => [...currentPeople, result.person])
+        relationships.update(currentRelationships => [...currentRelationships, result.relationship])
+
+        // Show success notification
+        successNotification(`Child added successfully`)
+
+        // Hide the form
+        showQuickAddChild = false
+      } else {
+        // Show error notification
+        errorNotification(result.error || 'Failed to add child')
+      }
+    } catch (err) {
+      errorNotification('Failed to add child: ' + err.message)
+    }
   }
 </script>
 
@@ -164,6 +206,28 @@
                   />
                 {/each}
               </RelationshipCardGrid>
+
+              <!-- Add Child Button -->
+              <button
+                type="button"
+                class="add-child-button"
+                data-testid="add-child-button"
+                on:click={toggleQuickAddChild}
+              >
+                {showQuickAddChild ? 'Cancel' : '+ Add Child'}
+              </button>
+
+              <!-- Quick Add Child Form -->
+              {#if showQuickAddChild}
+                <div data-testid="quick-add-child-form">
+                  <QuickAddChild
+                    parent={person}
+                    onCancel={handleQuickAddChildCancel}
+                    on:submit={handleQuickAddChildSubmit}
+                    on:cancel={handleQuickAddChildCancel}
+                  />
+                </div>
+              {/if}
             {:else}
               <div class="empty-relationships">
                 <p>Add person details to view relationships</p>
@@ -228,7 +292,7 @@
             </div>
           </CollapsibleSection>
 
-          <CollapsibleSection title="Children" expanded={false} count={$personRelationships.children.length}>
+          <CollapsibleSection title="Children" expanded={false} count={$personRelationships.children.length} data-testid="collapsible-children">
             <div class="mobile-cards">
               {#each $personRelationships.children as child (child.id)}
                 <RelationshipCard
@@ -238,6 +302,28 @@
                 />
               {/each}
             </div>
+
+            <!-- Add Child Button (Mobile) -->
+            <button
+              type="button"
+              class="add-child-button mobile"
+              data-testid="add-child-button"
+              on:click={toggleQuickAddChild}
+            >
+              {showQuickAddChild ? 'Cancel' : '+ Add Child'}
+            </button>
+
+            <!-- Quick Add Child Form (Mobile) -->
+            {#if showQuickAddChild}
+              <div data-testid="quick-add-child-form">
+                <QuickAddChild
+                  parent={person}
+                  onCancel={handleQuickAddChildCancel}
+                  on:submit={handleQuickAddChildSubmit}
+                  on:cancel={handleQuickAddChildCancel}
+                />
+              </div>
+            {/if}
           </CollapsibleSection>
         {/if}
       {/if}
@@ -391,6 +477,33 @@
   .delete-button:focus {
     outline: 2px solid #f44336;
     outline-offset: 2px;
+  }
+
+  .add-child-button {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .add-child-button:hover {
+    background-color: #1976D2;
+  }
+
+  .add-child-button:focus {
+    outline: 2px solid #2196F3;
+    outline-offset: 2px;
+  }
+
+  .add-child-button.mobile {
+    margin-top: 0.75rem;
   }
 
   /* Mobile responsive */

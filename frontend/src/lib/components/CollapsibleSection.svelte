@@ -36,7 +36,7 @@
   $: ariaLabel = `${isExpanded ? 'Collapse' : 'Expand'} ${title} section`
 </script>
 
-<div class="collapsible-section">
+<div class="collapsible-section" {...$$restProps}>
   <div
     class="section-header"
     role="button"
