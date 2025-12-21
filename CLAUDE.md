@@ -314,10 +314,9 @@ See issue #37 (PersonModal Layout Redesign Epic) and issue #41 (Hybrid Modal Imp
 ### Architecture Documentation
 
 For detailed information about the reactive architecture migration:
-- **`REACTIVE_ARCHITECTURE_EXPLORATION.md`**: Comprehensive technical analysis of the migration (1965 lines)
+- **`plans/REACTIVE_ARCHITECTURE_EXPLORATION.md`**: Comprehensive technical analysis of the migration (1965 lines)
 - **`frontend/src/stores/actions/README.md`**: Optimistic update pattern documentation
-- **`STORE_TEST_COVERAGE.md`**: Complete test coverage report
-- **`PHASE_1_1_IMPLEMENTATION_SUMMARY.md`**: Phase 1.1 implementation details
+- **`plans/PHASE_1_1_IMPLEMENTATION_SUMMARY.md`**: Phase 1.1 implementation details
 
 The application has evolved through a 6-phase reactive architecture migration (Issues #26-34):
 - **Phase 1**: Core Svelte stores foundation
