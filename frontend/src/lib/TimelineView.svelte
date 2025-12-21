@@ -238,10 +238,6 @@
       <svg bind:this={svgElement}></svg>
     </div>
   {/if}
-
-  <button class="fab" on:click={() => modal.openNew()} aria-label="Add Person">
-    +
-  </button>
 </div>
 
 <style>
@@ -330,39 +326,6 @@
   :global(.timeline-container .x-axis line),
   :global(.timeline-container .x-axis path) {
     stroke: #999;
-  }
-
-  /* FAB button */
-  .fab {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    font-size: 2rem;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-  }
-
-  .fab:hover {
-    background-color: #45a049;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-    transform: scale(1.1);
-  }
-
-  .fab:active {
-    transform: scale(0.95);
   }
 
   /* Responsive */

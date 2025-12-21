@@ -207,4 +207,41 @@ describe('TimelineView - Store Access', () => {
       expect(get(people)).toHaveLength(50)
     })
   })
+
+  describe('Floating Action Button Removal', () => {
+    it('should not render a floating add person button', () => {
+      people.set([
+        {
+          id: 1,
+          firstName: 'John',
+          lastName: 'Doe',
+          birthDate: '1950-01-01',
+          deathDate: null,
+          gender: 'male'
+        }
+      ])
+
+      const { container } = render(TimelineView)
+
+      // Should not have a button with class "fab"
+      const fabButton = container.querySelector('.fab')
+      expect(fabButton).toBeFalsy()
+
+      // Should not have a button with aria-label "Add Person"
+      const addButton = container.querySelector('button[aria-label="Add Person"]')
+      expect(addButton).toBeFalsy()
+    })
+
+    it('should not have floating button in empty state', () => {
+      // Empty store
+      people.set([])
+      relationships.set([])
+
+      const { container } = render(TimelineView)
+
+      // Should not have a button with class "fab"
+      const fabButton = container.querySelector('.fab')
+      expect(fabButton).toBeFalsy()
+    })
+  })
 })
