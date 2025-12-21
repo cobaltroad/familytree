@@ -84,9 +84,19 @@ See `frontend/src/stores/actions/README.md` for detailed optimistic update docum
 #### Core Components
 - **App.svelte**: Root component, manages routing and initial data loading (simplified to ~80 LOC)
 - **ViewSwitcher.svelte**: Navigation tabs for switching between visualization views
-- **PersonModal.svelte**: Modal dialog for editing/adding people, uses `$modal` store for state
-- **PersonForm.svelte**: Form inside modal that displays relationship info using derived stores
+- **PersonModal.svelte**: Hybrid responsive modal dialog for editing/adding people, uses `$modal` store for state
+  - Desktop/Tablet (>=768px): Two-column layout with card-based relationships
+  - Mobile (<768px): Collapsible sections with progressive disclosure
+  - Responsive breakpoints automatically adjust layout and component behavior
+- **PersonFormFields.svelte**: Reusable form fields for person data entry
 - **Notification.svelte**: Toast notification component for non-blocking user feedback
+
+#### Modal-Specific Components
+- **TwoColumnLayout.svelte**: Two-column grid layout (40%/60% split) for desktop/tablet modal views
+- **CollapsibleSection.svelte**: Accordion-style collapsible sections for mobile modal layout
+- **RelationshipCard.svelte**: Clickable card component displaying person info with avatar, name, dates, and relationship type
+- **RelationshipCardGrid.svelte**: Responsive grid container for relationship cards (3 columns on desktop, 2 on tablet, 1 on mobile)
+- **InlineParentSelector.svelte**: Inline parent selection dropdown with gender-based filtering and remove button
 
 #### Visualization Views
 All views access stores directly (no prop drilling), support clicking nodes/bars to open PersonModal via `modal.open()`, and have floating "+" button to add people.
@@ -127,11 +137,17 @@ All views access stores directly (no prop drilling), support clicking nodes/bars
 ### Key UI Patterns
 - Clicking a tree node calls `modal.open(personId, 'edit')` to open **PersonModal**
 - Floating "+" button calls `modal.openNew()` to add new person
+- **Hybrid Modal Layout**:
+  - Desktop/Tablet: Two-column layout with personal info (left) and relationships (right)
+  - Mobile: Collapsible sections (Personal Information expanded by default, relationships collapsed)
+  - Responsive breakpoints: <768px (mobile), 768-1023px (tablet), >=1024px (desktop)
+- **Card-Based Relationship Navigation**: Click any relationship card to navigate to that person's modal
+- **Inline Parent Editing**: Dropdown selectors for mother/father with gender-based filtering and remove buttons
 - Modal displays computed relationships from derived stores: parents, siblings, and children
-- Modal has sticky close button that stays visible when scrolling
+- Modal has sticky close button (top right) and sticky button footer (bottom) that remain visible when scrolling
 - **Optimistic updates**: UI updates immediately, shows toast notification, rolls back on error
 - **Toast notifications**: Non-blocking feedback in top-right corner (success=green, error=red, info=blue)
-- Update button (bottom left) and Delete button (bottom right) in modal footer
+- Update/Add button (bottom left) and Delete button (bottom right) in modal footer
 
 ### Shared Utilities
 
@@ -235,6 +251,65 @@ ViewSwitcher navigation appears on all views except List view.
 - Gender values are stored lowercase in the database
 - Gender determines node color in all tree visualizations
 - Selected gender radio button text appears bold
+
+### Responsive Modal Implementation
+
+The PersonModal uses a hybrid responsive design that adapts to screen size, providing an optimal UX across all devices.
+
+#### Desktop/Tablet Layout (>=768px)
+- **Two-column grid layout** (40%/60% split):
+  - Left column: Personal information form with white background
+  - Right column: Relationships display with gray background (#fafafa)
+- **Card-based relationship display**:
+  - RelationshipCard components with avatar, name, dates, and relationship type
+  - Hover effects with lift animation and green border
+  - Click cards to navigate between people
+  - Responsive grid: 3 cards per row (desktop >=1024px), 2 cards per row (tablet 768-1023px)
+- **Inline parent selectors**:
+  - Dropdown menus for mother/father selection
+  - Gender-based filtering (mothers=female, fathers=male)
+  - Remove button appears when parent is selected
+  - Gray background section (#f9f9f9) for visual grouping
+- **Immediate visibility**: All relationships visible without scrolling (max-height: 70vh per column)
+
+#### Mobile Layout (<768px)
+- **Single-column layout** with collapsible sections:
+  - Personal Information section (expanded by default)
+  - Parents section (collapsed, shows count badge)
+  - Siblings section (collapsed, shows count badge)
+  - Children section (collapsed, shows count badge)
+- **Progressive disclosure**:
+  - Smooth slide transitions (250ms) when expanding/collapsing
+  - Chevron icon rotates to indicate state
+  - Sections use gray header (#f5f5f5) for clear visual separation
+- **Full-width cards**: Single-column card layout optimized for touch
+- **Touch-friendly targets**: Minimum 48px tap targets for WCAG 2.1 AA compliance
+
+#### Responsive Breakpoints
+- **Mobile**: <768px (window width)
+- **Tablet**: 768-1023px
+- **Desktop**: >=1024px
+
+Breakpoint detection uses Svelte's reactive `$:` syntax with `window.innerWidth` binding for automatic layout switching.
+
+#### Accessibility Features
+- ARIA labels and roles throughout
+- Keyboard navigation support (Enter/Space for cards and sections)
+- Focus indicators with green outlines
+- Screen reader announcements for expand/collapse actions
+- Semantic HTML (sections, buttons, headings)
+
+#### Component Composition
+The hybrid modal is built from specialized components:
+1. **PersonModal.svelte**: Top-level component with responsive logic
+2. **TwoColumnLayout.svelte**: Grid layout container (desktop/tablet)
+3. **CollapsibleSection.svelte**: Accordion sections (mobile)
+4. **PersonFormFields.svelte**: Form fields (shared across layouts)
+5. **RelationshipCard.svelte**: Person card with click handler
+6. **RelationshipCardGrid.svelte**: Responsive grid wrapper
+7. **InlineParentSelector.svelte**: Parent dropdown with filtering
+
+See issue #37 (PersonModal Layout Redesign Epic) and issue #41 (Hybrid Modal Implementation) for design decisions and evaluation process.
 
 ### Architecture Documentation
 
