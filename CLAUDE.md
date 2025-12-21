@@ -57,7 +57,7 @@ Computed stores that automatically update when core stores change:
 - **relationshipsByPerson**: Map for O(1) relationship lookups
 - **familyTree**: Pre-computed descendant tree structure
 - **rootPeople**: People without parents (tree roots)
-- **createPersonRelationships(personId)**: Factory function for person-specific relationships (mother, father, siblings, children)
+- **createPersonRelationships(personId)**: Factory function for person-specific relationships (mother, father, siblings, children, spouses)
 
 #### Modal Store (`modalStore.js`)
 Centralized modal state management:
@@ -96,10 +96,12 @@ See `frontend/src/stores/actions/README.md` for detailed optimistic update docum
 - **CollapsibleSection.svelte**: Accordion-style collapsible sections for mobile modal layout
 - **RelationshipCard.svelte**: Clickable card component displaying person info with avatar, name, dates, and relationship type
 - **RelationshipCardGrid.svelte**: Responsive grid container for relationship cards (3 columns on desktop, 2 on tablet, 1 on mobile)
-- **InlineParentSelector.svelte**: Inline parent selection dropdown with gender-based filtering and remove button
+- **QuickAddChild.svelte**: Inline form for quickly adding a child with pre-filled parent relationship (blue accent)
+- **QuickAddParent.svelte**: Inline form for quickly adding mother or father with pre-set gender and relationship (orange accent)
+- **QuickAddSpouse.svelte**: Inline form for quickly adding spouse/partner with bidirectional relationship (purple accent)
 
 #### Visualization Views
-All views access stores directly (no prop drilling), support clicking nodes/bars to open PersonModal via `modal.open()`, and have floating "+" button to add people.
+All views access stores directly (no prop drilling) and support clicking nodes/bars to open PersonModal via `modal.open()`. The "Add Person" link in the ViewSwitcher navigation (top right) opens a modal to add new people via `modal.openNew()`.
 
 - **TreeView.svelte** (`#/` or `#/tree`): Default hierarchical tree view
   - Descendants flow downward from root ancestors
@@ -136,14 +138,19 @@ All views access stores directly (no prop drilling), support clicking nodes/bars
 
 ### Key UI Patterns
 - Clicking a tree node calls `modal.open(personId, 'edit')` to open **PersonModal**
-- Floating "+" button calls `modal.openNew()` to add new person
+- "Add Person" link in ViewSwitcher (top right) calls `modal.openNew()` to add new person
 - **Hybrid Modal Layout**:
   - Desktop/Tablet: Two-column layout with personal info (left) and relationships (right)
   - Mobile: Collapsible sections (Personal Information expanded by default, relationships collapsed)
   - Responsive breakpoints: <768px (mobile), 768-1023px (tablet), >=1024px (desktop)
 - **Card-Based Relationship Navigation**: Click any relationship card to navigate to that person's modal
-- **Inline Parent Editing**: Dropdown selectors for mother/father with gender-based filtering and remove buttons
-- Modal displays computed relationships from derived stores: parents, siblings, and children
+- **Quick Add Workflows**: Add related people directly from within PersonModal
+  - **QuickAddChild**: Blue "+ Add Child" button creates child with automatic parent relationship
+  - **QuickAddParent**: Orange "+ Add Mother/Father" buttons (shown when parent missing) with pre-set gender
+  - **QuickAddSpouse**: Purple "+ Add Spouse" button creates bidirectional spouse relationships (supports multiple spouses)
+  - All Quick Add forms use atomic transactions (person + relationship created together or rolled back)
+  - Pre-fills last name from context person for convenience
+- Modal displays computed relationships from derived stores: parents, siblings, children, and spouses
 - Modal has sticky close button (top right) and sticky button footer (bottom) that remain visible when scrolling
 - **Optimistic updates**: UI updates immediately, shows toast notification, rolls back on error
 - **Toast notifications**: Non-blocking feedback in top-right corner (success=green, error=red, info=blue)
@@ -265,11 +272,11 @@ The PersonModal uses a hybrid responsive design that adapts to screen size, prov
   - Hover effects with lift animation and green border
   - Click cards to navigate between people
   - Responsive grid: 3 cards per row (desktop >=1024px), 2 cards per row (tablet 768-1023px)
-- **Inline parent selectors**:
-  - Dropdown menus for mother/father selection
-  - Gender-based filtering (mothers=female, fathers=male)
-  - Remove button appears when parent is selected
-  - Gray background section (#f9f9f9) for visual grouping
+- **Quick Add buttons**:
+  - "+ Add Mother/Father" buttons when parents don't exist (orange accent)
+  - "+ Add Child" button to quickly add children (blue accent)
+  - "+ Add Spouse" button to add spouse/partner (purple accent)
+  - All Quick Add forms expand inline with pre-filled context data
 - **Immediate visibility**: All relationships visible without scrolling (max-height: 70vh per column)
 
 #### Mobile Layout (<768px)
@@ -307,7 +314,9 @@ The hybrid modal is built from specialized components:
 4. **PersonFormFields.svelte**: Form fields (shared across layouts)
 5. **RelationshipCard.svelte**: Person card with click handler
 6. **RelationshipCardGrid.svelte**: Responsive grid wrapper
-7. **InlineParentSelector.svelte**: Parent dropdown with filtering
+7. **QuickAddChild.svelte**: Inline child creation form
+8. **QuickAddParent.svelte**: Inline parent creation form (mother/father)
+9. **QuickAddSpouse.svelte**: Inline spouse creation form
 
 See issue #37 (PersonModal Layout Redesign Epic) and issue #41 (Hybrid Modal Implementation) for design decisions and evaluation process.
 
