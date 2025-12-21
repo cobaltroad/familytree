@@ -7,11 +7,13 @@
   import RelationshipCardGrid from './components/RelationshipCardGrid.svelte'
   import InlineParentSelector from './components/InlineParentSelector.svelte'
   import QuickAddChild from './QuickAddChild.svelte'
+  import QuickAddParent from './QuickAddParent.svelte'
   import { modal } from '../stores/modalStore.js'
   import { peopleById, createPersonRelationships } from '../stores/derivedStores.js'
   import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
   import { error as errorNotification, success as successNotification } from '../stores/notificationStore.js'
   import { addChildWithRelationship } from './quickAddChildUtils.js'
+  import { addParentWithRelationship } from './quickAddParentUtils.js'
   import { api } from './api.js'
   import { people, relationships } from '../stores/familyStore.js'
 
@@ -19,6 +21,10 @@
 
   // Quick Add Child state
   let showQuickAddChild = false
+
+  // Quick Add Parent state
+  let showQuickAddMother = false
+  let showQuickAddFather = false
 
   // Responsive breakpoint detection
   let windowWidth = 0
@@ -126,6 +132,60 @@
       errorNotification('Failed to add child: ' + err.message)
     }
   }
+
+  // Quick Add Parent handlers
+  function toggleQuickAddMother() {
+    showQuickAddMother = !showQuickAddMother
+    if (showQuickAddMother) {
+      showQuickAddFather = false // Close father form if open
+    }
+  }
+
+  function toggleQuickAddFather() {
+    showQuickAddFather = !showQuickAddFather
+    if (showQuickAddFather) {
+      showQuickAddMother = false // Close mother form if open
+    }
+  }
+
+  function handleQuickAddMotherCancel() {
+    showQuickAddMother = false
+  }
+
+  function handleQuickAddFatherCancel() {
+    showQuickAddFather = false
+  }
+
+  async function handleQuickAddParentSubmit(event) {
+    const { parentData, childId, parentType } = event.detail
+
+    try {
+      // Use atomic parent creation with relationship
+      const result = await addParentWithRelationship(api, parentData, childId, parentType)
+
+      if (result.success) {
+        // Update stores with new parent and relationship
+        people.update(currentPeople => [...currentPeople, result.person])
+        relationships.update(currentRelationships => [...currentRelationships, result.relationship])
+
+        // Show success notification
+        const parentTypeDisplay = parentType === 'mother' ? 'Mother' : 'Father'
+        successNotification(`${parentTypeDisplay} added successfully`)
+
+        // Hide the form
+        if (parentType === 'mother') {
+          showQuickAddMother = false
+        } else {
+          showQuickAddFather = false
+        }
+      } else {
+        // Show error notification
+        errorNotification(result.error || 'Failed to add parent')
+      }
+    } catch (err) {
+      errorNotification('Failed to add parent: ' + err.message)
+    }
+  }
 </script>
 
 <svelte:window bind:innerWidth={windowWidth} on:keydown={handleKeydown} />
@@ -175,6 +235,16 @@
                     relationshipType="Mother"
                     on:click={handleCardClick}
                   />
+                {:else}
+                  <!-- Add Mother Button -->
+                  <button
+                    type="button"
+                    class="add-parent-button"
+                    data-testid="add-mother-button"
+                    on:click={toggleQuickAddMother}
+                  >
+                    {showQuickAddMother ? 'Cancel' : '+ Add Mother'}
+                  </button>
                 {/if}
                 {#if $personRelationships.father}
                   <RelationshipCard
@@ -182,8 +252,44 @@
                     relationshipType="Father"
                     on:click={handleCardClick}
                   />
+                {:else}
+                  <!-- Add Father Button -->
+                  <button
+                    type="button"
+                    class="add-parent-button"
+                    data-testid="add-father-button"
+                    on:click={toggleQuickAddFather}
+                  >
+                    {showQuickAddFather ? 'Cancel' : '+ Add Father'}
+                  </button>
                 {/if}
               </RelationshipCardGrid>
+
+              <!-- Quick Add Mother Form -->
+              {#if showQuickAddMother}
+                <div data-testid="quick-add-mother-form">
+                  <QuickAddParent
+                    child={person}
+                    parentType="mother"
+                    onCancel={handleQuickAddMotherCancel}
+                    on:submit={handleQuickAddParentSubmit}
+                    on:cancel={handleQuickAddMotherCancel}
+                  />
+                </div>
+              {/if}
+
+              <!-- Quick Add Father Form -->
+              {#if showQuickAddFather}
+                <div data-testid="quick-add-father-form">
+                  <QuickAddParent
+                    child={person}
+                    parentType="father"
+                    onCancel={handleQuickAddFatherCancel}
+                    on:submit={handleQuickAddParentSubmit}
+                    on:cancel={handleQuickAddFatherCancel}
+                  />
+                </div>
+              {/if}
 
               <!-- Sibling Cards -->
               <RelationshipCardGrid title="Siblings" count={$personRelationships.siblings.length}>
@@ -269,6 +375,16 @@
                   relationshipType="Mother"
                   on:click={handleCardClick}
                 />
+              {:else}
+                <!-- Add Mother Button (Mobile) -->
+                <button
+                  type="button"
+                  class="add-parent-button mobile"
+                  data-testid="add-mother-button"
+                  on:click={toggleQuickAddMother}
+                >
+                  {showQuickAddMother ? 'Cancel' : '+ Add Mother'}
+                </button>
               {/if}
               {#if $personRelationships.father}
                 <RelationshipCard
@@ -276,8 +392,44 @@
                   relationshipType="Father"
                   on:click={handleCardClick}
                 />
+              {:else}
+                <!-- Add Father Button (Mobile) -->
+                <button
+                  type="button"
+                  class="add-parent-button mobile"
+                  data-testid="add-father-button"
+                  on:click={toggleQuickAddFather}
+                >
+                  {showQuickAddFather ? 'Cancel' : '+ Add Father'}
+                </button>
               {/if}
             </div>
+
+            <!-- Quick Add Mother Form (Mobile) -->
+            {#if showQuickAddMother}
+              <div data-testid="quick-add-mother-form">
+                <QuickAddParent
+                  child={person}
+                  parentType="mother"
+                  onCancel={handleQuickAddMotherCancel}
+                  on:submit={handleQuickAddParentSubmit}
+                  on:cancel={handleQuickAddMotherCancel}
+                />
+              </div>
+            {/if}
+
+            <!-- Quick Add Father Form (Mobile) -->
+            {#if showQuickAddFather}
+              <div data-testid="quick-add-father-form">
+                <QuickAddParent
+                  child={person}
+                  parentType="father"
+                  onCancel={handleQuickAddFatherCancel}
+                  on:submit={handleQuickAddParentSubmit}
+                  on:cancel={handleQuickAddFatherCancel}
+                />
+              </div>
+            {/if}
           </CollapsibleSection>
 
           <CollapsibleSection title="Siblings" expanded={false} count={$personRelationships.siblings.length}>
@@ -503,6 +655,33 @@
   }
 
   .add-child-button.mobile {
+    margin-top: 0.75rem;
+  }
+
+  .add-parent-button {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+    background-color: #FF9800;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .add-parent-button:hover {
+    background-color: #F57C00;
+  }
+
+  .add-parent-button:focus {
+    outline: 2px solid #FF9800;
+    outline-offset: 2px;
+  }
+
+  .add-parent-button.mobile {
     margin-top: 0.75rem;
   }
 
