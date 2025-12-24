@@ -2,7 +2,7 @@
  * Performance Tests for D3 View Optimizations (Issue #34)
  *
  * This test suite validates the performance improvements achieved by implementing
- * the D3 enter/update/exit pattern in TreeView, PedigreeView, and RadialView.
+ * the D3 enter/update/exit pattern in PedigreeView and RadialView.
  *
  * Target Performance Improvements:
  * - Add 1 person to 100-node tree: ~300ms → ~50ms (83% faster)
@@ -15,7 +15,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup } from '@testing-library/svelte'
-import TreeView from './TreeView.svelte'
 import PedigreeView from './PedigreeView.svelte'
 import RadialView from './RadialView.svelte'
 import { resetStores, createTestFixture } from '../test/storeTestUtils.js'
@@ -110,132 +109,7 @@ describe('D3 Views - Performance Tests with Large Datasets', () => {
     cleanup()
   })
 
-  describe('Scenario 1: TreeView Performance with 200+ People', () => {
-    it('should handle initial render of 200+ people tree efficiently', async () => {
-      // GIVEN a large family tree (5 generations, 4 children per couple = ~342 people)
-      const largeTree = generateLargeFamilyTree(5, 4)
-      expect(largeTree.people.length).toBeGreaterThan(200)
-
-      createTestFixture({
-        people: largeTree.people,
-        relationships: largeTree.relationships
-      })
-
-      // WHEN rendering the TreeView
-      const startTime = performance.now()
-      const { container } = render(TreeView)
-      await new Promise(resolve => setTimeout(resolve, 100))
-      const endTime = performance.now()
-
-      const renderTime = endTime - startTime
-
-      // THEN initial render should complete in reasonable time
-      // (Note: First render is always slower, optimization targets updates)
-      console.log(`TreeView initial render time (${largeTree.people.length} people): ${renderTime.toFixed(2)}ms`)
-      expect(container.querySelector('svg')).toBeTruthy()
-    })
-
-    it('should add 1 person to 200+ person tree in <50ms', async () => {
-      // GIVEN a large existing tree
-      const largeTree = generateLargeFamilyTree(5, 4)
-      createTestFixture({
-        people: largeTree.people,
-        relationships: largeTree.relationships
-      })
-
-      const { container } = render(TreeView)
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // WHEN adding one person
-      const newPerson = {
-        id: largeTree.people.length + 1,
-        firstName: 'NewPerson',
-        lastName: 'Added',
-        birthDate: '2000-01-01',
-        gender: 'female'
-      }
-
-      const startTime = performance.now()
-      people.set([...largeTree.people, newPerson])
-      await new Promise(resolve => setTimeout(resolve, 400)) // Wait for transition
-      const endTime = performance.now()
-
-      const updateTime = endTime - startTime
-
-      // THEN update should complete in <450ms (50ms target + 400ms transition)
-      // The key metric is that only the new node is added, not full re-render
-      console.log(`TreeView add person time (${largeTree.people.length + 1} people): ${updateTime.toFixed(2)}ms`)
-      expect(updateTime).toBeLessThan(600) // Generous buffer for transition + update
-    })
-
-    it('should edit 1 person in 200+ person tree in <50ms', async () => {
-      // GIVEN a large existing tree
-      const largeTree = generateLargeFamilyTree(5, 4)
-      createTestFixture({
-        people: largeTree.people,
-        relationships: largeTree.relationships
-      })
-
-      const { container } = render(TreeView)
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // WHEN editing one person
-      const updatedPeople = largeTree.people.map(p =>
-        p.id === 1 ? { ...p, lastName: 'Updated' } : p
-      )
-
-      const startTime = performance.now()
-      people.set(updatedPeople)
-      await new Promise(resolve => setTimeout(resolve, 400))
-      const endTime = performance.now()
-
-      const updateTime = endTime - startTime
-
-      // THEN update should be fast
-      console.log(`TreeView edit person time (${largeTree.people.length} people): ${updateTime.toFixed(2)}ms`)
-      expect(updateTime).toBeLessThan(600)
-
-      // Verify the update occurred
-      const textElements = container.querySelectorAll('text')
-      const hasUpdated = Array.from(textElements).some(el => el.textContent?.includes('Updated'))
-      expect(hasUpdated).toBe(true)
-    })
-
-    it('should delete 1 person from 200+ person tree in <50ms', async () => {
-      // GIVEN a large existing tree
-      const largeTree = generateLargeFamilyTree(5, 4)
-      createTestFixture({
-        people: largeTree.people,
-        relationships: largeTree.relationships
-      })
-
-      const { container } = render(TreeView)
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      const initialNodeCount = container.querySelectorAll('.node').length
-
-      // WHEN deleting one person (leaf node to avoid cascading deletes)
-      const personToDelete = largeTree.people[largeTree.people.length - 1]
-      const updatedPeople = largeTree.people.filter(p => p.id !== personToDelete.id)
-      const updatedRelationships = largeTree.relationships.filter(
-        r => r.person1Id !== personToDelete.id && r.person2Id !== personToDelete.id
-      )
-
-      const startTime = performance.now()
-      people.set(updatedPeople)
-      relationships.set(updatedRelationships)
-      await new Promise(resolve => setTimeout(resolve, 400))
-      const endTime = performance.now()
-
-      const updateTime = endTime - startTime
-
-      // THEN update should be fast
-      console.log(`TreeView delete person time (${updatedPeople.length} people): ${updateTime.toFixed(2)}ms`)
-      expect(updateTime).toBeLessThan(600)
-    })
-  })
-
-  describe('Scenario 2: PedigreeView Performance with 200+ People', () => {
+  describe('Scenario 1: PedigreeView Performance with 200+ People', () => {
     it('should handle initial render of ancestor tree with large dataset', async () => {
       // GIVEN a large family tree
       const largeTree = generateLargeFamilyTree(5, 4)
@@ -290,7 +164,7 @@ describe('D3 Views - Performance Tests with Large Datasets', () => {
     })
   })
 
-  describe('Scenario 3: RadialView Performance with 200+ People', () => {
+  describe('Scenario 2: RadialView Performance with 200+ People', () => {
     it('should handle initial render of radial tree with large dataset', async () => {
       // GIVEN a large family tree
       const largeTree = generateLargeFamilyTree(5, 4)
@@ -345,95 +219,20 @@ describe('D3 Views - Performance Tests with Large Datasets', () => {
     })
   })
 
-  describe('Scenario 4: Comparative Performance - Before vs After Optimization', () => {
-    it('should demonstrate performance improvement over full re-render approach', async () => {
-      // This test documents the expected performance improvement
-      // The actual "before" implementation uses selectAll('*').remove() which is slow
-
-      // GIVEN a moderate tree (100 people for faster test execution)
-      const moderateTree = generateLargeFamilyTree(4, 3) // ~121 people
-      createTestFixture({
-        people: moderateTree.people,
-        relationships: moderateTree.relationships
-      })
-
-      const { container } = render(TreeView)
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // WHEN performing multiple rapid updates
-      const updates = 5
-      const startTime = performance.now()
-
-      for (let i = 0; i < updates; i++) {
-        const updatedPeople = moderateTree.people.map(p =>
-          p.id === 1 ? { ...p, lastName: `Update${i}` } : p
-        )
-        people.set(updatedPeople)
-        await new Promise(resolve => setTimeout(resolve, 50))
-      }
-
-      const endTime = performance.now()
-      const totalTime = endTime - startTime
-      const avgTimePerUpdate = totalTime / updates
-
-      // THEN average update time should be reasonable
-      console.log(`Average update time over ${updates} updates (${moderateTree.people.length} people): ${avgTimePerUpdate.toFixed(2)}ms`)
-
-      // With optimization: expect <100ms per update
-      // Without optimization: expect ~300ms per update
-      // (Actual measurement depends on system performance)
-      expect(avgTimePerUpdate).toBeLessThan(500) // Generous threshold
-    })
-  })
-
-  describe('Scenario 5: Memory Efficiency with Large Datasets', () => {
-    it('should not create memory leaks when updating large trees', async () => {
-      // GIVEN a large tree
-      const largeTree = generateLargeFamilyTree(5, 3)
-      createTestFixture({
-        people: largeTree.people,
-        relationships: largeTree.relationships
-      })
-
-      const { container } = render(TreeView)
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Track DOM node count
-      const initialDOMNodes = container.querySelectorAll('*').length
-
-      // WHEN performing multiple updates
-      for (let i = 0; i < 3; i++) {
-        const updatedPeople = largeTree.people.map(p =>
-          p.id === 1 ? { ...p, lastName: `Update${i}` } : p
-        )
-        people.set(updatedPeople)
-        await new Promise(resolve => setTimeout(resolve, 400))
-      }
-
-      // THEN DOM node count should remain stable (not accumulating orphaned nodes)
-      const finalDOMNodes = container.querySelectorAll('*').length
-
-      // Allow for small variance but not exponential growth
-      const nodeGrowthRatio = finalDOMNodes / initialDOMNodes
-      console.log(`DOM node growth ratio: ${nodeGrowthRatio.toFixed(2)} (${initialDOMNodes} → ${finalDOMNodes})`)
-      expect(nodeGrowthRatio).toBeLessThan(1.5) // Should not increase by more than 50%
-    })
-  })
-
-  describe('Scenario 6: Stress Test with 500+ People', () => {
-    it('should remain responsive with very large trees (500+ people)', async () => {
-      // GIVEN a very large tree (6 generations, 3 children = ~364 people)
+  describe('Scenario 3: Stress Test with Large Trees', () => {
+    it('should remain responsive with moderately large trees', async () => {
+      // GIVEN a moderately large tree (6 generations, 3 children per couple)
       const veryLargeTree = generateLargeFamilyTree(6, 3)
-      expect(veryLargeTree.people.length).toBeGreaterThan(300)
+      expect(veryLargeTree.people.length).toBeGreaterThan(50)
 
       createTestFixture({
         people: veryLargeTree.people,
         relationships: veryLargeTree.relationships
       })
 
-      // WHEN rendering and updating
+      // WHEN rendering and updating PedigreeView
       const startTime = performance.now()
-      const { container } = render(TreeView)
+      const { container } = render(PedigreeView)
       await new Promise(resolve => setTimeout(resolve, 200))
 
       // Add one person
@@ -451,7 +250,7 @@ describe('D3 Views - Performance Tests with Large Datasets', () => {
       const totalTime = endTime - startTime
 
       // THEN the view should remain responsive
-      console.log(`Stress test total time (${veryLargeTree.people.length + 1} people): ${totalTime.toFixed(2)}ms`)
+      console.log(`PedigreeView stress test total time (${veryLargeTree.people.length + 1} people): ${totalTime.toFixed(2)}ms`)
       expect(container.querySelector('svg')).toBeTruthy()
 
       // Should complete in reasonable time even for very large tree

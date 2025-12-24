@@ -375,8 +375,8 @@ describe('modalStore', () => {
       expect(value.isOpen).toBe(false)
     })
 
-    it('should support rapid person switching in tree view', () => {
-      // User rapidly clicks different people in tree
+    it('should support rapid person switching in pedigree view', () => {
+      // User rapidly clicks different people in pedigree
       modal.open(1, 'edit')
       modal.open(2, 'edit')
       modal.open(3, 'edit')

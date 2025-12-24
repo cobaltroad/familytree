@@ -137,7 +137,7 @@ describe('Quick Add Spouse - Acceptance Criteria', () => {
   })
 
   describe('Scenario 3: Spouse appears in tree visualization', () => {
-    it('should create spouse relationship compatible with TreeView', async () => {
+    it('should create spouse relationship compatible with PedigreeView', async () => {
       // GIVEN I add a spouse to a person
       const person = { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male' }
       const spouseData = { firstName: 'Jane', lastName: 'Doe', gender: 'female' }
@@ -153,12 +153,12 @@ describe('Quick Add Spouse - Acceptance Criteria', () => {
 
       const result = await addSpouseWithRelationship(mockApi, spouseData, person.id)
 
-      // THEN the relationship should use type "spouse" (already supported by TreeView)
+      // THEN the relationship should use type "spouse" (supported by visualization views)
       expect(result.success).toBe(true)
       expect(result.relationships[0].type).toBe('spouse')
       expect(result.relationships[1].type).toBe('spouse')
 
-      // AND TreeView should display them horizontally (existing TreeView functionality)
+      // AND visualization views should display them appropriately
       // (Verified by checking the relationship type is "spouse")
     })
   })

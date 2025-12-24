@@ -44,14 +44,14 @@ describe('App.svelte - Simplified (No Prop Drilling)', () => {
   })
 
   describe('Routing', () => {
-    it('should render TreeView by default', () => {
+    it('should render PedigreeView by default', () => {
       window.location.hash = ''
 
       const { container } = render(App)
 
-      // Should render tree view (has specific structure)
-      const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeTruthy()
+      // Should render pedigree view (has specific structure)
+      const pedigreeContainer = container.querySelector('.pedigree-container')
+      expect(pedigreeContainer).toBeTruthy()
     })
 
     it('should render TimelineView for #/timeline', () => {

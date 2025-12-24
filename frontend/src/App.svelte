@@ -2,7 +2,6 @@
   import { onMount } from 'svelte'
   import { api } from './lib/api'
   import ListView from './lib/ListView.svelte'
-  import TreeView from './lib/TreeView.svelte'
   import TimelineView from './lib/TimelineView.svelte'
   import PedigreeView from './lib/PedigreeView.svelte'
   import RadialView from './lib/RadialView.svelte'
@@ -13,8 +12,8 @@
 
   let currentPath = window.location.hash.slice(1) || '/'
 
-  // Normalize path (treat '/' as '/tree')
-  $: normalizedPath = currentPath === '/' ? '/tree' : currentPath
+  // Normalize path (treat '/' and '/tree' as '/pedigree')
+  $: normalizedPath = (currentPath === '/' || currentPath === '/tree') ? '/pedigree' : currentPath
 
   // Handle route changes
   function handleHashChange() {
@@ -59,8 +58,6 @@
 
   {#if normalizedPath === '/list'}
     <ListView />
-  {:else if normalizedPath === '/tree'}
-    <TreeView />
   {:else if normalizedPath === '/timeline'}
     <TimelineView />
   {:else if normalizedPath === '/pedigree'}
@@ -68,7 +65,7 @@
   {:else if normalizedPath === '/radial'}
     <RadialView />
   {:else}
-    <TreeView />
+    <PedigreeView />
   {/if}
 
   <PersonModal />

@@ -4,14 +4,13 @@
   export let currentPath = '/'
 
   const views = [
-    { path: '/tree', label: 'Tree', icon: '🌳' },
-    { path: '/timeline', label: 'Timeline', icon: '📅' },
     { path: '/pedigree', label: 'Pedigree', icon: '📊' },
+    { path: '/timeline', label: 'Timeline', icon: '📅' },
     { path: '/radial', label: 'Radial', icon: '⭕' }
   ]
 
-  // Normalize current path for comparison
-  $: normalizedCurrent = currentPath === '/' ? '/tree' : currentPath
+  // Normalize current path for comparison (treat '/' and '/tree' as '/pedigree')
+  $: normalizedCurrent = (currentPath === '/' || currentPath === '/tree') ? '/pedigree' : currentPath
 </script>
 
 <nav class="view-switcher">

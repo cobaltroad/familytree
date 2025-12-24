@@ -114,12 +114,11 @@ describe('ViewSwitcher - Add Person Link', () => {
 
   describe('ViewSwitcher Layout', () => {
     it('should display all view tabs and Add Person link', () => {
-      render(ViewSwitcher, { props: { currentPath: '/tree' } })
+      render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       // Check for all view tabs
-      expect(screen.getByText('Tree')).toBeTruthy()
-      expect(screen.getByText('Timeline')).toBeTruthy()
       expect(screen.getByText('Pedigree')).toBeTruthy()
+      expect(screen.getByText('Timeline')).toBeTruthy()
       expect(screen.getByText('Radial')).toBeTruthy()
 
       // Check for Add Person link
@@ -158,9 +157,9 @@ describe('ViewSwitcher - Add Person Link', () => {
 
   describe('Styling Consistency', () => {
     it('should style Add Person link consistently with view tabs', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
-      const viewTab = screen.getByText('Tree').closest('a')
+      const viewTab = screen.getByText('Pedigree').closest('a')
       const addPersonElement = screen.getByText(/add person/i).closest('a') || screen.getByText(/add person/i).closest('button')
 
       // Both should be within the same navigation

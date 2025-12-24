@@ -103,25 +103,19 @@ See `frontend/src/stores/actions/README.md` for detailed optimistic update docum
 #### Visualization Views
 All views access stores directly (no prop drilling) and support clicking nodes/bars to open PersonModal via `modal.open()`. The "Add Person" link in the ViewSwitcher navigation (top right) opens a modal to add new people via `modal.openNew()`.
 
-- **TreeView.svelte** (`#/` or `#/tree`): Default hierarchical tree view
-  - Descendants flow downward from root ancestors
-  - Displays spouses/co-parents horizontally
-  - Uses D3 tree layout with optimized enter/update/exit pattern
+- **PedigreeView.svelte** (`#/` or `#/pedigree`): Default compact ancestor chart
+  - Focus person selector (dropdown)
+  - Ancestors expand upward in compact boxes (80x40)
+  - Generation labels (G0=focus, G1=parents, G2=grandparents, etc.)
+  - Uses D3 enter/update/exit for incremental updates
   - Preserves zoom/pan state during updates
-  - Smooth 300ms transitions for changes
+  - Limited to 4-5 generations for performance
 
 - **TimelineView.svelte** (`#/timeline`): Chronological lifespan view
   - Horizontal bars showing birth to death (or present)
   - Sort by birth year or generation
   - Filters for living/deceased people
   - Excludes people without birth dates
-
-- **PedigreeView.svelte** (`#/pedigree`): Compact ancestor chart
-  - Focus person selector (dropdown)
-  - Ancestors expand upward in compact boxes (80x40)
-  - Generation labels (G0=focus, G1=parents, G2=grandparents, etc.)
-  - Uses D3 enter/update/exit for incremental updates
-  - Limited to 4-5 generations for performance
 
 - **RadialView.svelte** (`#/radial`): Circular fan chart
   - Focus person at center
@@ -161,7 +155,7 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
 - **`frontend/src/lib/treeHelpers.js`**: Common tree manipulation functions
   - `getNodeColor(person)`: Gender-based colors (male=#AED6F1, female=#F8BBD0, other=#E0E0E0)
   - `findRootPeople(people, relationships)`: Find people without parents
-  - `buildDescendantTree(person, ...)`: Build tree downward (for TreeView)
+  - `buildDescendantTree(person, ...)`: Build tree downward (for future views if needed)
   - `buildAncestorTree(person, ...)`: Build tree upward (for PedigreeView, RadialView)
   - `findParents(personId, ...)`: Get mother and father
   - `findChildren(personId, ...)`: Get children
@@ -216,7 +210,6 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
    - `createPersonRelationships()`: Reactive relationship data
 
 5. **Tree Building**: Tree views use shared helpers with derived store data
-   - TreeView: Uses `$familyTree` derived store (descendants)
    - PedigreeView/RadialView: Uses `buildAncestorTree()` with `$rootPeople`
 
 6. **Modal Interactions**: Components call modal store methods directly
@@ -240,13 +233,13 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
 
 ### Routing
 Hash-based routing in `App.svelte`:
-- `#/` or `#/tree`: Default tree view (hierarchical descendants)
+- `#/` or `#/pedigree`: Default pedigree view (compact ancestor chart with focus person)
+- `#/tree`: Redirects to pedigree view (TreeView removed)
 - `#/timeline`: Chronological timeline with lifespan bars
-- `#/pedigree`: Compact ancestor chart with focus person
 - `#/radial`: Circular fan chart with concentric generations
 - `#/list`: Admin list view (forms and tables)
 
-ViewSwitcher navigation appears on all views except List view.
+ViewSwitcher navigation appears on all views except List view. The ViewSwitcher shows: Pedigree, Timeline, and Radial tabs.
 
 ### API Client
 `frontend/src/lib/api.js` provides typed API methods for all backend endpoints. The backend expects relationships to use:
