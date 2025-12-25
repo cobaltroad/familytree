@@ -108,7 +108,7 @@
   $: label = parentType === 'mother' ? 'Link Existing Person as Mother' : 'Link Existing Person as Father'
 </script>
 
-<div class="link-existing-parent">
+<div class="link-existing-parent" {...$$restProps}>
   <h4>{label}</h4>
 
   <PersonAutocomplete

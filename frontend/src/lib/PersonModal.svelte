@@ -9,6 +9,7 @@
   import QuickAddParent from './QuickAddParent.svelte'
   import QuickAddSpouse from './QuickAddSpouse.svelte'
   import LinkExistingParent from './LinkExistingParent.svelte'
+  import LinkExistingSpouse from './LinkExistingSpouse.svelte'
   import { modal } from '../stores/modalStore.js'
   import { peopleById, createPersonRelationships } from '../stores/derivedStores.js'
   import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
@@ -362,6 +363,14 @@
                 </div>
               {/if}
 
+              <!-- Link Existing Spouse (always show, supports multiple spouses) -->
+              {#if !showQuickAddSpouse}
+                <LinkExistingSpouse
+                  person={person}
+                  data-testid="link-existing-spouse"
+                />
+              {/if}
+
               <!-- Children Cards -->
               <RelationshipCardGrid title="Children" count={$personRelationships.children.length}>
                 {#each $personRelationships.children as child (child.id)}
@@ -536,6 +545,14 @@
                   on:cancel={handleQuickAddSpouseCancel}
                 />
               </div>
+            {/if}
+
+            <!-- Link Existing Spouse (Mobile, always show, supports multiple spouses) -->
+            {#if !showQuickAddSpouse}
+              <LinkExistingSpouse
+                person={person}
+                data-testid="link-existing-spouse"
+              />
             {/if}
           </CollapsibleSection>
 
