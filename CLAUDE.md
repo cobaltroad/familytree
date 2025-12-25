@@ -125,11 +125,6 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - D3 optimization for smooth updates
   - Limited to 5 generations
 
-- **ListView.svelte** (`#/list`): Admin view with forms
-  - Forms for adding/editing people and relationships
-  - Table view of all people with relationship info
-  - No ViewSwitcher (use direct link or back navigation)
-
 ### Key UI Patterns
 - Clicking a tree node calls `modal.open(personId, 'edit')` to open **PersonModal**
 - "Add Person" link in ViewSwitcher (top right) calls `modal.openNew()` to add new person
@@ -235,11 +230,11 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
 Hash-based routing in `App.svelte`:
 - `#/` or `#/pedigree`: Default pedigree view (compact ancestor chart with focus person)
 - `#/tree`: Redirects to pedigree view (TreeView removed)
+- `#/list`: Redirects to pedigree view (ListView removed)
 - `#/timeline`: Chronological timeline with lifespan bars
 - `#/radial`: Circular fan chart with concentric generations
-- `#/list`: Admin list view (forms and tables)
 
-ViewSwitcher navigation appears on all views except List view. The ViewSwitcher shows: Pedigree, Timeline, and Radial tabs.
+ViewSwitcher navigation appears on all views and shows: Pedigree, Timeline, and Radial tabs.
 
 ### API Client
 `frontend/src/lib/api.js` provides typed API methods for all backend endpoints. The backend expects relationships to use:

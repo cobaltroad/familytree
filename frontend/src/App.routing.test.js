@@ -150,19 +150,18 @@ describe('App.svelte - Pedigree as Default View (TDD)', () => {
       expect(pedigreeContainer).toBeFalsy()
     })
 
-    it('should render ListView for #/list', () => {
+    it('should redirect #/list to PedigreeView (ListView removed)', () => {
       window.location.hash = '#/list'
 
       const { container } = render(App)
 
-      // List view has different structure, check for form elements
-      const listContainer = container.querySelector('.list-container') ||
-                           container.querySelector('form')
-      expect(listContainer).toBeTruthy()
-
-      // Should NOT render pedigree
+      // Should redirect to pedigree view
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeFalsy()
+      expect(pedigreeContainer).toBeTruthy()
+
+      // Should NOT render list view
+      const listContainer = container.querySelector('.list-container')
+      expect(listContainer).toBeFalsy()
     })
   })
 

@@ -100,7 +100,6 @@ familytree/
 │   │   │   ├── TimelineView.svelte  # Chronological timeline
 │   │   │   ├── PedigreeView.svelte  # Compact ancestor chart
 │   │   │   ├── RadialView.svelte    # Circular fan chart
-│   │   │   ├── ListView.svelte      # Admin/debug view
 │   │   │   ├── ViewSwitcher.svelte  # Navigation tabs
 │   │   │   ├── PersonModal.svelte   # Edit person modal
 │   │   │   ├── PersonForm.svelte    # Person form component
