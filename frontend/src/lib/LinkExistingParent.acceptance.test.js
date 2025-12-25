@@ -69,28 +69,30 @@ describe('LinkExistingParent - Acceptance Tests (Issue #45)', () => {
       const child = mockPeople[3]
       people.set(mockPeople)
 
-      const { getByText } = render(LinkExistingParent, {
+      const { container } = render(LinkExistingParent, {
         props: {
           child: child,
           parentType: 'mother'
         }
       })
 
-      expect(getByText(/Link Existing Person as Mother/i)).toBeTruthy()
+      const heading = container.querySelector('h4')
+      expect(heading.textContent).toContain('Link Existing Person as Mother')
     })
 
     it('should have descriptive label for father linking', () => {
       const child = mockPeople[3]
       people.set(mockPeople)
 
-      const { getByText } = render(LinkExistingParent, {
+      const { container } = render(LinkExistingParent, {
         props: {
           child: child,
           parentType: 'father'
         }
       })
 
-      expect(getByText(/Link Existing Person as Father/i)).toBeTruthy()
+      const heading = container.querySelector('h4')
+      expect(heading.textContent).toContain('Link Existing Person as Father')
     })
   })
 

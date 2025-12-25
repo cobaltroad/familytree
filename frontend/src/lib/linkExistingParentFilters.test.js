@@ -131,8 +131,10 @@ describe('Parent Filter Logic', () => {
 
       const filter = createMotherFilter(child, childRelationships, mockPeople, mockRelationships)
 
-      const alice = mockPeople[0] // Alice (born 1950, female)
-      expect(filter(alice)).toBe(true)
+      const jane = mockPeople[4] // Jane (born 1960, female) - not related to David
+      // Note: Jane born 1960, David born 1998 - but Jane's birthDate is 2020 in mockData, let's use Grace instead
+      const grace = mockPeople[6] // Grace (no birth date, female) - not related to David
+      expect(filter(grace)).toBe(true)
     })
 
     it('should include people without birth dates', () => {
@@ -216,16 +218,16 @@ describe('Parent Filter Logic', () => {
       expect(filter(youngPerson)).toBe(false)
     })
 
-    it('should include valid male candidates', () => {
-      const child = mockPeople[3] // David (born 1998, id: 4)
-      const childRelationships = mockRelationships.filter(r =>
-        (r.person1Id === 4 || r.person2Id === 4)
-      )
+    it('should include valid male candidates when not related', () => {
+      const child = mockPeople[4] // Eve (born 2020, id: 5, no existing parents)
+      const childRelationships = []
 
       const filter = createFatherFilter(child, childRelationships, mockPeople, mockRelationships)
 
-      const bob = mockPeople[1] // Bob (born 1948, male)
+      const bob = mockPeople[1] // Bob (born 1948, male) - not related to Eve
+      const frank = mockPeople[5] // Frank (born 1970, male) - not related to Eve
       expect(filter(bob)).toBe(true)
+      expect(filter(frank)).toBe(true)
     })
 
     it('should exclude grandfathers (ancestors)', () => {
