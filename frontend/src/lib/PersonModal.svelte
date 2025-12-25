@@ -29,8 +29,9 @@
   // Quick Add Child state
   let showQuickAddChild = false
 
-  // Quick Add Spouse state
-  let showQuickAddSpouse = false
+  // Spouse Panel references (for collapsing after success)
+  let spousePanelDesktop = null
+  let spousePanelMobile = null
 
   // Confirmation dialog state
   let showConfirmDialog = false
@@ -194,14 +195,6 @@
   }
 
   // Quick Add Spouse handlers
-  function toggleQuickAddSpouse() {
-    showQuickAddSpouse = !showQuickAddSpouse
-  }
-
-  function handleQuickAddSpouseCancel() {
-    showQuickAddSpouse = false
-  }
-
   async function handleQuickAddSpouseSubmit(event) {
     const { spouseData, personId } = event.detail
 
@@ -217,14 +210,30 @@
         // Show success notification
         successNotification('Spouse added successfully')
 
-        // Hide the form
-        showQuickAddSpouse = false
+        // Collapse the panel (but keep it visible for adding more spouses)
+        if (spousePanelDesktop) {
+          spousePanelDesktop.collapsePanel()
+        }
+        if (spousePanelMobile) {
+          spousePanelMobile.collapsePanel()
+        }
       } else {
         // Show error notification
         errorNotification(result.error || 'Failed to add spouse')
       }
     } catch (err) {
       errorNotification('Failed to add spouse: ' + err.message)
+    }
+  }
+
+  // Handle successful spouse link from LinkExistingSpouse
+  function handleLinkSpouseSuccess() {
+    // Collapse the panel after successful link
+    if (spousePanelDesktop) {
+      spousePanelDesktop.collapsePanel()
+    }
+    if (spousePanelMobile) {
+      spousePanelMobile.collapsePanel()
     }
   }
 
@@ -382,35 +391,27 @@
                 {/each}
               </RelationshipCardGrid>
 
-              <!-- Add Spouse Button (always visible, supports multiple spouses) -->
-              <button
-                type="button"
-                class="add-spouse-button"
-                data-testid="add-spouse-button"
-                on:click={toggleQuickAddSpouse}
+              <!-- Spouse Panel (CollapsibleActionPanel - always visible, supports multiple spouses) -->
+              <CollapsibleActionPanel
+                bind:this={spousePanelDesktop}
+                label={$personRelationships.spouses.length > 0 ? "Add/Link Another Spouse" : "Add/Link Spouse"}
+                relationshipType="spouse"
+                createLabel="Create New Person"
+                linkLabel="Link Existing Person"
               >
-                {showQuickAddSpouse ? 'Cancel' : ($personRelationships.spouses.length > 0 ? 'Add Another New Person As Spouse' : 'Add New Person As Spouse')}
-              </button>
-
-              <!-- Quick Add Spouse Form -->
-              {#if showQuickAddSpouse}
-                <div data-testid="quick-add-spouse-form">
+                <div slot="create">
                   <QuickAddSpouse
                     person={person}
-                    onCancel={handleQuickAddSpouseCancel}
                     on:submit={handleQuickAddSpouseSubmit}
-                    on:cancel={handleQuickAddSpouseCancel}
                   />
                 </div>
-              {/if}
-
-              <!-- Link Existing Spouse (always show, supports multiple spouses) -->
-              {#if !showQuickAddSpouse}
-                <LinkExistingSpouse
-                  person={person}
-                  data-testid="link-existing-spouse"
-                />
-              {/if}
+                <div slot="link">
+                  <LinkExistingSpouse
+                    person={person}
+                    on:success={handleLinkSpouseSuccess}
+                  />
+                </div>
+              </CollapsibleActionPanel>
 
               <!-- Children Cards -->
               <RelationshipCardGrid title="Children" count={$personRelationships.children.length}>
@@ -571,35 +572,27 @@
               {/each}
             </div>
 
-            <!-- Add Spouse Button (Mobile) -->
-            <button
-              type="button"
-              class="add-spouse-button mobile"
-              data-testid="add-spouse-button"
-              on:click={toggleQuickAddSpouse}
+            <!-- Spouse Panel (Mobile - CollapsibleActionPanel, always visible, supports multiple spouses) -->
+            <CollapsibleActionPanel
+              bind:this={spousePanelMobile}
+              label={$personRelationships.spouses.length > 0 ? "Add/Link Another Spouse" : "Add/Link Spouse"}
+              relationshipType="spouse"
+              createLabel="Create New Person"
+              linkLabel="Link Existing Person"
             >
-              {showQuickAddSpouse ? 'Cancel' : ($personRelationships.spouses.length > 0 ? 'Add Another New Person As Spouse' : 'Add New Person As Spouse')}
-            </button>
-
-            <!-- Quick Add Spouse Form (Mobile) -->
-            {#if showQuickAddSpouse}
-              <div data-testid="quick-add-spouse-form">
+              <div slot="create">
                 <QuickAddSpouse
                   person={person}
-                  onCancel={handleQuickAddSpouseCancel}
                   on:submit={handleQuickAddSpouseSubmit}
-                  on:cancel={handleQuickAddSpouseCancel}
                 />
               </div>
-            {/if}
-
-            <!-- Link Existing Spouse (Mobile, always show, supports multiple spouses) -->
-            {#if !showQuickAddSpouse}
-              <LinkExistingSpouse
-                person={person}
-                data-testid="link-existing-spouse"
-              />
-            {/if}
+              <div slot="link">
+                <LinkExistingSpouse
+                  person={person}
+                  on:success={handleLinkSpouseSuccess}
+                />
+              </div>
+            </CollapsibleActionPanel>
           </CollapsibleSection>
 
           <CollapsibleSection title="Children" expanded={false} count={$personRelationships.children.length} data-testid="collapsible-children">
@@ -831,34 +824,6 @@
   }
 
   .add-child-button.mobile {
-    margin-top: 0.75rem;
-  }
-
-
-  .add-spouse-button {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    margin-top: 1rem;
-    background-color: #9C27B0;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .add-spouse-button:hover {
-    background-color: #7B1FA2;
-  }
-
-  .add-spouse-button:focus {
-    outline: 2px solid #9C27B0;
-    outline-offset: 2px;
-  }
-
-  .add-spouse-button.mobile {
     margin-top: 0.75rem;
   }
 

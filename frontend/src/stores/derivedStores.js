@@ -212,14 +212,20 @@ export function createPersonRelationships(personId) {
       })
 
       // Find spouses
+      // Note: Spouse relationships are bidirectional, so we need to deduplicate
+      const spouseIds = new Set()
       const spouses = []
       rels.forEach(rel => {
         if (rel.type === 'spouse') {
           // Determine which person is the spouse (the one that's not personId)
           const spouseId = rel.person1Id === personId ? rel.person2Id : rel.person1Id
-          const spouse = $peopleById.get(spouseId)
-          if (spouse) {
-            spouses.push(spouse)
+          // Only add each spouse once (deduplication)
+          if (!spouseIds.has(spouseId)) {
+            spouseIds.add(spouseId)
+            const spouse = $peopleById.get(spouseId)
+            if (spouse) {
+              spouses.push(spouse)
+            }
           }
         }
       })

@@ -88,6 +88,11 @@
   $: showOptions = isExpanded && currentView === 'options'
   $: showCreateSlot = isExpanded && currentView === 'create'
   $: showLinkSlot = isExpanded && currentView === 'link'
+
+  // Export collapse function for parent components
+  export function collapsePanel() {
+    collapse()
+  }
 </script>
 
 <div class="collapsible-action-panel" data-relationship-type={relationshipType}>
