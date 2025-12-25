@@ -252,7 +252,7 @@
                     data-testid="add-mother-button"
                     on:click={toggleQuickAddMother}
                   >
-                    {showQuickAddMother ? 'Cancel' : '+ Add Mother'}
+                    {showQuickAddMother ? 'Cancel' : 'Add New Person As Mother'}
                   </button>
                 {/if}
                 {#if $personRelationships.father}
@@ -269,7 +269,7 @@
                     data-testid="add-father-button"
                     on:click={toggleQuickAddFather}
                   >
-                    {showQuickAddFather ? 'Cancel' : '+ Add Father'}
+                    {showQuickAddFather ? 'Cancel' : 'Add New Person As Father'}
                   </button>
                 {/if}
               </RelationshipCardGrid>
@@ -347,7 +347,7 @@
                 data-testid="add-spouse-button"
                 on:click={toggleQuickAddSpouse}
               >
-                {showQuickAddSpouse ? 'Cancel' : ($personRelationships.spouses.length > 0 ? '+ Add Another Spouse' : '+ Add Spouse')}
+                {showQuickAddSpouse ? 'Cancel' : ($personRelationships.spouses.length > 0 ? 'Add Another New Person As Spouse' : 'Add New Person As Spouse')}
               </button>
 
               <!-- Quick Add Spouse Form -->
@@ -380,7 +380,7 @@
                 data-testid="add-child-button"
                 on:click={toggleQuickAddChild}
               >
-                {showQuickAddChild ? 'Cancel' : '+ Add Child'}
+                {showQuickAddChild ? 'Cancel' : 'Add New Person As Child'}
               </button>
 
               <!-- Quick Add Child Form -->
@@ -426,7 +426,7 @@
                   data-testid="add-mother-button"
                   on:click={toggleQuickAddMother}
                 >
-                  {showQuickAddMother ? 'Cancel' : '+ Add Mother'}
+                  {showQuickAddMother ? 'Cancel' : 'Add New Person As Mother'}
                 </button>
               {/if}
               {#if $personRelationships.father}
@@ -443,7 +443,7 @@
                   data-testid="add-father-button"
                   on:click={toggleQuickAddFather}
                 >
-                  {showQuickAddFather ? 'Cancel' : '+ Add Father'}
+                  {showQuickAddFather ? 'Cancel' : 'Add New Person As Father'}
                 </button>
               {/if}
             </div>
@@ -523,7 +523,7 @@
               data-testid="add-spouse-button"
               on:click={toggleQuickAddSpouse}
             >
-              {showQuickAddSpouse ? 'Cancel' : ($personRelationships.spouses.length > 0 ? '+ Add Another Spouse' : '+ Add Spouse')}
+              {showQuickAddSpouse ? 'Cancel' : ($personRelationships.spouses.length > 0 ? 'Add Another New Person As Spouse' : 'Add New Person As Spouse')}
             </button>
 
             <!-- Quick Add Spouse Form (Mobile) -->
@@ -557,7 +557,7 @@
               data-testid="add-child-button"
               on:click={toggleQuickAddChild}
             >
-              {showQuickAddChild ? 'Cancel' : '+ Add Child'}
+              {showQuickAddChild ? 'Cancel' : 'Add New Person As Child'}
             </button>
 
             <!-- Quick Add Child Form (Mobile) -->

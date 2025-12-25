@@ -141,7 +141,7 @@ describe('PersonModal', () => {
 
       const addMotherButton = container.querySelector('[data-testid="add-mother-button"]')
       expect(addMotherButton).toBeTruthy()
-      expect(addMotherButton.textContent).toContain('Add Mother')
+      expect(addMotherButton.textContent).toContain('Add New Person As Mother')
     })
 
     it('should show Add Father button when father does not exist', () => {
@@ -162,7 +162,7 @@ describe('PersonModal', () => {
 
       const addFatherButton = container.querySelector('[data-testid="add-father-button"]')
       expect(addFatherButton).toBeTruthy()
-      expect(addFatherButton.textContent).toContain('Add Father')
+      expect(addFatherButton.textContent).toContain('Add New Person As Father')
     })
 
     it('should not show parent dropdown selectors', () => {
