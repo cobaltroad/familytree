@@ -23,6 +23,7 @@
   import { addSpouseWithRelationship } from './quickAddSpouseUtils.js'
   import { api } from './api.js'
   import { people, relationships } from '../stores/familyStore.js'
+  import { openPanels } from '../stores/panelStore.js'
 
   const dispatch = createEventDispatcher()
 
@@ -86,6 +87,8 @@
   }
 
   function closeModal() {
+    // Reset panel store when modal closes (AC10)
+    openPanels.set({})
     modal.close()
   }
 
@@ -321,6 +324,8 @@
                 <CollapsibleActionPanel
                   label="Add/Link Mother"
                   relationshipType="mother"
+                  groupId="parents"
+                  panelId="mother"
                   createLabel="Create New Person"
                   linkLabel="Link Existing Person"
                 >
@@ -345,6 +350,8 @@
                 <CollapsibleActionPanel
                   label="Add/Link Father"
                   relationshipType="father"
+                  groupId="parents"
+                  panelId="father"
                   createLabel="Create New Person"
                   linkLabel="Link Existing Person"
                 >
@@ -395,6 +402,8 @@
                 bind:this={spousePanelDesktop}
                 label={$personRelationships.spouses.length > 0 ? "Add/Link Another Spouse" : "Add/Link Spouse"}
                 relationshipType="spouse"
+                groupId="spouses"
+                panelId="spouse"
                 createLabel="Create New Person"
                 linkLabel="Link Existing Person"
               >
@@ -431,6 +440,8 @@
                 bind:this={childPanelDesktop}
                 label="Add/Link Children"
                 relationshipType="child"
+                groupId="children"
+                panelId="child"
                 createLabel="Create New Person"
                 linkLabel="Link Existing Person(s)"
               >
@@ -492,6 +503,8 @@
               <CollapsibleActionPanel
                 label="Add/Link Mother"
                 relationshipType="mother"
+                groupId="parents"
+                panelId="mother"
                 createLabel="Create New Person"
                 linkLabel="Link Existing Person"
               >
@@ -516,6 +529,8 @@
               <CollapsibleActionPanel
                 label="Add/Link Father"
                 relationshipType="father"
+                groupId="parents"
+                panelId="father"
                 createLabel="Create New Person"
                 linkLabel="Link Existing Person"
               >
@@ -568,6 +583,8 @@
               bind:this={spousePanelMobile}
               label={$personRelationships.spouses.length > 0 ? "Add/Link Another Spouse" : "Add/Link Spouse"}
               relationshipType="spouse"
+              groupId="spouses"
+              panelId="spouse"
               createLabel="Create New Person"
               linkLabel="Link Existing Person"
             >
@@ -605,6 +622,8 @@
               bind:this={childPanelMobile}
               label="Add/Link Children"
               relationshipType="child"
+              groupId="children"
+              panelId="child"
               createLabel="Create New Person"
               linkLabel="Link Existing Person(s)"
             >

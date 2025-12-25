@@ -6,11 +6,13 @@
    * - Collapsed state shows a trigger button with "+" icon
    * - Expanded state shows "Create New" and "Link Existing" options
    * - Slot-based content for QuickAdd forms and Link components
+   * - Auto-collapse behavior when another panel in same group opens (Issue #56)
    *
    * @component
    */
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onDestroy } from 'svelte'
   import { slide } from 'svelte/transition'
+  import { openPanels, openPanel, closePanel } from '../../stores/panelStore.js'
 
   /** @type {string} - Label text shown on trigger button when collapsed */
   export let label = ''
@@ -24,10 +26,22 @@
   /** @type {string} - Label for "Link Existing Person" button */
   export let linkLabel = 'Link Existing Person'
 
+  /** @type {string|null|undefined} - Group ID for auto-collapse behavior (e.g., "parents", "spouses") */
+  export let groupId = null
+
+  /** @type {string|null|undefined} - Panel ID within the group (e.g., "mother", "father") */
+  export let panelId = null
+
+  /** @type {boolean} - Whether the form has unsaved changes (for confirmation dialog) */
+  export let isDirty = false
+
+  /** @type {function|null} - Callback when auto-collapse is triggered with dirty form */
+  export let onConfirmationRequested = null
+
   const dispatch = createEventDispatcher()
 
   // Generate unique IDs for accessibility (WCAG 2.1 AA compliance)
-  const panelId = `panel-${Math.random().toString(36).substr(2, 9)}`
+  const regionId = `panel-${Math.random().toString(36).substr(2, 9)}`
   const triggerId = `trigger-${Math.random().toString(36).substr(2, 9)}`
 
   // Component state
@@ -35,16 +49,60 @@
   let currentView = 'options' // 'options' | 'create' | 'link'
   let triggerButton
 
+  // Subscribe to panel store for auto-collapse behavior
+  let unsubscribe = null
+  if (groupId && panelId) {
+    unsubscribe = openPanels.subscribe($openPanels => {
+      // If another panel in the same group is opening and this panel is expanded
+      if (isExpanded && $openPanels[groupId] && $openPanels[groupId] !== panelId) {
+        handleAutoCollapse()
+      }
+    })
+  }
+
+  // Clean up subscription on destroy
+  onDestroy(() => {
+    if (unsubscribe) {
+      unsubscribe()
+    }
+  })
+
+  // Handle auto-collapse triggered by another panel opening in same group
+  async function handleAutoCollapse() {
+    if (isDirty && onConfirmationRequested) {
+      // Form has unsaved changes - request confirmation
+      onConfirmationRequested()
+      // Prevent collapse until user confirms
+      // Revert store to keep this panel open
+      if (groupId && panelId) {
+        openPanel(groupId, panelId)
+      }
+    } else {
+      // Clean form or no confirmation callback - collapse immediately
+      collapse()
+    }
+  }
+
   // Expand panel to show options
   function expand() {
     isExpanded = true
     currentView = 'options'
+
+    // Register in panel store if groupId and panelId are provided
+    if (groupId && panelId) {
+      openPanel(groupId, panelId)
+    }
   }
 
   // Collapse panel and reset state
   function collapse() {
     isExpanded = false
     currentView = 'options'
+
+    // Remove from panel store if registered
+    if (groupId) {
+      closePanel(groupId)
+    }
 
     // Return focus to trigger button
     if (triggerButton) {
@@ -105,7 +163,7 @@
     type="button"
     tabindex="0"
     aria-expanded={isExpanded}
-    aria-controls={panelId}
+    aria-controls={regionId}
     on:click={toggle}
     on:keydown={handleTriggerKeyDown}
   >
@@ -116,7 +174,7 @@
   <!-- Options Panel -->
   {#if isExpanded}
     <div
-      id={panelId}
+      id={regionId}
       class="options-panel"
       role="region"
       aria-labelledby={triggerId}

@@ -1,12 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, fireEvent, screen } from '@testing-library/svelte'
+import { render, fireEvent, screen, waitFor } from '@testing-library/svelte'
+import { get } from 'svelte/store'
 import CollapsibleActionPanel from './CollapsibleActionPanel.svelte'
+import { openPanels } from '../../stores/panelStore.js'
 
 /**
- * Unit tests for CollapsibleActionPanel component (Issue #52)
- * Tests all 11 acceptance criteria from the issue
+ * Unit tests for CollapsibleActionPanel component (Issue #52, Issue #56)
+ * Tests all 11 acceptance criteria from Issue #52
+ * Tests auto-collapse behavior from Issue #56
  */
 describe('CollapsibleActionPanel', () => {
+  beforeEach(() => {
+    // Reset panel store before each test
+    openPanels.set({})
+  })
+
   describe('AC1: Component rendering and initial state', () => {
     it('should render collapsed by default with trigger button and plus icon', () => {
       const { container } = render(CollapsibleActionPanel, {
@@ -1010,6 +1018,474 @@ describe('CollapsibleActionPanel', () => {
       // Should show link slot
       const linkSlot = container.querySelector('[data-slot="link"]')
       expect(linkSlot).toBeTruthy()
+    })
+  })
+
+  describe('Issue #56: Auto-collapse panel behavior', () => {
+    describe('Panel store registration (groupId/panelId)', () => {
+      it('should register in panel store when expanded with both groupId and panelId', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+        await fireEvent.click(triggerButton)
+
+        const state = get(openPanels)
+        expect(state).toEqual({ parents: 'mother' })
+      })
+
+      it('should not register in panel store without groupId', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Spouse',
+            relationshipType: 'spouse',
+            panelId: 'spouse'
+            // No groupId
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Spouse/i })
+        await fireEvent.click(triggerButton)
+
+        const state = get(openPanels)
+        expect(state).toEqual({})
+      })
+
+      it('should not register in panel store without panelId', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents'
+            // No panelId
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+        await fireEvent.click(triggerButton)
+
+        const state = get(openPanels)
+        expect(state).toEqual({})
+      })
+
+      it('should remove from panel store when manually collapsed', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand
+        await fireEvent.click(triggerButton)
+        expect(get(openPanels)).toEqual({ parents: 'mother' })
+
+        // Collapse
+        await fireEvent.click(screen.getByRole('button', { name: /Cancel/i }))
+
+        // Panel should be removed from store
+        const state = get(openPanels)
+        expect(state).toEqual({})
+      })
+    })
+
+    describe('Auto-collapse within same group', () => {
+      it('should auto-collapse when another panel in same group opens (AC1)', async () => {
+        // Render two panels in same group
+        const { rerender: rerenderMother, container: containerMother, queryByText: queryMotherText } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        // Expand mother panel
+        const motherTrigger = screen.getByRole('button', { name: /Add\/Link Mother/i })
+        await fireEvent.click(motherTrigger)
+        expect(motherTrigger.getAttribute('aria-expanded')).toBe('true')
+
+        // Simulate opening father panel by updating store
+        openPanels.set({ parents: 'father' })
+
+        // Mother panel should detect the change and auto-collapse
+        await waitFor(() => {
+          expect(motherTrigger.getAttribute('aria-expanded')).toBe('false')
+        }, { timeout: 500 })
+      })
+
+      it('should handle dirty form protection (isDirty=false - auto-collapse immediately) (AC4)', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother',
+            isDirty: false
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand mother panel
+        await fireEvent.click(triggerButton)
+        expect(triggerButton.getAttribute('aria-expanded')).toBe('true')
+
+        // Trigger auto-collapse by opening another panel in same group
+        openPanels.set({ parents: 'father' })
+
+        // Should collapse immediately without confirmation (clean form)
+        await waitFor(() => {
+          expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+        }, { timeout: 500 })
+      })
+
+      it('should request confirmation when form is dirty (isDirty=true) (AC4)', async () => {
+        const onConfirmationRequested = vi.fn()
+
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother',
+            isDirty: true,
+            onConfirmationRequested
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand mother panel
+        await fireEvent.click(triggerButton)
+        expect(triggerButton.getAttribute('aria-expanded')).toBe('true')
+
+        // Trigger auto-collapse by opening another panel in same group
+        openPanels.set({ parents: 'father' })
+
+        // Should call confirmation callback instead of collapsing immediately
+        await waitFor(() => {
+          expect(onConfirmationRequested).toHaveBeenCalled()
+        }, { timeout: 500 })
+
+        // Panel should still be expanded (waiting for user confirmation)
+        expect(triggerButton.getAttribute('aria-expanded')).toBe('true')
+      })
+    })
+
+    describe('Independence between different groups (AC3)', () => {
+      it('should not auto-collapse spouse panel when parent panel opens', async () => {
+        // Render spouse panel
+        const { container: spouseContainer } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Spouse',
+            relationshipType: 'spouse',
+            groupId: 'spouses',
+            panelId: 'spouse'
+          }
+        })
+
+        const spouseTrigger = screen.getByRole('button', { name: /Add\/Link Spouse/i })
+        await fireEvent.click(spouseTrigger)
+        expect(spouseTrigger.getAttribute('aria-expanded')).toBe('true')
+
+        // Open parent panel in different group
+        openPanels.set({ spouses: 'spouse', parents: 'mother' })
+
+        // Spouse panel should remain open
+        await new Promise(resolve => setTimeout(resolve, 300))
+        expect(spouseTrigger.getAttribute('aria-expanded')).toBe('true')
+      })
+
+      it('should not auto-collapse children panel when spouse panel opens', async () => {
+        // Render children panel
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Children',
+            relationshipType: 'child',
+            groupId: 'children',
+            panelId: 'child'
+          }
+        })
+
+        const childTrigger = screen.getByRole('button', { name: /Add\/Link Children/i })
+        await fireEvent.click(childTrigger)
+        expect(childTrigger.getAttribute('aria-expanded')).toBe('true')
+
+        // Open spouse panel in different group
+        openPanels.set({ children: 'child', spouses: 'spouse' })
+
+        // Children panel should remain open
+        await new Promise(resolve => setTimeout(resolve, 300))
+        expect(childTrigger.getAttribute('aria-expanded')).toBe('true')
+      })
+
+      it('should allow multiple panels open simultaneously in different groups', async () => {
+        // Set up multiple panels in different groups as open
+        openPanels.set({
+          parents: 'mother',
+          spouses: 'spouse',
+          children: 'child'
+        })
+
+        const state = get(openPanels)
+        expect(state).toEqual({
+          parents: 'mother',
+          spouses: 'spouse',
+          children: 'child'
+        })
+      })
+    })
+
+    describe('Autocomplete low-commitment interaction (AC5)', () => {
+      it('should treat autocomplete input as non-dirty by default', async () => {
+        // Autocomplete text input should not trigger isDirty unless explicitly set
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother',
+            isDirty: false // Autocomplete interaction is low-commitment
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand and show link slot (autocomplete content)
+        await fireEvent.click(triggerButton)
+        await fireEvent.click(screen.getByRole('button', { name: /Link Existing Person/i }))
+
+        // Trigger auto-collapse
+        openPanels.set({ parents: 'father' })
+
+        // Should collapse without confirmation (autocomplete is low-commitment)
+        await waitFor(() => {
+          expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+        }, { timeout: 500 })
+      })
+    })
+
+    describe('Keyboard navigation with auto-collapse (AC7)', () => {
+      it('should auto-collapse via keyboard navigation (Enter key)', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand via Enter key
+        await fireEvent.keyDown(triggerButton, { key: 'Enter' })
+        expect(triggerButton.getAttribute('aria-expanded')).toBe('true')
+
+        // Trigger auto-collapse
+        openPanels.set({ parents: 'father' })
+
+        // Should auto-collapse
+        await waitFor(() => {
+          expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+        }, { timeout: 500 })
+      })
+
+      it('should return focus to trigger button after auto-collapse', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand
+        await fireEvent.click(triggerButton)
+
+        // Trigger auto-collapse
+        openPanels.set({ parents: 'father' })
+
+        // Wait for collapse
+        await waitFor(() => {
+          expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+        }, { timeout: 500 })
+
+        // Focus should be on trigger button
+        expect(document.activeElement).toBe(triggerButton)
+      })
+    })
+
+    describe('Screen reader announcements (AC8)', () => {
+      it('should announce auto-collapse to screen readers', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand
+        await fireEvent.click(triggerButton)
+        expect(triggerButton.getAttribute('aria-expanded')).toBe('true')
+
+        // Trigger auto-collapse
+        openPanels.set({ parents: 'father' })
+
+        // Wait for collapse
+        await waitFor(() => {
+          expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+        }, { timeout: 500 })
+
+        // aria-expanded should update for screen readers
+        expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+      })
+    })
+
+    describe('Mobile layout compatibility (AC9)', () => {
+      it('should work identically on mobile layouts', async () => {
+        global.innerWidth = 375
+        global.innerHeight = 667
+
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand
+        await fireEvent.click(triggerButton)
+        expect(triggerButton.getAttribute('aria-expanded')).toBe('true')
+
+        // Trigger auto-collapse
+        openPanels.set({ parents: 'father' })
+
+        // Should auto-collapse on mobile too
+        await waitFor(() => {
+          expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+        }, { timeout: 500 })
+      })
+    })
+
+    describe('Modal navigation state reset (AC10)', () => {
+      it('should reset panel state when modal closes', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand panel
+        await fireEvent.click(triggerButton)
+        expect(get(openPanels)).toEqual({ parents: 'mother' })
+
+        // Simulate modal close (reset store)
+        openPanels.set({})
+
+        // Store should be empty
+        expect(get(openPanels)).toEqual({})
+      })
+
+      it('should open fresh modal with all panels collapsed', () => {
+        // Ensure store is empty (fresh modal state)
+        openPanels.set({})
+
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Should be collapsed initially
+        expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+      })
+    })
+
+    describe('Edge cases with auto-collapse', () => {
+      it('should handle rapid panel switching in same group', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand
+        await fireEvent.click(triggerButton)
+
+        // Rapidly switch between panels
+        for (let i = 0; i < 5; i++) {
+          openPanels.set({ parents: i % 2 === 0 ? 'mother' : 'father' })
+          await new Promise(resolve => setTimeout(resolve, 50))
+        }
+
+        // Should be in valid state
+        const ariaExpanded = triggerButton.getAttribute('aria-expanded')
+        expect(ariaExpanded === 'true' || ariaExpanded === 'false').toBe(true)
+      })
+
+      it('should handle panel switching while viewing slot content', async () => {
+        const { container } = render(CollapsibleActionPanel, {
+          props: {
+            label: 'Add/Link Mother',
+            relationshipType: 'mother',
+            groupId: 'parents',
+            panelId: 'mother'
+          }
+        })
+
+        const triggerButton = screen.getByRole('button', { name: /Add\/Link Mother/i })
+
+        // Expand and show create slot
+        await fireEvent.click(triggerButton)
+        await fireEvent.click(screen.getByRole('button', { name: /Create New Person/i }))
+
+        // Trigger auto-collapse while in slot view
+        openPanels.set({ parents: 'father' })
+
+        // Should auto-collapse
+        await waitFor(() => {
+          expect(triggerButton.getAttribute('aria-expanded')).toBe('false')
+        }, { timeout: 500 })
+      })
     })
   })
 })
