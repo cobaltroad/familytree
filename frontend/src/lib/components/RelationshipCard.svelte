@@ -3,8 +3,12 @@
 
   export let person = null
   export let relationshipType = ''
+  export let relationship = null
+  export let isMobile = false
 
   const dispatch = createEventDispatcher()
+
+  let isHovering = false
 
   function handleClick() {
     if (person) {
@@ -17,6 +21,33 @@
       event.preventDefault()
       handleClick()
     }
+  }
+
+  function handleDeleteClick(event) {
+    event.stopPropagation() // Prevent card click event
+    if (relationship && person) {
+      dispatch('delete', {
+        relationship,
+        person,
+        relationshipType
+      })
+    }
+  }
+
+  function handleDeleteKeyDown(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      event.stopPropagation()
+      handleDeleteClick(event)
+    }
+  }
+
+  function handleMouseEnter() {
+    isHovering = true
+  }
+
+  function handleMouseLeave() {
+    isHovering = false
   }
 
   // Format lifespan for display
@@ -34,7 +65,14 @@
     ? `View ${person.firstName} ${person.lastName}, ${relationshipType}`
     : relationshipType
 
+  $: deleteAriaLabel = person && relationshipType
+    ? `Remove ${person.firstName} ${person.lastName} as ${relationshipType}`
+    : 'Remove relationship'
+
   $: lifespan = person ? formatLifespan(person.birthDate, person.deathDate) : ''
+
+  // Show delete button on hover (desktop) or always (mobile)
+  $: showDeleteButton = relationship && (isMobile || isHovering)
 </script>
 
 {#if person}
@@ -45,6 +83,8 @@
     aria-label={ariaLabel}
     on:click={handleClick}
     on:keydown={handleKeyDown}
+    on:mouseenter={handleMouseEnter}
+    on:mouseleave={handleMouseLeave}
   >
     <div class="card-content">
       <div class="photo-placeholder avatar person-icon">
@@ -60,6 +100,18 @@
           <div class="person-dates">{lifespan}</div>
         {/if}
       </div>
+
+      {#if showDeleteButton}
+        <button
+          type="button"
+          class="delete-button"
+          aria-label={deleteAriaLabel}
+          on:click={handleDeleteClick}
+          on:keydown={handleDeleteKeyDown}
+        >
+          <span class="icon-trash" aria-hidden="true">🗑</span>
+        </button>
+      {/if}
     </div>
   </div>
 {:else}
@@ -106,6 +158,48 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    position: relative;
+  }
+
+  .delete-button {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.375rem 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    z-index: 10;
+  }
+
+  .delete-button:hover {
+    background-color: #d32f2f;
+    transform: translateY(-50%) scale(1.05);
+  }
+
+  .delete-button:focus {
+    outline: 2px solid #f44336;
+    outline-offset: 2px;
+  }
+
+  .delete-button:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  .icon-trash {
+    display: inline-block;
+    font-size: 1rem;
   }
 
   .photo-placeholder {

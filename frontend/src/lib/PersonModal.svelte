@@ -5,6 +5,7 @@
   import PersonFormFields from './components/PersonFormFields.svelte'
   import RelationshipCard from './components/RelationshipCard.svelte'
   import RelationshipCardGrid from './components/RelationshipCardGrid.svelte'
+  import ConfirmationDialog from './components/ConfirmationDialog.svelte'
   import QuickAddChild from './QuickAddChild.svelte'
   import QuickAddParent from './QuickAddParent.svelte'
   import QuickAddSpouse from './QuickAddSpouse.svelte'
@@ -12,8 +13,9 @@
   import LinkExistingSpouse from './LinkExistingSpouse.svelte'
   import LinkExistingChildren from './LinkExistingChildren.svelte'
   import { modal } from '../stores/modalStore.js'
-  import { peopleById, createPersonRelationships } from '../stores/derivedStores.js'
+  import { peopleById, createPersonRelationships, relationshipsByPerson } from '../stores/derivedStores.js'
   import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
+  import { deleteRelationship } from '../stores/actions/relationshipActions.js'
   import { error as errorNotification, success as successNotification } from '../stores/notificationStore.js'
   import { addChildWithRelationship } from './quickAddChildUtils.js'
   import { addParentWithRelationship } from './quickAddParentUtils.js'
@@ -33,6 +35,12 @@
   // Quick Add Spouse state
   let showQuickAddSpouse = false
 
+  // Confirmation dialog state
+  let showConfirmDialog = false
+  let pendingDeleteRelationship = null
+  let pendingDeletePerson = null
+  let pendingDeleteType = null
+
   // Responsive breakpoint detection
   let windowWidth = 0
   $: isMobile = windowWidth < 768
@@ -44,6 +52,39 @@
 
   // Get relationships for the person
   $: personRelationships = person ? createPersonRelationships(person.id) : null
+
+  // Get actual relationship objects for the person
+  $: personRelationshipObjects = person ? $relationshipsByPerson.get(person.id) || [] : []
+
+  // Helper to find relationship object for a specific person and type
+  function findRelationshipObject(relatedPersonId, type, parentRole = null) {
+    if (!personRelationshipObjects) return null
+
+    return personRelationshipObjects.find(rel => {
+      if (type === 'spouse') {
+        return rel.type === 'spouse' && (
+          (rel.person1Id === person.id && rel.person2Id === relatedPersonId) ||
+          (rel.person2Id === person.id && rel.person1Id === relatedPersonId)
+        )
+      } else if (type === 'parentOf') {
+        // For parents: person is person2Id (child), related person is person1Id (parent)
+        // For children: person is person1Id (parent), related person is person2Id (child)
+        if (parentRole) {
+          // Looking for a parent relationship
+          return rel.type === 'parentOf' &&
+            rel.person2Id === person.id &&
+            rel.person1Id === relatedPersonId &&
+            rel.parentRole === parentRole
+        } else {
+          // Looking for a child relationship
+          return rel.type === 'parentOf' &&
+            rel.person1Id === person.id &&
+            rel.person2Id === relatedPersonId
+        }
+      }
+      return false
+    }) || null
+  }
 
   function closeModal() {
     modal.close()
@@ -215,6 +256,40 @@
       errorNotification('Failed to add spouse: ' + err.message)
     }
   }
+
+  // Delete relationship handlers
+  function handleDeleteRelationship(event) {
+    const { relationship, person: relatedPerson, relationshipType } = event.detail
+
+    // Store pending deletion data
+    pendingDeleteRelationship = relationship
+    pendingDeletePerson = relatedPerson
+    pendingDeleteType = relationshipType
+
+    // Show confirmation dialog
+    showConfirmDialog = true
+  }
+
+  function handleConfirmDelete() {
+    if (pendingDeleteRelationship && pendingDeletePerson && pendingDeleteType) {
+      // Call the delete action
+      deleteRelationship(pendingDeleteRelationship, pendingDeleteType, pendingDeletePerson)
+
+      // Reset state
+      showConfirmDialog = false
+      pendingDeleteRelationship = null
+      pendingDeletePerson = null
+      pendingDeleteType = null
+    }
+  }
+
+  function handleCancelDelete() {
+    // Reset state without deleting
+    showConfirmDialog = false
+    pendingDeleteRelationship = null
+    pendingDeletePerson = null
+    pendingDeleteType = null
+  }
 </script>
 
 <svelte:window bind:innerWidth={windowWidth} on:keydown={handleKeydown} />
@@ -244,7 +319,10 @@
                   <RelationshipCard
                     person={$personRelationships.mother}
                     relationshipType="Mother"
+                    relationship={findRelationshipObject($personRelationships.mother.id, 'parentOf', 'mother')}
+                    isMobile={isMobile}
                     on:click={handleCardClick}
+                    on:delete={handleDeleteRelationship}
                   />
                 {:else}
                   <!-- Add Mother Button -->
@@ -261,7 +339,10 @@
                   <RelationshipCard
                     person={$personRelationships.father}
                     relationshipType="Father"
+                    relationship={findRelationshipObject($personRelationships.father.id, 'parentOf', 'father')}
+                    isMobile={isMobile}
                     on:click={handleCardClick}
+                    on:delete={handleDeleteRelationship}
                   />
                 {:else}
                   <!-- Add Father Button -->
@@ -326,6 +407,7 @@
                   <RelationshipCard
                     person={sibling}
                     relationshipType="Sibling"
+                    isMobile={isMobile}
                     on:click={handleCardClick}
                   />
                 {/each}
@@ -337,7 +419,10 @@
                   <RelationshipCard
                     person={spouse}
                     relationshipType="Spouse"
+                    relationship={findRelationshipObject(spouse.id, 'spouse')}
+                    isMobile={isMobile}
                     on:click={handleCardClick}
+                    on:delete={handleDeleteRelationship}
                   />
                 {/each}
               </RelationshipCardGrid>
@@ -378,7 +463,10 @@
                   <RelationshipCard
                     person={child}
                     relationshipType="Child"
+                    relationship={findRelationshipObject(child.id, 'parentOf')}
+                    isMobile={isMobile}
                     on:click={handleCardClick}
+                    on:delete={handleDeleteRelationship}
                   />
                 {/each}
               </RelationshipCardGrid>
@@ -434,7 +522,10 @@
                 <RelationshipCard
                   person={$personRelationships.mother}
                   relationshipType="Mother"
+                  relationship={findRelationshipObject($personRelationships.mother.id, 'parentOf', 'mother')}
+                  isMobile={isMobile}
                   on:click={handleCardClick}
+                  on:delete={handleDeleteRelationship}
                 />
               {:else}
                 <!-- Add Mother Button (Mobile) -->
@@ -451,7 +542,10 @@
                 <RelationshipCard
                   person={$personRelationships.father}
                   relationshipType="Father"
+                  relationship={findRelationshipObject($personRelationships.father.id, 'parentOf', 'father')}
+                  isMobile={isMobile}
                   on:click={handleCardClick}
+                  on:delete={handleDeleteRelationship}
                 />
               {:else}
                 <!-- Add Father Button (Mobile) -->
@@ -517,6 +611,7 @@
                 <RelationshipCard
                   person={sibling}
                   relationshipType="Sibling"
+                  isMobile={isMobile}
                   on:click={handleCardClick}
                 />
               {/each}
@@ -529,7 +624,10 @@
                 <RelationshipCard
                   person={spouse}
                   relationshipType="Spouse"
+                  relationship={findRelationshipObject(spouse.id, 'spouse')}
+                  isMobile={isMobile}
                   on:click={handleCardClick}
+                  on:delete={handleDeleteRelationship}
                 />
               {/each}
             </div>
@@ -571,7 +669,10 @@
                 <RelationshipCard
                   person={child}
                   relationshipType="Child"
+                  relationship={findRelationshipObject(child.id, 'parentOf')}
+                  isMobile={isMobile}
                   on:click={handleCardClick}
+                  on:delete={handleDeleteRelationship}
                 />
               {/each}
             </div>
@@ -622,6 +723,20 @@
     </div>
   </div>
 {/if}
+
+<!-- Confirmation Dialog for Relationship Deletion -->
+<ConfirmationDialog
+  isOpen={showConfirmDialog}
+  title="Delete Relationship"
+  message={pendingDeletePerson && pendingDeleteType
+    ? `Are you sure you want to remove ${pendingDeletePerson.firstName} ${pendingDeletePerson.lastName} as ${pendingDeleteType}?`
+    : 'Are you sure you want to delete this relationship?'}
+  confirmText="Delete"
+  cancelText="Cancel"
+  isDangerous={true}
+  on:confirm={handleConfirmDelete}
+  on:cancel={handleCancelDelete}
+/>
 
 <style>
   .modal-backdrop {
