@@ -8,6 +8,7 @@
   import QuickAddChild from './QuickAddChild.svelte'
   import QuickAddParent from './QuickAddParent.svelte'
   import QuickAddSpouse from './QuickAddSpouse.svelte'
+  import LinkExistingParent from './LinkExistingParent.svelte'
   import { modal } from '../stores/modalStore.js'
   import { peopleById, createPersonRelationships } from '../stores/derivedStores.js'
   import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
@@ -299,6 +300,24 @@
                 </div>
               {/if}
 
+              <!-- Link Existing Mother -->
+              {#if !$personRelationships.mother && !showQuickAddMother}
+                <LinkExistingParent
+                  child={person}
+                  parentType="mother"
+                  data-testid="link-existing-mother"
+                />
+              {/if}
+
+              <!-- Link Existing Father -->
+              {#if !$personRelationships.father && !showQuickAddFather}
+                <LinkExistingParent
+                  child={person}
+                  parentType="father"
+                  data-testid="link-existing-father"
+                />
+              {/if}
+
               <!-- Sibling Cards -->
               <RelationshipCardGrid title="Siblings" count={$personRelationships.siblings.length}>
                 {#each $personRelationships.siblings as sibling (sibling.id)}
@@ -453,6 +472,24 @@
                   on:cancel={handleQuickAddFatherCancel}
                 />
               </div>
+            {/if}
+
+            <!-- Link Existing Mother (Mobile) -->
+            {#if !$personRelationships.mother && !showQuickAddMother}
+              <LinkExistingParent
+                child={person}
+                parentType="mother"
+                data-testid="link-existing-mother"
+              />
+            {/if}
+
+            <!-- Link Existing Father (Mobile) -->
+            {#if !$personRelationships.father && !showQuickAddFather}
+              <LinkExistingParent
+                child={person}
+                parentType="father"
+                data-testid="link-existing-father"
+              />
             {/if}
           </CollapsibleSection>
 
