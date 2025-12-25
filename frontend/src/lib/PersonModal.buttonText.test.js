@@ -64,7 +64,7 @@ describe('PersonModal - Quick Add Button Text', () => {
       expect(fatherPanel.textContent).toContain('Add/Link Father')
     })
 
-    it('should display "Add New Person As Child" button', () => {
+    it('should display "Add/Link Children" collapsible panel', () => {
       // GIVEN any existing person
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' }
@@ -75,13 +75,13 @@ describe('PersonModal - Quick Add Button Text', () => {
       modal.open(1, 'edit')
       const { container } = render(PersonModal)
 
-      // THEN the button should say "Add New Person As Child"
-      const addChildButton = container.querySelector('[data-testid="add-child-button"]')
-      expect(addChildButton).toBeTruthy()
-      expect(addChildButton.textContent.trim()).toBe('Add New Person As Child')
+      // THEN should show CollapsibleActionPanel for children
+      const childPanel = container.querySelector('[data-relationship-type="child"]')
+      expect(childPanel).toBeTruthy()
+      expect(childPanel.textContent).toMatch(/Add\/Link Children/i)
     })
 
-    it('should display "Add New Person As Spouse" button when no spouses exist', () => {
+    it('should display "Add/Link Spouse" collapsible panel when no spouses exist', () => {
       // GIVEN a person with no spouses
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' }
@@ -92,13 +92,14 @@ describe('PersonModal - Quick Add Button Text', () => {
       modal.open(1, 'edit')
       const { container } = render(PersonModal)
 
-      // THEN the button should say "Add New Person As Spouse"
-      const addSpouseButton = container.querySelector('[data-testid="add-spouse-button"]')
-      expect(addSpouseButton).toBeTruthy()
-      expect(addSpouseButton.textContent.trim()).toBe('Add New Person As Spouse')
+      // THEN should show CollapsibleActionPanel for spouse
+      const spousePanel = container.querySelector('[data-relationship-type="spouse"]')
+      expect(spousePanel).toBeTruthy()
+      expect(spousePanel.textContent).toMatch(/Add\/Link Spouse/i)
+      expect(spousePanel.textContent).not.toMatch(/Another/i)
     })
 
-    it('should display "Add Another New Person As Spouse" button when spouses already exist', () => {
+    it('should display "Add/Link Another Spouse" panel when spouses already exist', () => {
       // GIVEN a person with an existing spouse
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' },
@@ -112,10 +113,10 @@ describe('PersonModal - Quick Add Button Text', () => {
       modal.open(1, 'edit')
       const { container } = render(PersonModal)
 
-      // THEN the button should say "Add Another New Person As Spouse"
-      const addSpouseButton = container.querySelector('[data-testid="add-spouse-button"]')
-      expect(addSpouseButton).toBeTruthy()
-      expect(addSpouseButton.textContent.trim()).toBe('Add Another New Person As Spouse')
+      // THEN should show CollapsibleActionPanel with "Another" label
+      const spousePanel = container.querySelector('[data-relationship-type="spouse"]')
+      expect(spousePanel).toBeTruthy()
+      expect(spousePanel.textContent).toMatch(/Add\/Link Another Spouse/i)
     })
   })
 
@@ -170,7 +171,7 @@ describe('PersonModal - Quick Add Button Text', () => {
       })
     })
 
-    it('should display "Add New Person As Child" button on mobile', async () => {
+    it('should display "Add/Link Children" panel on mobile', async () => {
       // GIVEN any existing person
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' }
@@ -185,15 +186,15 @@ describe('PersonModal - Quick Add Button Text', () => {
       const childrenSection = getByText('Children')
       childrenSection.click()
 
-      // THEN the button should say "Add New Person As Child"
+      // THEN should show CollapsibleActionPanel for children
       await waitFor(() => {
-        const addChildButton = container.querySelector('[data-testid="add-child-button"]')
-        expect(addChildButton).toBeTruthy()
-        expect(addChildButton.textContent.trim()).toBe('Add New Person As Child')
+        const childPanel = container.querySelector('[data-relationship-type="child"]')
+        expect(childPanel).toBeTruthy()
+        expect(childPanel.textContent).toMatch(/Add\/Link Children/i)
       })
     })
 
-    it('should display "Add New Person As Spouse" button on mobile when no spouses exist', async () => {
+    it('should display "Add/Link Spouse" panel on mobile when no spouses exist', async () => {
       // GIVEN a person with no spouses
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' }
@@ -208,15 +209,16 @@ describe('PersonModal - Quick Add Button Text', () => {
       const spousesSection = getByText('Spouses')
       spousesSection.click()
 
-      // THEN the button should say "Add New Person As Spouse"
+      // THEN should show CollapsibleActionPanel for spouse
       await waitFor(() => {
-        const addSpouseButton = container.querySelector('[data-testid="add-spouse-button"]')
-        expect(addSpouseButton).toBeTruthy()
-        expect(addSpouseButton.textContent.trim()).toBe('Add New Person As Spouse')
+        const spousePanel = container.querySelector('[data-relationship-type="spouse"]')
+        expect(spousePanel).toBeTruthy()
+        expect(spousePanel.textContent).toMatch(/Add\/Link Spouse/i)
+        expect(spousePanel.textContent).not.toMatch(/Another/i)
       })
     })
 
-    it('should display "Add Another New Person As Spouse" button on mobile when spouses exist', async () => {
+    it('should display "Add/Link Another Spouse" panel on mobile when spouses exist', async () => {
       // GIVEN a person with an existing spouse
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' },
@@ -234,11 +236,11 @@ describe('PersonModal - Quick Add Button Text', () => {
       const spousesSection = getByText(/Spouses/)
       spousesSection.click()
 
-      // THEN the button should say "Add Another New Person As Spouse"
+      // THEN should show CollapsibleActionPanel with "Another" label
       await waitFor(() => {
-        const addSpouseButton = container.querySelector('[data-testid="add-spouse-button"]')
-        expect(addSpouseButton).toBeTruthy()
-        expect(addSpouseButton.textContent.trim()).toBe('Add Another New Person As Spouse')
+        const spousePanel = container.querySelector('[data-relationship-type="spouse"]')
+        expect(spousePanel).toBeTruthy()
+        expect(spousePanel.textContent).toMatch(/Add\/Link Another Spouse/i)
       })
     })
   })
@@ -267,7 +269,7 @@ describe('PersonModal - Quick Add Button Text', () => {
       expect(addFatherButton).toBeFalsy()
     })
 
-    it('should show child and spouse buttons even when relationships exist', () => {
+    it('should show child and spouse panels even when relationships exist', () => {
       // GIVEN a person with existing children and spouses
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' },
@@ -283,13 +285,13 @@ describe('PersonModal - Quick Add Button Text', () => {
       modal.open(1, 'edit')
       const { container } = render(PersonModal)
 
-      // THEN both buttons should still be visible (can add more children and spouses)
-      const addChildButton = container.querySelector('[data-testid="add-child-button"]')
-      const addSpouseButton = container.querySelector('[data-testid="add-spouse-button"]')
-      expect(addChildButton).toBeTruthy()
-      expect(addSpouseButton).toBeTruthy()
-      expect(addChildButton.textContent.trim()).toBe('Add New Person As Child')
-      expect(addSpouseButton.textContent.trim()).toBe('Add Another New Person As Spouse')
+      // THEN both panels should still be visible (can add more children and spouses)
+      const childPanel = container.querySelector('[data-relationship-type="child"]')
+      const spousePanel = container.querySelector('[data-relationship-type="spouse"]')
+      expect(childPanel).toBeTruthy()
+      expect(spousePanel).toBeTruthy()
+      expect(childPanel.textContent).toMatch(/Add\/Link Children/i)
+      expect(spousePanel.textContent).toMatch(/Add\/Link Another Spouse/i)
     })
   })
 })

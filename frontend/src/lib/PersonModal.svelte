@@ -26,12 +26,13 @@
 
   const dispatch = createEventDispatcher()
 
-  // Quick Add Child state
-  let showQuickAddChild = false
-
   // Spouse Panel references (for collapsing after success)
   let spousePanelDesktop = null
   let spousePanelMobile = null
+
+  // Child Panel references (for collapsing after success)
+  let childPanelDesktop = null
+  let childPanelMobile = null
 
   // Confirmation dialog state
   let showConfirmDialog = false
@@ -131,15 +132,17 @@
     }
   }
 
-  // Quick Add Child handlers
-  function toggleQuickAddChild() {
-    showQuickAddChild = !showQuickAddChild
+  // Helper function to collapse both desktop and mobile panels
+  function collapsePanels(desktopPanel, mobilePanel) {
+    if (desktopPanel) {
+      desktopPanel.collapsePanel()
+    }
+    if (mobilePanel) {
+      mobilePanel.collapsePanel()
+    }
   }
 
-  function handleQuickAddChildCancel() {
-    showQuickAddChild = false
-  }
-
+  // Quick Add Child handler (used by CollapsibleActionPanel slots)
   async function handleQuickAddChildSubmit(event) {
     const { childData, parentId, parentRole } = event.detail
 
@@ -155,8 +158,8 @@
         // Show success notification
         successNotification(`Child added successfully`)
 
-        // Hide the form
-        showQuickAddChild = false
+        // Collapse the panel (but keep it visible for adding more children)
+        collapsePanels(childPanelDesktop, childPanelMobile)
       } else {
         // Show error notification
         errorNotification(result.error || 'Failed to add child')
@@ -164,6 +167,12 @@
     } catch (err) {
       errorNotification('Failed to add child: ' + err.message)
     }
+  }
+
+  // Handle successful child link from LinkExistingChildren
+  function handleLinkChildrenSuccess() {
+    // Collapse the panel after successful link
+    collapsePanels(childPanelDesktop, childPanelMobile)
   }
 
   // Quick Add Parent handler (used by CollapsibleActionPanel slots)
@@ -211,12 +220,7 @@
         successNotification('Spouse added successfully')
 
         // Collapse the panel (but keep it visible for adding more spouses)
-        if (spousePanelDesktop) {
-          spousePanelDesktop.collapsePanel()
-        }
-        if (spousePanelMobile) {
-          spousePanelMobile.collapsePanel()
-        }
+        collapsePanels(spousePanelDesktop, spousePanelMobile)
       } else {
         // Show error notification
         errorNotification(result.error || 'Failed to add spouse')
@@ -229,12 +233,7 @@
   // Handle successful spouse link from LinkExistingSpouse
   function handleLinkSpouseSuccess() {
     // Collapse the panel after successful link
-    if (spousePanelDesktop) {
-      spousePanelDesktop.collapsePanel()
-    }
-    if (spousePanelMobile) {
-      spousePanelMobile.collapsePanel()
-    }
+    collapsePanels(spousePanelDesktop, spousePanelMobile)
   }
 
   // Delete relationship handlers
@@ -427,35 +426,27 @@
                 {/each}
               </RelationshipCardGrid>
 
-              <!-- Add Child Button -->
-              <button
-                type="button"
-                class="add-child-button"
-                data-testid="add-child-button"
-                on:click={toggleQuickAddChild}
+              <!-- Child Panel (CollapsibleActionPanel - always visible, supports multiple children) -->
+              <CollapsibleActionPanel
+                bind:this={childPanelDesktop}
+                label="Add/Link Children"
+                relationshipType="child"
+                createLabel="Create New Person"
+                linkLabel="Link Existing Person(s)"
               >
-                {showQuickAddChild ? 'Cancel' : 'Add New Person As Child'}
-              </button>
-
-              <!-- Quick Add Child Form -->
-              {#if showQuickAddChild}
-                <div data-testid="quick-add-child-form">
+                <div slot="create">
                   <QuickAddChild
                     parent={person}
-                    onCancel={handleQuickAddChildCancel}
                     on:submit={handleQuickAddChildSubmit}
-                    on:cancel={handleQuickAddChildCancel}
                   />
                 </div>
-              {/if}
-
-              <!-- Link Existing Children (always show, supports multiple children) -->
-              {#if !showQuickAddChild}
-                <LinkExistingChildren
-                  parent={person}
-                  data-testid="link-existing-children"
-                />
-              {/if}
+                <div slot="link">
+                  <LinkExistingChildren
+                    parent={person}
+                    on:success={handleLinkChildrenSuccess}
+                  />
+                </div>
+              </CollapsibleActionPanel>
             {:else}
               <div class="empty-relationships">
                 <p>Add person details to view relationships</p>
@@ -609,35 +600,27 @@
               {/each}
             </div>
 
-            <!-- Add Child Button (Mobile) -->
-            <button
-              type="button"
-              class="add-child-button mobile"
-              data-testid="add-child-button"
-              on:click={toggleQuickAddChild}
+            <!-- Child Panel (Mobile - CollapsibleActionPanel, always visible, supports multiple children) -->
+            <CollapsibleActionPanel
+              bind:this={childPanelMobile}
+              label="Add/Link Children"
+              relationshipType="child"
+              createLabel="Create New Person"
+              linkLabel="Link Existing Person(s)"
             >
-              {showQuickAddChild ? 'Cancel' : 'Add New Person As Child'}
-            </button>
-
-            <!-- Quick Add Child Form (Mobile) -->
-            {#if showQuickAddChild}
-              <div data-testid="quick-add-child-form">
+              <div slot="create">
                 <QuickAddChild
                   parent={person}
-                  onCancel={handleQuickAddChildCancel}
                   on:submit={handleQuickAddChildSubmit}
-                  on:cancel={handleQuickAddChildCancel}
                 />
               </div>
-            {/if}
-
-            <!-- Link Existing Children (Mobile, always show, supports multiple children) -->
-            {#if !showQuickAddChild}
-              <LinkExistingChildren
-                parent={person}
-                data-testid="link-existing-children"
-              />
-            {/if}
+              <div slot="link">
+                <LinkExistingChildren
+                  parent={person}
+                  on:success={handleLinkChildrenSuccess}
+                />
+              </div>
+            </CollapsibleActionPanel>
           </CollapsibleSection>
         {/if}
       {/if}
@@ -798,33 +781,6 @@
   .delete-button:focus {
     outline: 2px solid #f44336;
     outline-offset: 2px;
-  }
-
-  .add-child-button {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    margin-top: 1rem;
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .add-child-button:hover {
-    background-color: #1976D2;
-  }
-
-  .add-child-button:focus {
-    outline: 2px solid #2196F3;
-    outline-offset: 2px;
-  }
-
-  .add-child-button.mobile {
-    margin-top: 0.75rem;
   }
 
   /* Mobile responsive */
