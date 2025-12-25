@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import TwoColumnLayout from './components/TwoColumnLayout.svelte'
   import CollapsibleSection from './components/CollapsibleSection.svelte'
+  import CollapsibleActionPanel from './components/CollapsibleActionPanel.svelte'
   import PersonFormFields from './components/PersonFormFields.svelte'
   import RelationshipCard from './components/RelationshipCard.svelte'
   import RelationshipCardGrid from './components/RelationshipCardGrid.svelte'
@@ -27,10 +28,6 @@
 
   // Quick Add Child state
   let showQuickAddChild = false
-
-  // Quick Add Parent state
-  let showQuickAddMother = false
-  let showQuickAddFather = false
 
   // Quick Add Spouse state
   let showQuickAddSpouse = false
@@ -168,29 +165,7 @@
     }
   }
 
-  // Quick Add Parent handlers
-  function toggleQuickAddMother() {
-    showQuickAddMother = !showQuickAddMother
-    if (showQuickAddMother) {
-      showQuickAddFather = false // Close father form if open
-    }
-  }
-
-  function toggleQuickAddFather() {
-    showQuickAddFather = !showQuickAddFather
-    if (showQuickAddFather) {
-      showQuickAddMother = false // Close mother form if open
-    }
-  }
-
-  function handleQuickAddMotherCancel() {
-    showQuickAddMother = false
-  }
-
-  function handleQuickAddFatherCancel() {
-    showQuickAddFather = false
-  }
-
+  // Quick Add Parent handler (used by CollapsibleActionPanel slots)
   async function handleQuickAddParentSubmit(event) {
     const { parentData, childId, parentType } = event.detail
 
@@ -207,12 +182,8 @@
         const parentTypeDisplay = parentType === 'mother' ? 'Mother' : 'Father'
         successNotification(`${parentTypeDisplay} added successfully`)
 
-        // Hide the form
-        if (parentType === 'mother') {
-          showQuickAddMother = false
-        } else {
-          showQuickAddFather = false
-        }
+        // Note: CollapsibleActionPanel will disappear automatically when parent is added
+        // because the panel is conditionally rendered based on parent existence
       } else {
         // Show error notification
         errorNotification(result.error || 'Failed to add parent')
@@ -324,16 +295,6 @@
                     on:click={handleCardClick}
                     on:delete={handleDeleteRelationship}
                   />
-                {:else}
-                  <!-- Add Mother Button -->
-                  <button
-                    type="button"
-                    class="add-parent-button"
-                    data-testid="add-mother-button"
-                    on:click={toggleQuickAddMother}
-                  >
-                    {showQuickAddMother ? 'Cancel' : 'Add New Person As Mother'}
-                  </button>
                 {/if}
                 {#if $personRelationships.father}
                   <RelationshipCard
@@ -344,61 +305,55 @@
                     on:click={handleCardClick}
                     on:delete={handleDeleteRelationship}
                   />
-                {:else}
-                  <!-- Add Father Button -->
-                  <button
-                    type="button"
-                    class="add-parent-button"
-                    data-testid="add-father-button"
-                    on:click={toggleQuickAddFather}
-                  >
-                    {showQuickAddFather ? 'Cancel' : 'Add New Person As Father'}
-                  </button>
                 {/if}
               </RelationshipCardGrid>
 
-              <!-- Quick Add Mother Form -->
-              {#if showQuickAddMother}
-                <div data-testid="quick-add-mother-form">
-                  <QuickAddParent
-                    child={person}
-                    parentType="mother"
-                    onCancel={handleQuickAddMotherCancel}
-                    on:submit={handleQuickAddParentSubmit}
-                    on:cancel={handleQuickAddMotherCancel}
-                  />
-                </div>
+              <!-- Mother Panel (CollapsibleActionPanel) -->
+              {#if !$personRelationships.mother}
+                <CollapsibleActionPanel
+                  label="Add/Link Mother"
+                  relationshipType="mother"
+                  createLabel="Create New Person"
+                  linkLabel="Link Existing Person"
+                >
+                  <div slot="create">
+                    <QuickAddParent
+                      child={person}
+                      parentType="mother"
+                      on:submit={handleQuickAddParentSubmit}
+                    />
+                  </div>
+                  <div slot="link">
+                    <LinkExistingParent
+                      child={person}
+                      parentType="mother"
+                    />
+                  </div>
+                </CollapsibleActionPanel>
               {/if}
 
-              <!-- Quick Add Father Form -->
-              {#if showQuickAddFather}
-                <div data-testid="quick-add-father-form">
-                  <QuickAddParent
-                    child={person}
-                    parentType="father"
-                    onCancel={handleQuickAddFatherCancel}
-                    on:submit={handleQuickAddParentSubmit}
-                    on:cancel={handleQuickAddFatherCancel}
-                  />
-                </div>
-              {/if}
-
-              <!-- Link Existing Mother -->
-              {#if !$personRelationships.mother && !showQuickAddMother}
-                <LinkExistingParent
-                  child={person}
-                  parentType="mother"
-                  data-testid="link-existing-mother"
-                />
-              {/if}
-
-              <!-- Link Existing Father -->
-              {#if !$personRelationships.father && !showQuickAddFather}
-                <LinkExistingParent
-                  child={person}
-                  parentType="father"
-                  data-testid="link-existing-father"
-                />
+              <!-- Father Panel (CollapsibleActionPanel) -->
+              {#if !$personRelationships.father}
+                <CollapsibleActionPanel
+                  label="Add/Link Father"
+                  relationshipType="father"
+                  createLabel="Create New Person"
+                  linkLabel="Link Existing Person"
+                >
+                  <div slot="create">
+                    <QuickAddParent
+                      child={person}
+                      parentType="father"
+                      on:submit={handleQuickAddParentSubmit}
+                    />
+                  </div>
+                  <div slot="link">
+                    <LinkExistingParent
+                      child={person}
+                      parentType="father"
+                    />
+                  </div>
+                </CollapsibleActionPanel>
               {/if}
 
               <!-- Sibling Cards -->
@@ -527,16 +482,6 @@
                   on:click={handleCardClick}
                   on:delete={handleDeleteRelationship}
                 />
-              {:else}
-                <!-- Add Mother Button (Mobile) -->
-                <button
-                  type="button"
-                  class="add-parent-button mobile"
-                  data-testid="add-mother-button"
-                  on:click={toggleQuickAddMother}
-                >
-                  {showQuickAddMother ? 'Cancel' : 'Add New Person As Mother'}
-                </button>
               {/if}
               {#if $personRelationships.father}
                 <RelationshipCard
@@ -547,61 +492,55 @@
                   on:click={handleCardClick}
                   on:delete={handleDeleteRelationship}
                 />
-              {:else}
-                <!-- Add Father Button (Mobile) -->
-                <button
-                  type="button"
-                  class="add-parent-button mobile"
-                  data-testid="add-father-button"
-                  on:click={toggleQuickAddFather}
-                >
-                  {showQuickAddFather ? 'Cancel' : 'Add New Person As Father'}
-                </button>
               {/if}
             </div>
 
-            <!-- Quick Add Mother Form (Mobile) -->
-            {#if showQuickAddMother}
-              <div data-testid="quick-add-mother-form">
-                <QuickAddParent
-                  child={person}
-                  parentType="mother"
-                  onCancel={handleQuickAddMotherCancel}
-                  on:submit={handleQuickAddParentSubmit}
-                  on:cancel={handleQuickAddMotherCancel}
-                />
-              </div>
+            <!-- Mother Panel (Mobile) -->
+            {#if !$personRelationships.mother}
+              <CollapsibleActionPanel
+                label="Add/Link Mother"
+                relationshipType="mother"
+                createLabel="Create New Person"
+                linkLabel="Link Existing Person"
+              >
+                <div slot="create">
+                  <QuickAddParent
+                    child={person}
+                    parentType="mother"
+                    on:submit={handleQuickAddParentSubmit}
+                  />
+                </div>
+                <div slot="link">
+                  <LinkExistingParent
+                    child={person}
+                    parentType="mother"
+                  />
+                </div>
+              </CollapsibleActionPanel>
             {/if}
 
-            <!-- Quick Add Father Form (Mobile) -->
-            {#if showQuickAddFather}
-              <div data-testid="quick-add-father-form">
-                <QuickAddParent
-                  child={person}
-                  parentType="father"
-                  onCancel={handleQuickAddFatherCancel}
-                  on:submit={handleQuickAddParentSubmit}
-                  on:cancel={handleQuickAddFatherCancel}
-                />
-              </div>
-            {/if}
-
-            <!-- Link Existing Mother (Mobile) -->
-            {#if !$personRelationships.mother && !showQuickAddMother}
-              <LinkExistingParent
-                child={person}
-                parentType="mother"
-                data-testid="link-existing-mother"
-              />
-            {/if}
-
-            <!-- Link Existing Father (Mobile) -->
-            {#if !$personRelationships.father && !showQuickAddFather}
-              <LinkExistingParent
-                child={person}
-                parentType="father"
-                data-testid="link-existing-father"
-              />
+            <!-- Father Panel (Mobile) -->
+            {#if !$personRelationships.father}
+              <CollapsibleActionPanel
+                label="Add/Link Father"
+                relationshipType="father"
+                createLabel="Create New Person"
+                linkLabel="Link Existing Person"
+              >
+                <div slot="create">
+                  <QuickAddParent
+                    child={person}
+                    parentType="father"
+                    on:submit={handleQuickAddParentSubmit}
+                  />
+                </div>
+                <div slot="link">
+                  <LinkExistingParent
+                    child={person}
+                    parentType="father"
+                  />
+                </div>
+              </CollapsibleActionPanel>
             {/if}
           </CollapsibleSection>
 
@@ -895,32 +834,6 @@
     margin-top: 0.75rem;
   }
 
-  .add-parent-button {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    margin-top: 0.5rem;
-    background-color: #FF9800;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .add-parent-button:hover {
-    background-color: #F57C00;
-  }
-
-  .add-parent-button:focus {
-    outline: 2px solid #FF9800;
-    outline-offset: 2px;
-  }
-
-  .add-parent-button.mobile {
-    margin-top: 0.75rem;
-  }
 
   .add-spouse-button {
     width: 100%;

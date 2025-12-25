@@ -30,7 +30,7 @@ describe('PersonModal - Quick Add Button Text', () => {
       global.innerWidth = 1024 // Desktop mode
     })
 
-    it('should display "Add New Person As Mother" button when mother does not exist', () => {
+    it('should display "Add/Link Mother" collapsible panel when mother does not exist', () => {
       // GIVEN a person with no mother
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' }
@@ -41,13 +41,13 @@ describe('PersonModal - Quick Add Button Text', () => {
       modal.open(1, 'edit')
       const { container } = render(PersonModal)
 
-      // THEN the button should say "Add New Person As Mother"
-      const addMotherButton = container.querySelector('[data-testid="add-mother-button"]')
-      expect(addMotherButton).toBeTruthy()
-      expect(addMotherButton.textContent.trim()).toBe('Add New Person As Mother')
+      // THEN the CollapsibleActionPanel should show "Add/Link Mother"
+      const motherPanel = container.querySelector('[data-relationship-type="mother"]')
+      expect(motherPanel).toBeTruthy()
+      expect(motherPanel.textContent).toContain('Add/Link Mother')
     })
 
-    it('should display "Add New Person As Father" button when father does not exist', () => {
+    it('should display "Add/Link Father" collapsible panel when father does not exist', () => {
       // GIVEN a person with no father
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' }
@@ -58,10 +58,10 @@ describe('PersonModal - Quick Add Button Text', () => {
       modal.open(1, 'edit')
       const { container } = render(PersonModal)
 
-      // THEN the button should say "Add New Person As Father"
-      const addFatherButton = container.querySelector('[data-testid="add-father-button"]')
-      expect(addFatherButton).toBeTruthy()
-      expect(addFatherButton.textContent.trim()).toBe('Add New Person As Father')
+      // THEN the CollapsibleActionPanel should show "Add/Link Father"
+      const fatherPanel = container.querySelector('[data-relationship-type="father"]')
+      expect(fatherPanel).toBeTruthy()
+      expect(fatherPanel.textContent).toContain('Add/Link Father')
     })
 
     it('should display "Add New Person As Child" button', () => {
@@ -124,7 +124,7 @@ describe('PersonModal - Quick Add Button Text', () => {
       global.innerWidth = 375 // Mobile mode
     })
 
-    it('should display "Add New Person As Mother" button on mobile', async () => {
+    it('should display "Add/Link Mother" collapsible panel on mobile', async () => {
       // GIVEN a person with no mother
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' }
@@ -139,15 +139,15 @@ describe('PersonModal - Quick Add Button Text', () => {
       const parentsSection = getByText('Parents')
       parentsSection.click()
 
-      // THEN the button should say "Add New Person As Mother"
+      // THEN the CollapsibleActionPanel should show "Add/Link Mother"
       await waitFor(() => {
-        const addMotherButton = container.querySelector('[data-testid="add-mother-button"]')
-        expect(addMotherButton).toBeTruthy()
-        expect(addMotherButton.textContent.trim()).toBe('Add New Person As Mother')
+        const motherPanel = container.querySelector('[data-relationship-type="mother"]')
+        expect(motherPanel).toBeTruthy()
+        expect(motherPanel.textContent).toContain('Add/Link Mother')
       })
     })
 
-    it('should display "Add New Person As Father" button on mobile', async () => {
+    it('should display "Add/Link Father" collapsible panel on mobile', async () => {
       // GIVEN a person with no father
       people.set([
         { id: 1, firstName: 'Alice', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01' }
@@ -162,11 +162,11 @@ describe('PersonModal - Quick Add Button Text', () => {
       const parentsSection = getByText('Parents')
       parentsSection.click()
 
-      // THEN the button should say "Add New Person As Father"
+      // THEN the CollapsibleActionPanel should show "Add/Link Father"
       await waitFor(() => {
-        const addFatherButton = container.querySelector('[data-testid="add-father-button"]')
-        expect(addFatherButton).toBeTruthy()
-        expect(addFatherButton.textContent.trim()).toBe('Add New Person As Father')
+        const fatherPanel = container.querySelector('[data-relationship-type="father"]')
+        expect(fatherPanel).toBeTruthy()
+        expect(fatherPanel.textContent).toContain('Add/Link Father')
       })
     })
 

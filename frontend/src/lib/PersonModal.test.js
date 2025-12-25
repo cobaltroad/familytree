@@ -123,7 +123,7 @@ describe('PersonModal', () => {
       expect(container.textContent).toContain('Jane Smith') // Mother
     })
 
-    it('should show Add Mother button when mother does not exist', () => {
+    it('should show Add/Link Mother collapsible panel when mother does not exist', () => {
       // Set up data: person with no mother
       people.set([
         { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: '1949-01-01' },
@@ -139,12 +139,12 @@ describe('PersonModal', () => {
 
       const { container } = render(PersonModal)
 
-      const addMotherButton = container.querySelector('[data-testid="add-mother-button"]')
-      expect(addMotherButton).toBeTruthy()
-      expect(addMotherButton.textContent).toContain('Add New Person As Mother')
+      const motherPanel = container.querySelector('[data-relationship-type="mother"]')
+      expect(motherPanel).toBeTruthy()
+      expect(motherPanel.textContent).toContain('Add/Link Mother')
     })
 
-    it('should show Add Father button when father does not exist', () => {
+    it('should show Add/Link Father collapsible panel when father does not exist', () => {
       // Set up data: person with no father
       people.set([
         { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'female', birthDate: '1952-02-02' },
@@ -160,9 +160,9 @@ describe('PersonModal', () => {
 
       const { container } = render(PersonModal)
 
-      const addFatherButton = container.querySelector('[data-testid="add-father-button"]')
-      expect(addFatherButton).toBeTruthy()
-      expect(addFatherButton.textContent).toContain('Add New Person As Father')
+      const fatherPanel = container.querySelector('[data-relationship-type="father"]')
+      expect(fatherPanel).toBeTruthy()
+      expect(fatherPanel.textContent).toContain('Add/Link Father')
     })
 
     it('should not show parent dropdown selectors', () => {
