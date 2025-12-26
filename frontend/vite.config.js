@@ -1,13 +1,17 @@
-import { defineConfig } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [sveltekit()],
   server: {
-    port: 5173
+    port: 5173,
+    fs: {
+      allow: ['..']
+    }
   },
   test: {
     globals: true,
-    environment: 'jsdom'
+    environment: 'jsdom',
+    include: ['src/**/*.{test,spec}.{js,ts}']
   }
-})
+});

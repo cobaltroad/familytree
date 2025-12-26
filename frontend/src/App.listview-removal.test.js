@@ -17,7 +17,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render } from '@testing-library/svelte'
-import App from './App.svelte'
+import App from './routes/+page.svelte'
 import { people, relationships } from './stores/familyStore.js'
 import { api } from './lib/api'
 

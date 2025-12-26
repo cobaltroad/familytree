@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/svelte'
 import { get } from 'svelte/store'
-import App from './App.svelte'
+import App from './routes/+page.svelte'
 import { people, relationships } from './stores/familyStore.js'
 
 describe('App.svelte - Simplified (No Prop Drilling)', () => {
