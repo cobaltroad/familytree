@@ -161,7 +161,7 @@ describe('POST /api/relationships - Edge Cases', () => {
 
     // Verify both relationships exist (child Person 1 has two parents)
     const relationships = sqlite.prepare(
-      'SELECT * FROM relationships WHERE person2_id = 1 AND type = "parentOf"'
+      "SELECT * FROM relationships WHERE person2_id = 1 AND type = 'parentOf'"
     ).all()
 
     expect(relationships).toHaveLength(2)
@@ -527,7 +527,7 @@ describe('POST /api/relationships - Edge Cases', () => {
 
     // Verify both spouse relationships exist
     const relationships = sqlite.prepare(
-      'SELECT * FROM relationships WHERE person1_id = 1 AND type = "spouse"'
+      "SELECT * FROM relationships WHERE person1_id = 1 AND type = 'spouse'"
     ).all()
 
     expect(relationships).toHaveLength(2)

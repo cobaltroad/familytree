@@ -314,7 +314,7 @@ describe('Performance Benchmarks - Relationships API', () => {
   it('should fetch 100 relationships in < 200ms', async () => {
     // Create 100 spouse relationships
     const stmt = sqlite.prepare(`
-      INSERT INTO relationships (person1_id, related_person1_id, type)
+      INSERT INTO relationships (person1_id, person2_id, type)
       VALUES (?, ?, ?)
     `)
 
@@ -426,7 +426,7 @@ describe('Performance Benchmarks - Complex Queries', () => {
       );
 
       CREATE INDEX idx_relationships_person ON relationships(person1_id);
-      CREATE INDEX idx_relationships_related ON relationships(related_person1_id);
+      CREATE INDEX idx_relationships_related ON relationships(person2_id);
       CREATE INDEX idx_relationships_type ON relationships(type);
     `)
   })
@@ -448,7 +448,7 @@ describe('Performance Benchmarks - Complex Queries', () => {
 
     // Create 1000 relationships
     const relStmt = sqlite.prepare(`
-      INSERT INTO relationships (person1_id, related_person1_id, type, parent_role)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
       VALUES (?, ?, ?, ?)
     `)
 

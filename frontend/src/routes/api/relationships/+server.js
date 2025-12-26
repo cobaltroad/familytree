@@ -56,17 +56,17 @@ export async function POST({ request, locals }) {
     try {
       data = await request.json()
     } catch (jsonError) {
-      return new Response('Invalid JSON', { status: 400 })
+      return json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
     // Validate required fields
     const validation = validateRelationshipData(data)
     if (!validation.valid) {
-      return new Response(validation.error, { status: 400 })
+      return json({ error: validation.error }, { status: 400 })
     }
 
     // Normalize relationship (convert mother/father to parentOf)
-    const normalized = normalizeRelationship(data.person1Id, data.person2Id, data.type)
+    const normalized = normalizeRelationship(data.person1Id, data.person2Id, data.type, data.parentRole)
 
     // Check if both people exist (validate foreign keys)
     const personsExist = await checkPersonsExist(
@@ -75,7 +75,7 @@ export async function POST({ request, locals }) {
       normalized.person2Id
     )
     if (!personsExist) {
-      return new Response('One or both persons do not exist', { status: 400 })
+      return json({ error: 'One or both persons do not exist' }, { status: 400 })
     }
 
     // For parent relationships, validate child doesn't already have this parent role
@@ -86,7 +86,7 @@ export async function POST({ request, locals }) {
         normalized.parentRole
       )
       if (hasParent) {
-        return new Response(`Person already has a ${normalized.parentRole}`, { status: 400 })
+        return json({ error: `Person already has a ${normalized.parentRole}` }, { status: 400 })
       }
     }
 
@@ -98,7 +98,7 @@ export async function POST({ request, locals }) {
       normalized.type
     )
     if (exists) {
-      return new Response('This relationship already exists', { status: 400 })
+      return json({ error: 'This relationship already exists' }, { status: 400 })
     }
 
     // Insert relationship into database
