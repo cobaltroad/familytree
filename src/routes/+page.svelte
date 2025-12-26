@@ -9,7 +9,9 @@
   import PersonModal from '$lib/PersonModal.svelte'
   import * as familyStore from '../stores/familyStore.js'
 
-  let currentPath = '/'
+  // Initialize currentPath from hash BEFORE first render
+  // This ensures the correct view is shown immediately, not after onMount
+  let currentPath = browser ? (window.location.hash.slice(1) || '/') : '/'
 
   // Normalize path (treat '/', '/tree', and '/list' as '/pedigree')
   $: normalizedPath = (currentPath === '/' || currentPath === '/tree' || currentPath === '/list') ? '/pedigree' : currentPath
@@ -22,9 +24,6 @@
   }
 
   onMount(() => {
-    // Initialize current path from hash
-    currentPath = window.location.hash.slice(1) || '/'
-
     // Load data
     loadData()
 

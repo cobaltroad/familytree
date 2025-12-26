@@ -104,9 +104,9 @@ describe('App.svelte - Simplified (No Prop Drilling)', () => {
       // Verify data is in store
       expect(get(people)).toEqual(testPeople)
 
-      // Tree container should be present
-      const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeTruthy()
+      // Pedigree container should be present (default view)
+      const pedigreeContainer = container.querySelector('.pedigree-container')
+      expect(pedigreeContainer).toBeTruthy()
     })
   })
 
