@@ -22,10 +22,8 @@
 
   $: focusPerson = $people.find(p => p.id === focusPersonId)
 
-  // Initialize D3 structure on mount
-  onMount(() => {
-    if (!svgElement) return
-
+  // Initialize D3 when svgElement becomes available (reactive to binding)
+  $: if (svgElement && !initialized) {
     svg = d3.select(svgElement)
       .attr('width', width)
       .attr('height', height)
@@ -42,7 +40,7 @@
     if (focusPerson) {
       updatePedigree()
     }
-  })
+  }
 
   // Update pedigree when focus person or data changes
   $: if (focusPerson && initialized && g) {

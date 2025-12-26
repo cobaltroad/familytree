@@ -164,6 +164,26 @@ export function renderRadialPersonNode(selection, getColor, onClick, nodeSize = 
   return selection
 }
 
+// Test mode configuration - when enabled, disables transitions for JSDOM compatibility
+export const testConfig = {
+  enabled: false
+}
+
+/**
+ * Apply transition to a selection if not in test mode
+ * In test mode, returns the selection directly (no transition)
+ *
+ * @param {d3.Selection} selection - The D3 selection
+ * @param {number} duration - Transition duration in ms
+ * @returns {d3.Selection|d3.Transition} - Selection or transition
+ */
+function maybeTransition(selection, duration) {
+  if (testConfig.enabled) {
+    return selection
+  }
+  return selection.transition().duration(duration)
+}
+
 /**
  * Update tree nodes using D3's enter/update/exit pattern
  * This function implements incremental updates instead of full re-renders
@@ -188,18 +208,16 @@ export function updateTreeNodes(g, nodes, getColor, onClick, options = {}) {
     .data(nodes, d => d.data.person.id)
 
   // EXIT: Remove old nodes with fade out
-  nodeGroups.exit()
-    .transition()
-    .duration(transitionDuration)
+  maybeTransition(nodeGroups.exit(), transitionDuration)
     .style('opacity', 0)
     .remove()
 
-  // ENTER: Add new node groups with initial opacity 0
+  // ENTER: Add new node groups with initial opacity
   const enterGroups = nodeGroups.enter()
     .append('g')
     .attr('class', 'node')
     .attr('transform', d => `translate(${d.x},${d.y})`)
-    .style('opacity', 0)
+    .style('opacity', testConfig.enabled ? 1 : 0)
 
   // Add rectangles to new nodes
   enterGroups.append('rect')
@@ -229,8 +247,7 @@ export function updateTreeNodes(g, nodes, getColor, onClick, options = {}) {
   const mergedNodes = nodeGroups.merge(enterGroups)
 
   // UPDATE: Transition all nodes to new positions and update attributes
-  mergedNodes.transition()
-    .duration(transitionDuration)
+  maybeTransition(mergedNodes, transitionDuration)
     .attr('transform', d => `translate(${d.x},${d.y})`)
     .style('opacity', 1)
 
@@ -279,9 +296,7 @@ function updateSpouseNodes(nodeGroups, getColor, onClick, options = {}) {
   const spouseData = nodeGroups.filter(d => d.data.spouse)
 
   // Remove old spouse elements
-  nodeGroups.selectAll('.spouse-rect, .spouse-line, .spouse-name, .spouse-year')
-    .transition()
-    .duration(transitionDuration)
+  maybeTransition(nodeGroups.selectAll('.spouse-rect, .spouse-line, .spouse-name, .spouse-year'), transitionDuration)
     .style('opacity', 0)
     .remove()
 
@@ -290,7 +305,7 @@ function updateSpouseNodes(nodeGroups, getColor, onClick, options = {}) {
     const node = d3.select(this)
 
     // Spouse rectangle
-    node.append('rect')
+    maybeTransition(node.append('rect')
       .attr('class', 'spouse-rect')
       .attr('width', nodeWidth)
       .attr('height', nodeHeight)
@@ -302,17 +317,15 @@ function updateSpouseNodes(nodeGroups, getColor, onClick, options = {}) {
       .attr('stroke-width', 2)
       .attr('stroke-dasharray', d.data.spouse.deathDate ? '5,5' : '0')
       .style('cursor', 'pointer')
-      .style('opacity', 0)
+      .style('opacity', testConfig.enabled ? 1 : 0)
       .on('click', (event) => {
         event.stopPropagation()
         onClick(d.data.spouse)
-      })
-      .transition()
-      .duration(transitionDuration)
+      }), transitionDuration)
       .style('opacity', 1)
 
     // Marriage line
-    node.append('line')
+    maybeTransition(node.append('line')
       .attr('class', 'spouse-line')
       .attr('x1', 60)
       .attr('y1', 0)
@@ -320,13 +333,11 @@ function updateSpouseNodes(nodeGroups, getColor, onClick, options = {}) {
       .attr('y2', 0)
       .attr('stroke', '#999')
       .attr('stroke-width', 2)
-      .style('opacity', 0)
-      .transition()
-      .duration(transitionDuration)
+      .style('opacity', testConfig.enabled ? 1 : 0), transitionDuration)
       .style('opacity', 1)
 
     // Spouse name
-    node.append('text')
+    maybeTransition(node.append('text')
       .attr('class', 'spouse-name')
       .attr('x', 130)
       .attr('dy', -5)
@@ -334,13 +345,11 @@ function updateSpouseNodes(nodeGroups, getColor, onClick, options = {}) {
       .attr('font-size', '12px')
       .attr('font-weight', 'bold')
       .text(`${d.data.spouse.firstName} ${d.data.spouse.lastName}`)
-      .style('opacity', 0)
-      .transition()
-      .duration(transitionDuration)
+      .style('opacity', testConfig.enabled ? 1 : 0), transitionDuration)
       .style('opacity', 1)
 
     // Spouse year
-    node.append('text')
+    maybeTransition(node.append('text')
       .attr('class', 'spouse-year')
       .attr('x', 130)
       .attr('dy', 10)
@@ -351,9 +360,7 @@ function updateSpouseNodes(nodeGroups, getColor, onClick, options = {}) {
         const death = d.data.spouse.deathDate ? new Date(d.data.spouse.deathDate).getFullYear() : ''
         return death ? `${birth} - ${death}` : birth
       })
-      .style('opacity', 0)
-      .transition()
-      .duration(transitionDuration)
+      .style('opacity', testConfig.enabled ? 1 : 0), transitionDuration)
       .style('opacity', 1)
   })
 }
@@ -373,25 +380,21 @@ export function updateTreeLinks(g, links, options = {}) {
     .data(links, d => `${d.source.data.person.id}-${d.target.data.person.id}`)
 
   // EXIT: Remove old links with fade out
-  linkSelection.exit()
-    .transition()
-    .duration(transitionDuration)
+  maybeTransition(linkSelection.exit(), transitionDuration)
     .style('opacity', 0)
     .remove()
 
-  // ENTER: Add new links with initial opacity 0
+  // ENTER: Add new links with initial opacity
   const enterLinks = linkSelection.enter()
     .append('path')
     .attr('class', 'link')
     .attr('fill', 'none')
     .attr('stroke', '#ccc')
     .attr('stroke-width', 2)
-    .style('opacity', 0)
+    .style('opacity', testConfig.enabled ? 1 : 0)
 
   // MERGE and UPDATE: Transition all links to new positions
-  linkSelection.merge(enterLinks)
-    .transition()
-    .duration(transitionDuration)
+  maybeTransition(linkSelection.merge(enterLinks), transitionDuration)
     .attr('d', d3.linkVertical()
       .x(d => d.x)
       .y(d => d.y))
@@ -418,9 +421,7 @@ export function updateRadialNodes(g, nodes, getColor, onClick, focusPersonId, op
     .data(nodes, d => d.data.person.id)
 
   // EXIT: Remove old nodes
-  nodeGroups.exit()
-    .transition()
-    .duration(transitionDuration)
+  maybeTransition(nodeGroups.exit(), transitionDuration)
     .style('opacity', 0)
     .remove()
 
@@ -428,7 +429,7 @@ export function updateRadialNodes(g, nodes, getColor, onClick, focusPersonId, op
   const enterGroups = nodeGroups.enter()
     .append('g')
     .attr('class', 'node')
-    .style('opacity', 0)
+    .style('opacity', testConfig.enabled ? 1 : 0)
 
   // Add circles to new nodes
   enterGroups.append('circle')
@@ -447,8 +448,7 @@ export function updateRadialNodes(g, nodes, getColor, onClick, focusPersonId, op
   const mergedNodes = nodeGroups.merge(enterGroups)
 
   // Update transform and opacity
-  mergedNodes.transition()
-    .duration(transitionDuration)
+  maybeTransition(mergedNodes, transitionDuration)
     .attr('transform', d => {
       const angle = d.x - Math.PI / 2
       const x = d.y * Math.cos(angle)
@@ -542,9 +542,7 @@ export function updateRadialLinks(g, links, options = {}) {
     .data(links, d => `${d.source.data.person.id}-${d.target.data.person.id}`)
 
   // EXIT
-  linkSelection.exit()
-    .transition()
-    .duration(transitionDuration)
+  maybeTransition(linkSelection.exit(), transitionDuration)
     .style('opacity', 0)
     .remove()
 
@@ -555,12 +553,10 @@ export function updateRadialLinks(g, links, options = {}) {
     .attr('fill', 'none')
     .attr('stroke', '#ccc')
     .attr('stroke-width', 2)
-    .style('opacity', 0)
+    .style('opacity', testConfig.enabled ? 1 : 0)
 
   // MERGE and UPDATE
-  linkSelection.merge(enterLinks)
-    .transition()
-    .duration(transitionDuration)
+  maybeTransition(linkSelection.merge(enterLinks), transitionDuration)
     .attr('d', d3.linkRadial()
       .angle(d => d.x)
       .radius(d => d.y))
@@ -589,9 +585,7 @@ export function updatePedigreeNodes(g, nodes, getColor, onClick, focusPersonId, 
     .data(nodes, d => d.data.person.id)
 
   // EXIT
-  nodeGroups.exit()
-    .transition()
-    .duration(transitionDuration)
+  maybeTransition(nodeGroups.exit(), transitionDuration)
     .style('opacity', 0)
     .remove()
 
@@ -599,7 +593,7 @@ export function updatePedigreeNodes(g, nodes, getColor, onClick, focusPersonId, 
   const enterGroups = nodeGroups.enter()
     .append('g')
     .attr('class', 'node')
-    .style('opacity', 0)
+    .style('opacity', testConfig.enabled ? 1 : 0)
 
   // Add rectangles to new nodes
   enterGroups.append('rect')
@@ -639,8 +633,7 @@ export function updatePedigreeNodes(g, nodes, getColor, onClick, focusPersonId, 
   const mergedNodes = nodeGroups.merge(enterGroups)
 
   // Update transform and opacity
-  mergedNodes.transition()
-    .duration(transitionDuration)
+  maybeTransition(mergedNodes, transitionDuration)
     .attr('transform', d => `translate(${d.x},${d.y})`)
     .style('opacity', 1)
 

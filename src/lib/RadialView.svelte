@@ -1,5 +1,4 @@
 <script>
-  import { onMount, afterUpdate } from 'svelte'
   import * as d3 from 'd3'
   import { getNodeColor, buildAncestorTree } from './treeHelpers.js'
   import { createZoomBehavior, updateRadialNodes, updateRadialLinks } from './d3Helpers.js'
@@ -22,10 +21,8 @@
 
   $: focusPerson = $people.find(p => p.id === focusPersonId)
 
-  // Initialize D3 structure on mount
-  onMount(() => {
-    if (!svgElement) return
-
+  // Initialize D3 when svgElement becomes available (reactive to binding)
+  $: if (svgElement && !initialized) {
     svg = d3.select(svgElement)
       .attr('width', width)
       .attr('height', height)
@@ -42,7 +39,7 @@
     if (focusPerson) {
       updateRadial()
     }
-  })
+  }
 
   // Update radial view when focus person or data changes
   $: if (focusPerson && initialized && g) {

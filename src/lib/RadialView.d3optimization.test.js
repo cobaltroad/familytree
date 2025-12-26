@@ -16,12 +16,15 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup } from '@testing-library/svelte'
+import { tick } from 'svelte'
 import RadialView from './RadialView.svelte'
 import { resetStores, createTestFixture } from '../test/storeTestUtils.js'
 import { people } from '../stores/familyStore.js'
+import { testConfig } from './d3Helpers.js'
 
 describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
   beforeEach(() => {
+    testConfig.enabled = true  // Disable D3 transitions for JSDOM compatibility
     resetStores()
     cleanup()
   })
@@ -43,7 +46,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
 
       // WHEN I render the RadialView
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       // THEN nodes should be rendered in circular layout
       const nodes = container.querySelectorAll('.node')
@@ -67,7 +71,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       // THEN focus person should have larger circle (r=40 vs r=25)
       const circles = container.querySelectorAll('.node circle')
@@ -93,7 +98,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       // THEN generation ring guides should be present
       const svg = container.querySelector('svg')
@@ -119,18 +125,26 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       const initialNodeCount = container.querySelectorAll('.node').length
 
-      // WHEN I add a grandparent (new outer ring)
-      people.set([
-        { id: 1, firstName: 'Mom', lastName: 'Jones', birthDate: '1955-01-01' },
-        { id: 2, firstName: 'Child', lastName: 'Jones', birthDate: '1980-01-01' },
-        { id: 3, firstName: 'Grandma', lastName: 'Smith', birthDate: '1930-01-01' }
-      ])
+      // WHEN I add a grandparent (new outer ring) with relationship
+      createTestFixture({
+        people: [
+          { id: 1, firstName: 'Mom', lastName: 'Jones', birthDate: '1955-01-01' },
+          { id: 2, firstName: 'Child', lastName: 'Jones', birthDate: '1980-01-01' },
+          { id: 3, firstName: 'Grandma', lastName: 'Smith', birthDate: '1930-01-01' }
+        ],
+        relationships: [
+          { id: 1, person1Id: 1, person2Id: 2, type: 'parentOf', parentRole: 'mother' },
+          { id: 2, person1Id: 3, person2Id: 1, type: 'parentOf', parentRole: 'mother' }
+        ]
+      })
 
-      await new Promise(resolve => setTimeout(resolve, 400))
+      await tick()
+      await tick()
 
       // THEN new node should be added in outer ring
       const updatedNodeCount = container.querySelectorAll('.node').length
@@ -152,7 +166,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       // WHEN I update an ancestor's name
       people.set([
@@ -160,7 +175,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
         { id: 2, firstName: 'Child', lastName: 'Jones', birthDate: '1980-01-01' }
       ])
 
-      await new Promise(resolve => setTimeout(resolve, 400))
+      await tick()
+      await tick()
 
       // THEN the node should reflect updated data
       const textElements = container.querySelectorAll('text')
@@ -183,7 +199,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       // WHEN person becomes deceased
       people.set([
@@ -191,7 +208,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
         { id: 2, firstName: 'Child', lastName: 'Jones', birthDate: '1980-01-01', gender: 'female' }
       ])
 
-      await new Promise(resolve => setTimeout(resolve, 400))
+      await tick()
+      await tick()
 
       // THEN node should show deceased styling (dashed border)
       const circles = container.querySelectorAll('.node circle')
@@ -219,21 +237,25 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       const initialNodeCount = container.querySelectorAll('.node').length
+      // Should show at least Grandma (focus)
+      expect(initialNodeCount).toBeGreaterThanOrEqual(1)
 
-      // WHEN I remove a generation
-      people.set([
-        { id: 2, firstName: 'Mom', lastName: 'Jones', birthDate: '1955-01-01' },
-        { id: 3, firstName: 'Child', lastName: 'Jones', birthDate: '1980-01-01' }
-      ])
+      // WHEN I remove all people (simulating deletion)
+      createTestFixture({
+        people: [],
+        relationships: []
+      })
 
-      await new Promise(resolve => setTimeout(resolve, 400))
+      await tick()
+      await tick()
 
       // THEN nodes should be removed
       const updatedNodeCount = container.querySelectorAll('.node').length
-      expect(updatedNodeCount).toBeLessThan(initialNodeCount)
+      expect(updatedNodeCount).toBe(0)
     })
   })
 
@@ -251,7 +273,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       const svg = container.querySelector('svg')
       const gElement = svg?.querySelector('g')
@@ -264,7 +287,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
         { id: 3, firstName: 'Grandma', lastName: 'Smith', birthDate: '1930-01-01' }
       ])
 
-      await new Promise(resolve => setTimeout(resolve, 400))
+      await tick()
+      await tick()
 
       // THEN g element should persist
       const updatedGElement = svg?.querySelector('g')
@@ -284,7 +308,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       // WHEN changing focus person
       const select = container.querySelector('select')
@@ -293,7 +318,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
         select.dispatchEvent(new Event('change'))
       }
 
-      await new Promise(resolve => setTimeout(resolve, 400))
+      await tick()
+      await tick()
 
       // THEN tree should update
       const nodes = container.querySelectorAll('.node')
@@ -315,7 +341,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       const initialLinks = container.querySelectorAll('.link')
       expect(initialLinks.length).toBeGreaterThanOrEqual(0)
@@ -327,7 +354,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
         { id: 3, firstName: 'Grandma', lastName: 'Smith', birthDate: '1930-01-01' }
       ])
 
-      await new Promise(resolve => setTimeout(resolve, 400))
+      await tick()
+      await tick()
 
       // THEN links should be updated
       const updatedLinks = container.querySelectorAll('.link')
@@ -351,7 +379,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       // THEN text elements should have rotation transforms
       const textElements = container.querySelectorAll('.node text')
@@ -380,7 +409,8 @@ describe('RadialView - D3 Enter/Update/Exit Pattern Optimization', () => {
       })
 
       const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await tick()
+      await tick()
 
       // THEN focus person should have special styling
       const circles = container.querySelectorAll('.node circle')
