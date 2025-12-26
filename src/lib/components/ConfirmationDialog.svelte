@@ -14,11 +14,27 @@
   let dialogElement
   let confirmButton
   let cancelButton
+  let focusTimeoutId
 
-  // Focus management
+  // Focus management with cleanup to prevent race conditions
   $: if (isOpen && confirmButton) {
+    // Clear any pending focus timeout
+    if (focusTimeoutId) {
+      clearTimeout(focusTimeoutId)
+    }
     // Focus the confirm button when dialog opens
-    setTimeout(() => confirmButton.focus(), 0)
+    focusTimeoutId = setTimeout(() => {
+      // Check if button still exists before focusing (prevent race condition)
+      if (confirmButton) {
+        confirmButton.focus()
+      }
+    }, 0)
+  } else {
+    // Clear timeout when dialog closes
+    if (focusTimeoutId) {
+      clearTimeout(focusTimeoutId)
+      focusTimeoutId = null
+    }
   }
 
   function handleConfirm() {
@@ -76,6 +92,10 @@
 
     return () => {
       document.body.style.overflow = ''
+      // Clear any pending focus timeout on unmount
+      if (focusTimeoutId) {
+        clearTimeout(focusTimeoutId)
+      }
     }
   })
 

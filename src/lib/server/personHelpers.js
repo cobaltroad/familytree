@@ -20,37 +20,21 @@ function toRFC3339(sqliteDateTime) {
 /**
  * Transforms a person database record to API response format
  * Converts snake_case column names to camelCase for consistency with frontend
- * Omits null/empty fields to match Go backend behavior (omitempty JSON tag)
+ * Always includes all fields (including null values) for consistent API interface
  *
  * @param {Object} person - Person record from database
  * @returns {Object} Transformed person object
  */
 export function transformPersonToAPI(person) {
-  const result = {
+  return {
     id: person.id,
     firstName: person.firstName,
-    lastName: person.lastName
+    lastName: person.lastName,
+    birthDate: person.birthDate !== undefined ? person.birthDate : null,
+    deathDate: person.deathDate !== undefined ? person.deathDate : null,
+    gender: person.gender !== undefined && person.gender !== '' ? person.gender : null,
+    createdAt: toRFC3339(person.createdAt)
   }
-
-  // Only include birthDate if not null
-  if (person.birthDate !== null) {
-    result.birthDate = person.birthDate
-  }
-
-  // Only include deathDate if not null
-  if (person.deathDate !== null) {
-    result.deathDate = person.deathDate
-  }
-
-  // Only include gender if not null and not empty string
-  if (person.gender !== null && person.gender !== '') {
-    result.gender = person.gender
-  }
-
-  // Always include createdAt in RFC3339 format
-  result.createdAt = toRFC3339(person.createdAt)
-
-  return result
 }
 
 /**

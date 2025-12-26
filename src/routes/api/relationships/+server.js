@@ -56,7 +56,7 @@ export async function POST({ request, locals }) {
     try {
       data = await request.json()
     } catch (jsonError) {
-      return json({ error: 'Invalid JSON' }, { status: 400 })
+      return new Response('Invalid JSON', { status: 400 })
     }
 
     // Validate required fields

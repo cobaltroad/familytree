@@ -65,22 +65,31 @@ function toRFC3339(sqliteDateTime) {
 
 /**
  * Transforms relationship from database format to API format
- * Keeps normalized format (parentOf with parentRole) to match Go backend
+ * Denormalizes parentOf relationships back to mother/father for API responses
+ * Always includes parentRole field (null for non-parent relationships)
  *
  * @param {Object} relationship - Relationship from database
  * @returns {Object} Transformed relationship for API response
  */
 export function denormalizeRelationship(relationship) {
-  const result = {
+  // If it's a parentOf relationship with a parentRole, denormalize the type
+  let type = relationship.type
+  let parentRole = relationship.parentRole || null
+
+  if (relationship.type === 'parentOf' && relationship.parentRole) {
+    // Denormalize: parentOf + parentRole="mother" → type="mother", parentRole="mother"
+    type = relationship.parentRole
+  }
+
+  // Always return all fields including parentRole (even if null)
+  return {
     id: relationship.id,
     person1Id: relationship.person1Id,
     person2Id: relationship.person2Id,
-    type: relationship.type,
-    parentRole: relationship.parentRole || null, // Ensure null instead of undefined
+    type: type,
+    parentRole: parentRole,
     createdAt: toRFC3339(relationship.createdAt)
   }
-
-  return result
 }
 
 /**
