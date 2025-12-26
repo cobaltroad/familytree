@@ -1,22 +1,41 @@
-# Backend
-backend/familytree.db
-backend/familytree
+# Dependencies
+node_modules/
 
-# Frontend
-frontend/node_modules
-frontend/dist
-frontend/.svelte-kit
-frontend/coverage
+# Build output
+.svelte-kit/
+build/
+dist/
 
-scripts/
+# Database (adjust based on versioning strategy)
+familytree.db
+familytree.db-*
+
+# Drizzle migrations (optional - may want to version these)
+# drizzle/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
 
 # OS
 .DS_Store
-*.swp
-*.swo
+Thumbs.db
 *~
 
-# IDE
-.vscode
-.idea
-*.iml
+# Legacy directories (archived)
+backend/
+frontend/
+
+# Scripts
+scripts/

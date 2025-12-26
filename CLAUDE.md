@@ -4,27 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Backend (Go)
+### Full-Stack SvelteKit Application
 ```bash
-cd backend
-go run main.go        # Start backend server on http://localhost:8080
-```
-
-### Frontend (Svelte + Vite)
-```bash
-cd frontend
 npm install           # Install dependencies (first time only)
 npm run dev          # Start dev server on http://localhost:5173
 npm run build        # Build for production
 npm run preview      # Preview production build
 ```
 
+### Drizzle ORM (Database Management)
+```bash
+npm run db:studio      # Open Drizzle Studio (database GUI)
+npx drizzle-kit generate    # Generate migrations from schema
+npx drizzle-kit migrate     # Apply migrations to database
+npx drizzle-kit push        # Push schema directly (development)
+```
+
 ## Architecture Overview
 
 ### Backend Structure
-- Single-file Go REST API (`backend/main.go`) using Chi router
-- SQLite database (`backend/familytree.db`) for persistence
+- SvelteKit server routes (`src/routes/api/`) for REST API
+- Drizzle ORM for type-safe database access
+- SQLite database (`familytree.db`) for persistence
 - Two main entities: **Person** and **Relationship**
+- Business logic modules in `src/lib/server/`
+
+### Database Access with Drizzle ORM
+The application uses Drizzle ORM for type-safe database queries:
+- Schema defined in `src/lib/db/schema.js`
+- Database client in `src/lib/db/client.js`
+- Automatic type inference from schema
+- Migration management via Drizzle Kit
+- Zero-cost abstractions with minimal runtime overhead
 
 ### Relationship Model
 The relationship system has evolved and uses a normalized storage approach:
@@ -237,9 +248,15 @@ Hash-based routing in `App.svelte`:
 ViewSwitcher navigation appears on all views and shows: Pedigree, Timeline, and Radial tabs.
 
 ### API Client
-`frontend/src/lib/api.js` provides typed API methods for all backend endpoints. The backend expects relationships to use:
+`src/lib/api.js` provides typed API methods for all backend endpoints (both client and server). The backend expects relationships to use:
 - `type: "mother"` or `type: "father"` (will be normalized to `"parentOf"` with `parent_role`)
 - `type: "spouse"` for spousal relationships
+
+SvelteKit server routes (`src/routes/api/`) handle:
+- Person CRUD operations (`/api/people`, `/api/people/[id]`)
+- Relationship CRUD operations (`/api/relationships`, `/api/relationships/[id]`)
+- Validation and business logic
+- Database transactions via Drizzle ORM
 
 ### Gender Display
 - Gender is shown with radio buttons in the PersonForm (female, male, other, unspecified)
@@ -334,3 +351,58 @@ See GitHub issues for resolved and current bugs:
 - Issue #1: ~~Parent names not displaying in modal relationships section~~ (RESOLVED)
 - Issue #2: ~~Modal doesn't reopen when clicking same node immediately after closing~~ (RESOLVED)
 - Issue #3: ~~Gender not displayed correctly in Person modal~~ (RESOLVED)
+
+## Migration History
+
+### SvelteKit + Drizzle Migration (December 2025)
+
+The application was migrated from a dual-server architecture (Go backend + Svelte frontend) to a unified SvelteKit full-stack framework with Drizzle ORM. This migration represents a fundamental shift in the application's architecture and development workflow.
+
+#### Architecture Changes
+
+**Before:**
+- Go backend (Chi router, database/sql)
+- Svelte frontend (Vite)
+- Two separate processes to run
+- Manual API synchronization
+- SQL query strings
+
+**After:**
+- SvelteKit full-stack (unified framework)
+- Drizzle ORM (type-safe database access)
+- Single process for development
+- End-to-end type safety
+- Schema-driven development
+
+#### Benefits
+
+**Developer Experience:**
+- Single language (TypeScript/JavaScript) across entire stack
+- Simplified development workflow (1 command vs. 2)
+- Hot module replacement for server routes
+- Drizzle Studio for database management
+- Better IDE support with full-stack type inference
+
+**Code Quality:**
+- Reduced codebase complexity (approximately 125 fewer lines)
+- End-to-end type safety from database to UI
+- Schema-driven development reduces bugs
+- Modern tooling and best practices
+- Easier onboarding for new developers
+
+**Performance:**
+- Faster development iteration cycles
+- Optimized production builds
+- Built-in SvelteKit optimizations (prerendering, SSR, etc.)
+- Efficient database queries with Drizzle
+
+#### Documentation
+
+For comprehensive technical details about the migration:
+- `/plans/SVELTEKIT_DRIZZLE_MIGRATION.md` - Technical analysis and exploration
+- `/plans/MIGRATION_USER_STORIES.md` - User stories and acceptance criteria
+- `/plans/MIGRATION_PROPOSAL_SUMMARY.md` - Executive summary and decision rationale
+
+#### Historical Reference
+
+The original Go backend has been archived at `/archive/backend-go-YYYYMMDD/` for reference. All functionality has been preserved and enhanced in the SvelteKit version.
