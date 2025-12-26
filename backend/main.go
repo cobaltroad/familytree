@@ -30,7 +30,7 @@ type Relationship struct {
 	Person1ID  int     `json:"person1Id"`
 	Person2ID  int     `json:"person2Id"`
 	Type       string  `json:"type"`                    // parentOf, spouse
-	ParentRole *string `json:"parentRole,omitempty"`    // mother, father, or null
+	ParentRole *string `json:"parentRole"`              // mother, father, or null
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
@@ -81,6 +81,31 @@ func (app *App) relationshipExists(person1ID, person2ID int, relType string) (bo
 	return count > 0, err
 }
 
+// relationshipExistsExcluding checks if a relationship already exists, excluding a specific relationship ID
+func (app *App) relationshipExistsExcluding(person1ID, person2ID int, relType string, excludeID int) (bool, error) {
+	var count int
+
+	if relType == "parentOf" {
+		// Check for both the relationship and its inverse
+		err := app.db.QueryRow(`
+			SELECT COUNT(*) FROM relationships
+			WHERE ((person1_id = ? AND person2_id = ? AND type = 'parentOf')
+			   OR (person1_id = ? AND person2_id = ? AND type = 'parentOf'))
+			  AND id != ?
+		`, person1ID, person2ID, person2ID, person1ID, excludeID).Scan(&count)
+		return count > 0, err
+	}
+
+	// For other relationship types, check both directions
+	err := app.db.QueryRow(`
+		SELECT COUNT(*) FROM relationships
+		WHERE ((person1_id = ? AND person2_id = ?) OR (person1_id = ? AND person2_id = ?))
+		  AND type = ?
+		  AND id != ?
+	`, person1ID, person2ID, person2ID, person1ID, relType, excludeID).Scan(&count)
+	return count > 0, err
+}
+
 // migrateToParentRoles adds parent_role column and removes sibling relationships
 func (app *App) migrateToParentRoles() error {
 	// Add column if it doesn't exist (will error if already exists, which is fine)
@@ -101,6 +126,16 @@ func (app *App) hasParentOfRole(childID int, role string) (bool, error) {
 		SELECT COUNT(*) FROM relationships
 		WHERE person2_id = ? AND type = 'parentOf' AND parent_role = ?
 	`, childID, role).Scan(&count)
+	return count > 0, err
+}
+
+// hasParentOfRoleExcluding checks if a person already has a parent of the specified role, excluding a specific relationship ID
+func (app *App) hasParentOfRoleExcluding(childID int, role string, excludeID int) (bool, error) {
+	var count int
+	err := app.db.QueryRow(`
+		SELECT COUNT(*) FROM relationships
+		WHERE person2_id = ? AND type = 'parentOf' AND parent_role = ? AND id != ?
+	`, childID, role, excludeID).Scan(&count)
 	return count > 0, err
 }
 
@@ -141,6 +176,8 @@ func main() {
 		r.Route("/relationships", func(r chi.Router) {
 			r.Get("/", app.getAllRelationships)
 			r.Post("/", app.createRelationship)
+			r.Get("/{id}", app.getRelationship)
+			r.Put("/{id}", app.updateRelationship)
 			r.Delete("/{id}", app.deleteRelationship)
 		})
 	})
@@ -239,6 +276,16 @@ func (app *App) createPerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate required fields
+	if p.FirstName == "" {
+		http.Error(w, "firstName is required and must be a non-empty string", http.StatusBadRequest)
+		return
+	}
+	if p.LastName == "" {
+		http.Error(w, "lastName is required and must be a non-empty string", http.StatusBadRequest)
+		return
+	}
+
 	result, err := app.db.Exec(
 		"INSERT INTO people (first_name, last_name, birth_date, death_date, gender) VALUES (?, ?, ?, ?, ?)",
 		p.FirstName, p.LastName, p.BirthDate, p.DeathDate, p.Gender,
@@ -248,9 +295,14 @@ func (app *App) createPerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the created person from database to get accurate createdAt
 	id, _ := result.LastInsertId()
-	p.ID = int(id)
-	p.CreatedAt = time.Now()
+	err = app.db.QueryRow("SELECT id, first_name, last_name, birth_date, death_date, gender, created_at FROM people WHERE id = ?", id).
+		Scan(&p.ID, &p.FirstName, &p.LastName, &p.BirthDate, &p.DeathDate, &p.Gender, &p.CreatedAt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -264,9 +316,30 @@ func (app *App) updatePerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if person exists
+	var existing Person
+	err = app.db.QueryRow("SELECT id FROM people WHERE id = ?", id).Scan(&existing.ID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Person not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	var p Person
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if p.FirstName == "" {
+		http.Error(w, "firstName is required and must be a non-empty string", http.StatusBadRequest)
+		return
+	}
+	if p.LastName == "" {
+		http.Error(w, "lastName is required and must be a non-empty string", http.StatusBadRequest)
 		return
 	}
 
@@ -279,7 +352,14 @@ func (app *App) updatePerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.ID = id
+	// Get the updated person from database to get accurate createdAt
+	err = app.db.QueryRow("SELECT id, first_name, last_name, birth_date, death_date, gender, created_at FROM people WHERE id = ?", id).
+		Scan(&p.ID, &p.FirstName, &p.LastName, &p.BirthDate, &p.DeathDate, &p.Gender, &p.CreatedAt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(p)
 }
@@ -288,6 +368,17 @@ func (app *App) deletePerson(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	// Check if person exists
+	var existing Person
+	err = app.db.QueryRow("SELECT id FROM people WHERE id = ?", id).Scan(&existing.ID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Person not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -321,6 +412,109 @@ func (app *App) getAllRelationships(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(relationships)
+}
+
+func (app *App) getRelationship(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var rel Relationship
+	err = app.db.QueryRow("SELECT id, person1_id, person2_id, type, parent_role, created_at FROM relationships WHERE id = ?", id).
+		Scan(&rel.ID, &rel.Person1ID, &rel.Person2ID, &rel.Type, &rel.ParentRole, &rel.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "Relationship not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(rel)
+}
+
+func (app *App) updateRelationship(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	// Check if relationship exists
+	var existing Relationship
+	err = app.db.QueryRow("SELECT id FROM relationships WHERE id = ?", id).Scan(&existing.ID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Relationship not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var rel Relationship
+	if err := json.NewDecoder(r.Body).Decode(&rel); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Normalize the relationship (convert "mother"/"father" to "parentOf" with parent_role)
+	person1ID, person2ID, relType, parentRole := normalizeRelationship(rel.Person1ID, rel.Person2ID, rel.Type)
+
+	// Validate relationship type
+	validTypes := map[string]bool{"parentOf": true, "spouse": true}
+	if !validTypes[relType] {
+		http.Error(w, "Invalid relationship type. Must be: mother, father, or spouse", http.StatusBadRequest)
+		return
+	}
+
+	// For parent relationships, validate that child doesn't already have a parent of this role
+	// (excluding the current relationship being updated)
+	if relType == "parentOf" && parentRole != nil {
+		hasParent, err := app.hasParentOfRoleExcluding(person2ID, *parentRole, id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if hasParent {
+			http.Error(w, "Person already has a "+*parentRole, http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Check for duplicate relationships (excluding current relationship)
+	exists, err := app.relationshipExistsExcluding(person1ID, person2ID, relType, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if exists {
+		http.Error(w, "This relationship already exists", http.StatusBadRequest)
+		return
+	}
+
+	_, err = app.db.Exec(
+		"UPDATE relationships SET person1_id = ?, person2_id = ?, type = ?, parent_role = ? WHERE id = ?",
+		person1ID, person2ID, relType, parentRole, id,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get the updated relationship from database to get accurate createdAt
+	err = app.db.QueryRow("SELECT id, person1_id, person2_id, type, parent_role, created_at FROM relationships WHERE id = ?", id).
+		Scan(&rel.ID, &rel.Person1ID, &rel.Person2ID, &rel.Type, &rel.ParentRole, &rel.CreatedAt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(rel)
 }
 
 func (app *App) createRelationship(w http.ResponseWriter, r *http.Request) {
@@ -379,12 +573,13 @@ func (app *App) createRelationship(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rel.ID = int(id)
-	rel.Person1ID = person1ID
-	rel.Person2ID = person2ID
-	rel.Type = relType
-	rel.ParentRole = parentRole
-	rel.CreatedAt = time.Now()
+	// Get the created relationship from database to get accurate createdAt
+	err = app.db.QueryRow("SELECT id, person1_id, person2_id, type, parent_role, created_at FROM relationships WHERE id = ?", id).
+		Scan(&rel.ID, &rel.Person1ID, &rel.Person2ID, &rel.Type, &rel.ParentRole, &rel.CreatedAt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -395,6 +590,17 @@ func (app *App) deleteRelationship(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	// Check if relationship exists
+	var existing Relationship
+	err = app.db.QueryRow("SELECT id FROM relationships WHERE id = ?", id).Scan(&existing.ID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Relationship not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

@@ -50,34 +50,37 @@ export function normalizeRelationship(person1Id, person2Id, type, parentRole) {
 }
 
 /**
- * Denormalizes relationship from database format to API format
- * Converts "parentOf" with parent_role back to "mother"/"father"
+ * Converts SQLite datetime string to RFC3339 format (ISO 8601 with timezone)
+ * SQLite CURRENT_TIMESTAMP: "YYYY-MM-DD HH:MM:SS"
+ * RFC3339: "YYYY-MM-DDTHH:MM:SSZ"
+ *
+ * @param {string} sqliteDateTime - SQLite datetime string
+ * @returns {string} RFC3339 formatted datetime string
+ */
+function toRFC3339(sqliteDateTime) {
+  if (!sqliteDateTime) return sqliteDateTime
+  // Replace space with 'T' and append 'Z' for UTC timezone
+  return sqliteDateTime.replace(' ', 'T') + 'Z'
+}
+
+/**
+ * Transforms relationship from database format to API format
+ * Keeps normalized format (parentOf with parentRole) to match Go backend
  *
  * @param {Object} relationship - Relationship from database
- * @returns {Object} Denormalized relationship for API response
+ * @returns {Object} Transformed relationship for API response
  */
 export function denormalizeRelationship(relationship) {
-  // If it's a parent relationship, denormalize to mother/father
-  if (relationship.type === 'parentOf' && relationship.parentRole) {
-    return {
-      id: relationship.id,
-      person1Id: relationship.person1Id,
-      person2Id: relationship.person2Id,
-      type: relationship.parentRole, // "mother" or "father"
-      parentRole: relationship.parentRole,
-      createdAt: relationship.createdAt
-    }
-  }
-
-  // Spouse relationships returned as-is
-  return {
+  const result = {
     id: relationship.id,
     person1Id: relationship.person1Id,
     person2Id: relationship.person2Id,
     type: relationship.type,
-    parentRole: relationship.parentRole,
-    createdAt: relationship.createdAt
+    parentRole: relationship.parentRole || null, // Ensure null instead of undefined
+    createdAt: toRFC3339(relationship.createdAt)
   }
+
+  return result
 }
 
 /**
