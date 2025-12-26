@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit'
 import { db } from '$lib/db/client.js'
-import { relationships } from '$lib/db/schema.js'
+import { relationships, people } from '$lib/db/schema.js'
 import { eq, and, or } from 'drizzle-orm'
 import {
   transformRelationshipsToAPI,
@@ -67,6 +67,16 @@ export async function POST({ request, locals }) {
 
     // Normalize relationship (convert mother/father to parentOf)
     const normalized = normalizeRelationship(data.person1Id, data.person2Id, data.type)
+
+    // Check if both people exist (validate foreign keys)
+    const personsExist = await checkPersonsExist(
+      database,
+      normalized.person1Id,
+      normalized.person2Id
+    )
+    if (!personsExist) {
+      return new Response('One or both persons do not exist', { status: 400 })
+    }
 
     // For parent relationships, validate child doesn't already have this parent role
     if (normalized.type === 'parentOf' && normalized.parentRole) {
@@ -185,4 +195,26 @@ async function relationshipExists(database, person1Id, person2Id, type) {
     )
 
   return result.length > 0
+}
+
+/**
+ * Check if both persons exist in the database
+ *
+ * @param {Database} database - Drizzle database instance
+ * @param {number} person1Id - First person ID
+ * @param {number} person2Id - Second person ID
+ * @returns {Promise<boolean>} True if both persons exist
+ */
+async function checkPersonsExist(database, person1Id, person2Id) {
+  const person1 = await database
+    .select()
+    .from(people)
+    .where(eq(people.id, person1Id))
+
+  const person2 = await database
+    .select()
+    .from(people)
+    .where(eq(people.id, person2Id))
+
+  return person1.length > 0 && person2.length > 0
 }

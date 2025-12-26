@@ -128,6 +128,11 @@ export function validateRelationshipData(data) {
     return { valid: false, error: 'person2Id is required and must be a number' }
   }
 
+  // Prevent self-referential relationships
+  if (data.person1Id === data.person2Id) {
+    return { valid: false, error: 'A person cannot be related to themselves' }
+  }
+
   // Validate type
   const typeValidation = validateRelationshipType(data.type)
   if (!typeValidation.valid) {
