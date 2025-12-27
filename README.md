@@ -4,13 +4,22 @@ A modern family tree management application with multiple visualization modes. B
 
 ## Features
 
+### 🔐 Facebook Authentication & Profile Sync
+
+- **Facebook OAuth Login** - Secure authentication via Facebook
+- **Auto-Profile Creation** - Your Facebook profile automatically creates your family tree person on first login
+- **Profile Photo Import** - Import profile pictures from any Facebook profile
+- **Smart Data Import** - Pre-populate name, gender, and birth date from Facebook profiles
+- **Profile Indicators** - Visual "Your Profile" badges help you find yourself in the tree
+- **Deletion Protection** - Cannot delete your own profile record (data integrity)
+
 ### 🌳 Multiple Visualization Views
 
 Explore your family tree data from different perspectives:
 
-- **Pedigree View** - Compact ancestor chart focusing on a selected person's lineage (default)
+- **Pedigree View** - Compact ancestor chart focusing on a selected person's lineage (default, auto-focuses on your profile)
 - **Timeline View** - Chronological lifespan visualization with sortable horizontal bars
-- **Radial View** - Circular fan chart with ancestors in concentric generational rings
+- **Radial View** - Circular fan chart with ancestors in concentric generational rings (auto-focuses on your profile)
 
 ### 👥 Family Management
 
@@ -19,6 +28,7 @@ Explore your family tree data from different perspectives:
 - Track spouse/partner relationships
 - Automatic sibling computation based on shared parents
 - Gender-based color coding across all views
+- Photo support with graceful fallback to initials avatars
 
 ### 🎨 Interactive Features
 
@@ -46,6 +56,7 @@ Explore your family tree data from different perspectives:
 
 - Node.js 18+ (or 20+)
 - npm or pnpm
+- Facebook Developer Account (for OAuth login)
 
 ### Installation
 
@@ -57,11 +68,36 @@ cd familytree
 # Install dependencies
 npm install
 
+# Configure Facebook OAuth (required for authentication)
+cp .env.example .env
+# Edit .env and add your Facebook App credentials
+# See FACEBOOK_OAUTH_SETUP.md for detailed instructions
+
 # Start development server
 npm run dev
 ```
 
 The application will be available at `http://localhost:5173`
+
+### Facebook OAuth Setup
+
+The application requires Facebook OAuth for user authentication. See [FACEBOOK_OAUTH_SETUP.md](FACEBOOK_OAUTH_SETUP.md) for complete setup instructions.
+
+**Quick setup:**
+
+1. Create a Facebook app at [developers.facebook.com](https://developers.facebook.com/)
+2. Copy App ID and App Secret
+3. Generate an AUTH_SECRET: `openssl rand -base64 32`
+4. Update `.env` file with credentials
+5. Configure OAuth redirect URI in Facebook app settings
+
+**Required environment variables:**
+
+```bash
+FACEBOOK_APP_ID=your_app_id_here
+FACEBOOK_APP_SECRET=your_app_secret_here
+AUTH_SECRET=your_generated_secret_here
+```
 
 ### Database Management
 
@@ -91,7 +127,8 @@ Once running, access different views:
 - **Frontend:** Svelte 4, D3.js v7.9.0 for visualizations
 - **Backend:** SvelteKit server routes
 - **Database:** SQLite with Drizzle ORM
-- **Testing:** Vitest
+- **Authentication:** Auth.js with Facebook OAuth provider
+- **Testing:** Vitest (1,840+ tests)
 - **Build Tool:** Vite
 - **Routing:** Hash-based client-side navigation
 
@@ -154,6 +191,8 @@ See [CLAUDE.md](CLAUDE.md) for comprehensive architecture documentation, compone
 ## Documentation
 
 - [CLAUDE.md](CLAUDE.md) - Detailed architecture and development guide
+- [FACEBOOK_OAUTH_SETUP.md](FACEBOOK_OAUTH_SETUP.md) - Facebook OAuth configuration guide
+- [CHANGELOG.md](CHANGELOG.md) - Version history and release notes
 - [/plans/SVELTEKIT_DRIZZLE_MIGRATION.md](/plans/SVELTEKIT_DRIZZLE_MIGRATION.md) - Migration technical analysis
 - [/plans/MIGRATION_USER_STORIES.md](/plans/MIGRATION_USER_STORIES.md) - User stories and acceptance criteria
 

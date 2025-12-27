@@ -22,18 +22,19 @@ npx drizzle-kit push        # Push schema directly (development)
 
 ### Testing
 ```bash
-npm test              # Run full test suite (1,442 tests)
+npm test              # Run full test suite (1,840 tests)
 npm run test:watch    # Run tests in watch mode
 npm run test:ui       # Open Vitest UI for interactive testing
 ```
 
-**Test Suite Status**: Production-ready with 1,442 passing tests (99.4% pass rate). All test failures resolved in v2.0.1 (Story #69). The test suite includes comprehensive coverage of:
+**Test Suite Status**: Comprehensive test coverage with 1,840 total tests. The test suite includes:
 - Server route integration tests with Drizzle ORM
 - Component tests with @testing-library/svelte
 - D3.js visualization optimization tests
 - Routing and navigation tests
 - Performance benchmarks
 - End-to-end acceptance tests
+- Facebook integration tests (130+ tests for OAuth and profile sync)
 
 ## Architecture Overview
 
@@ -43,6 +44,170 @@ npm run test:ui       # Open Vitest UI for interactive testing
 - SQLite database (`familytree.db`) for persistence
 - Two main entities: **Person** and **Relationship**
 - Business logic modules in `src/lib/server/`
+- Facebook OAuth integration with Auth.js
+- User authentication and session management
+
+### Facebook Integration
+
+The application includes comprehensive Facebook OAuth integration for user authentication and profile synchronization. This feature set was implemented in v2.1.0 (Issues #77-84).
+
+#### Authentication Flow
+
+1. **OAuth Login**: Users authenticate via Facebook OAuth 2.0
+2. **Session Management**: Auth.js handles secure session management with JWT tokens
+3. **User Profile**: OAuth profile data (name, email, photo) stored in users table
+4. **Default Person**: On first login, user's Facebook profile automatically creates a Person record
+
+#### Features
+
+**Photo Storage (Story #77)**:
+- `photoUrl` field added to Person schema
+- Supports any valid image URL
+- Photo displayed in PersonModal, RelationshipCard, and tree visualizations
+- Graceful fallback to initials avatar when photo unavailable
+
+**Facebook Permissions (Story #79)**:
+- Requests `user_birthday` and `user_gender` permissions during OAuth flow
+- `defaultPersonId` field links users to their family tree Person record
+- Permissions stored for privacy-aware data access
+
+**Auto-Create Default Person (Story #81)**:
+- On first login, creates Person record from Facebook profile
+- Handles edge cases: single names, missing data, partial dates
+- Uses `facebookGraphClient.js` to fetch extended profile data
+- Uses `defaultPerson.js` module for profile-to-person conversion
+- One-time sync policy (manual updates after initial creation)
+
+**Deletion Protection (Story #83)**:
+- Users cannot delete their own default Person record
+- Returns 403 Forbidden with clear error message
+- Ensures data integrity (users always have representation in tree)
+
+**Smart Tree Focusing (Story #82)**:
+- PedigreeView and RadialView default to user's profile as focus person
+- Graceful fallback for legacy users without default person
+- Improves UX by showing relevant family tree section first
+
+**Profile Indicators (Story #84)**:
+- Blue "Your Profile" badges in PersonModal and RelationshipCard
+- Visual indicators in tree visualizations (highlighted nodes)
+- Helps users quickly identify their own record
+
+**Facebook Profile Import (Story #78)**:
+- Import profile picture from ANY Facebook user (not just own profile)
+- Supports 6+ Facebook URL formats (profile, photo, username, numeric ID)
+- Server-side API endpoint at `/api/facebook/profile`
+- `facebookProfileParser.js` module for URL parsing and validation
+- Secure photo URL extraction via Facebook Graph API
+
+**Data Pre-Population (Story #80)**:
+- Import gender and birth date from ANY Facebook profile
+- Smart normalization (Facebook values → app schema)
+- Date conversion (MM/DD/YYYY → YYYY-MM-DD)
+- Privacy-aware handling (respects Facebook privacy settings)
+
+#### Database Schema
+
+**Users Table** (`src/lib/db/schema.js`):
+- `id`: Auto-increment primary key
+- `facebookId`: OAuth provider ID (unique)
+- `email`: User email from Facebook
+- `name`: Display name
+- `photoUrl`: Profile picture URL
+- `defaultPersonId`: FK to people table (user's family tree record)
+- `createdAt`, `updatedAt`: Timestamps
+
+**People Table** (enhanced):
+- `photoUrl`: Person's photo URL (imported from Facebook or custom)
+
+#### Server Modules
+
+**Authentication**:
+- `src/lib/server/config.js`: OAuth configuration management
+- `src/hooks.server.js`: Auth.js integration and session handling
+- `src/routes/signin/+page.svelte`: Login page with Facebook button
+
+**Facebook Integration**:
+- `src/lib/server/facebookGraphClient.js`: Graph API client for profile data
+- `src/lib/server/defaultPerson.js`: Profile-to-person conversion logic
+- `src/lib/server/facebookProfileParser.js`: Facebook URL parsing and validation
+- `src/routes/api/facebook/profile/+server.js`: Profile import API endpoint
+
+**API Endpoints**:
+- `POST /api/facebook/profile`: Import profile data from Facebook URL
+  - Request: `{ facebookUrl: string }`
+  - Response: `{ name, gender, birthDate, photoUrl }`
+  - Returns 400 for invalid URLs or inaccessible profiles
+
+#### UI Components
+
+**PersonFormFields.svelte** (enhanced):
+- Facebook URL import field with validation
+- Photo preview with loading states
+- Import button triggers profile data fetch
+- Auto-populates name, gender, birth date, photo URL
+
+**PersonModal.svelte** (enhanced):
+- "Your Profile" badge for user's default person
+- Highlights user's record in relationship cards
+
+**RelationshipCard.svelte** (enhanced):
+- Blue badge indicator for user's profile
+- Photo display with fallback to initials
+
+**Tree Visualizations** (enhanced):
+- `d3Helpers.js`: Visual highlighting for user's profile node
+- Default focus on user's profile in PedigreeView and RadialView
+
+#### Configuration
+
+See `FACEBOOK_OAUTH_SETUP.md` for detailed setup instructions.
+
+**Required Environment Variables**:
+```bash
+FACEBOOK_APP_ID=your_app_id
+FACEBOOK_APP_SECRET=your_app_secret
+AUTH_SECRET=your_32_char_secret  # Generate with: openssl rand -base64 32
+```
+
+**Optional Variables** (with defaults):
+```bash
+FACEBOOK_CALLBACK_URL=http://localhost:5173/auth/callback/facebook
+FACEBOOK_API_VERSION=v19.0
+FACEBOOK_SCOPES=email,public_profile,user_birthday,user_gender
+```
+
+#### Testing
+
+**Test Coverage** (130+ tests):
+- OAuth configuration validation (35 tests)
+- Facebook Graph API client (30 tests)
+- Default person creation (30 tests)
+- Profile URL parsing (34 tests)
+- Deletion protection (6 tests)
+- Tree focusing (10 tests)
+- Profile indicators (9 tests)
+- Data pre-population (27 tests)
+
+All tests follow TDD methodology (RED → GREEN → REFACTOR) with 100% passing rate for Facebook features.
+
+#### Privacy and Security
+
+- OAuth tokens never stored in database (session-only)
+- Graph API calls use secure server-side endpoints
+- User consent required for birthday and gender permissions
+- Respects Facebook privacy settings (profile import fails gracefully)
+- Photo URLs are CDN links (no local storage of Facebook photos)
+- Users can manually update imported data at any time
+
+#### Edge Cases Handled
+
+- **Single Names**: Facebook profiles with only first name or last name
+- **Missing Data**: Graceful handling when birthday/gender unavailable
+- **Partial Dates**: Supports year-only or month-year birth dates
+- **Invalid URLs**: Clear error messages for malformed Facebook URLs
+- **Private Profiles**: Returns 400 error when profile not accessible
+- **Legacy Users**: Existing users without default person (graceful fallback)
 
 ### Database Access with Drizzle ORM
 The application uses Drizzle ORM for type-safe database queries:
