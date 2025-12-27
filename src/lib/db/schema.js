@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, integer, text, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 /**
@@ -35,3 +35,51 @@ export const relationships = sqliteTable('relationships', {
   parentRole: text('parent_role'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 })
+
+/**
+ * Users table schema
+ * Stores user authentication and profile data for Google OAuth
+ */
+export const users = sqliteTable(
+  'users',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    email: text('email').notNull().unique(),
+    name: text('name'),
+    avatarUrl: text('avatar_url'),
+    provider: text('provider').notNull(),
+    providerUserId: text('provider_user_id'),
+    emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(true),
+    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+    lastLoginAt: text('last_login_at')
+  },
+  (table) => {
+    return {
+      emailIdx: uniqueIndex('users_email_idx').on(table.email),
+      providerUserIdIdx: index('users_provider_user_id_idx').on(table.providerUserId)
+    }
+  }
+)
+
+/**
+ * Sessions table schema
+ * Manages user authentication sessions with 30-day expiration
+ */
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+    lastAccessedAt: text('last_accessed_at')
+  },
+  (table) => {
+    return {
+      userIdIdx: index('sessions_user_id_idx').on(table.userId),
+      expiresAtIdx: index('sessions_expires_at_idx').on(table.expiresAt)
+    }
+  }
+)

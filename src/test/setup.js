@@ -2,6 +2,10 @@ import { vi } from 'vitest';
 import { expect } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { testConfig } from '../lib/d3Helpers.js';
+import { config as loadEnv } from 'dotenv';
+
+// Load environment variables from .env file for testing
+loadEnv();
 
 // Extend Vitest's expect with @testing-library/jest-dom matchers
 expect.extend(matchers);
