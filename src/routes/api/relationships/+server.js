@@ -8,26 +8,42 @@ import {
   validateRelationshipData,
   normalizeRelationship
 } from '$lib/server/relationshipHelpers.js'
+import { requireAuth } from '$lib/server/session.js'
 
 /**
  * GET /api/relationships
- * Returns all relationships from the database with denormalized types
+ * Returns all relationships from the database for the authenticated user
  *
- * @returns {Response} JSON array of all relationships
+ * Authentication: Required
+ * Data Isolation: Only returns relationships belonging to the current user
+ *
+ * @returns {Response} JSON array of user's relationships
  */
-export async function GET({ locals }) {
+export async function GET({ locals, ...event }) {
   try {
+    // Require authentication (Issue #72)
+    const session = await requireAuth({ locals, ...event })
+    const userId = session.user.id
+
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
-    // Query all relationships from database
-    const allRelationships = await database.select().from(relationships)
+    // Query only relationships belonging to the current user (Issue #72: Data Isolation)
+    const userRelationships = await database
+      .select()
+      .from(relationships)
+      .where(eq(relationships.userId, userId))
 
     // Transform to API format (denormalize parent types)
-    const transformedRelationships = transformRelationshipsToAPI(allRelationships)
+    const transformedRelationships = transformRelationshipsToAPI(userRelationships)
 
     return json(transformedRelationships)
   } catch (error) {
+    // Handle authentication errors
+    if (error.name === 'AuthenticationError') {
+      return new Response(error.message, { status: error.status })
+    }
+
     console.error('Error fetching relationships:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -36,6 +52,9 @@ export async function GET({ locals }) {
 /**
  * POST /api/relationships
  * Creates a new relationship in the database with business logic validation
+ *
+ * Authentication: Required
+ * Ownership: Both people must belong to the current user
  *
  * Business logic:
  * - Normalizes "mother"/"father" to "parentOf" with parent_role
@@ -46,8 +65,12 @@ export async function GET({ locals }) {
  * @param {Request} request - HTTP request with relationship data in body
  * @returns {Response} JSON of created relationship with 201 status
  */
-export async function POST({ request, locals }) {
+export async function POST({ request, locals, ...event }) {
   try {
+    // Require authentication (Issue #72)
+    const session = await requireAuth({ locals, ...event })
+    const userId = session.user.id
+
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
@@ -68,14 +91,15 @@ export async function POST({ request, locals }) {
     // Normalize relationship (convert mother/father to parentOf)
     const normalized = normalizeRelationship(data.person1Id, data.person2Id, data.type, data.parentRole)
 
-    // Check if both people exist (validate foreign keys)
-    const personsExist = await checkPersonsExist(
+    // Check if both people exist and belong to the current user (Issue #72: Ownership Verification)
+    const personsOwnedByUser = await checkPersonsOwnedByUser(
       database,
+      userId,
       normalized.person1Id,
       normalized.person2Id
     )
-    if (!personsExist) {
-      return json({ error: 'One or both persons do not exist' }, { status: 400 })
+    if (!personsOwnedByUser) {
+      return json({ error: 'One or both persons do not exist or do not belong to you' }, { status: 403 })
     }
 
     // For parent relationships, validate child doesn't already have this parent role
@@ -101,14 +125,15 @@ export async function POST({ request, locals }) {
       return json({ error: 'This relationship already exists' }, { status: 400 })
     }
 
-    // Insert relationship into database
+    // Insert relationship into database with user_id (Issue #72: Data Association)
     const result = await database
       .insert(relationships)
       .values({
         person1Id: normalized.person1Id,
         person2Id: normalized.person2Id,
         type: normalized.type,
-        parentRole: normalized.parentRole
+        parentRole: normalized.parentRole,
+        userId: userId
       })
       .returning()
 
@@ -119,6 +144,11 @@ export async function POST({ request, locals }) {
 
     return json(transformedRelationship, { status: 201 })
   } catch (error) {
+    // Handle authentication errors
+    if (error.name === 'AuthenticationError') {
+      return new Response(error.message, { status: error.status })
+    }
+
     console.error('Error creating relationship:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -198,23 +228,24 @@ async function relationshipExists(database, person1Id, person2Id, type) {
 }
 
 /**
- * Check if both persons exist in the database
+ * Check if both persons exist and belong to the specified user
  *
  * @param {Database} database - Drizzle database instance
+ * @param {number} userId - User ID
  * @param {number} person1Id - First person ID
  * @param {number} person2Id - Second person ID
- * @returns {Promise<boolean>} True if both persons exist
+ * @returns {Promise<boolean>} True if both persons exist and belong to user
  */
-async function checkPersonsExist(database, person1Id, person2Id) {
+async function checkPersonsOwnedByUser(database, userId, person1Id, person2Id) {
   const person1 = await database
     .select()
     .from(people)
-    .where(eq(people.id, person1Id))
+    .where(and(eq(people.id, person1Id), eq(people.userId, userId)))
 
   const person2 = await database
     .select()
     .from(people)
-    .where(eq(people.id, person2Id))
+    .where(and(eq(people.id, person2Id), eq(people.userId, userId)))
 
   return person1.length > 0 && person2.length > 0
 }

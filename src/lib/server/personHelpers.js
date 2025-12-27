@@ -22,6 +22,8 @@ function toRFC3339(sqliteDateTime) {
  * Converts snake_case column names to camelCase for consistency with frontend
  * Always includes all fields (including null values) for consistent API interface
  *
+ * Issue #72: Now includes userId for multi-user support
+ *
  * @param {Object} person - Person record from database
  * @returns {Object} Transformed person object
  */
@@ -33,7 +35,8 @@ export function transformPersonToAPI(person) {
     birthDate: person.birthDate !== undefined ? person.birthDate : null,
     deathDate: person.deathDate !== undefined ? person.deathDate : null,
     gender: person.gender !== undefined && person.gender !== '' ? person.gender : null,
-    createdAt: toRFC3339(person.createdAt)
+    createdAt: toRFC3339(person.createdAt),
+    userId: person.userId
   }
 }
 

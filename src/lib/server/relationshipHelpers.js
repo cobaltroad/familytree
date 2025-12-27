@@ -68,6 +68,8 @@ function toRFC3339(sqliteDateTime) {
  * Denormalizes parentOf relationships back to mother/father for API responses
  * Always includes parentRole field (null for non-parent relationships)
  *
+ * Issue #72: Now includes userId for multi-user support
+ *
  * @param {Object} relationship - Relationship from database
  * @returns {Object} Transformed relationship for API response
  */
@@ -81,14 +83,15 @@ export function denormalizeRelationship(relationship) {
     type = relationship.parentRole
   }
 
-  // Always return all fields including parentRole (even if null)
+  // Always return all fields including parentRole (even if null) and userId (Issue #72)
   return {
     id: relationship.id,
     person1Id: relationship.person1Id,
     person2Id: relationship.person2Id,
     type: type,
     parentRole: parentRole,
-    createdAt: toRFC3339(relationship.createdAt)
+    createdAt: toRFC3339(relationship.createdAt),
+    userId: relationship.userId
   }
 }
 

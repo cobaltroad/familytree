@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit'
 import { db } from '$lib/db/client.js'
-import { relationships } from '$lib/db/schema.js'
+import { relationships, people } from '$lib/db/schema.js'
 import { eq, and, or, ne } from 'drizzle-orm'
 import {
   transformRelationshipToAPI,
@@ -8,16 +8,24 @@ import {
   normalizeRelationship,
   parseId
 } from '$lib/server/relationshipHelpers.js'
+import { requireAuth } from '$lib/server/session.js'
 
 /**
  * GET /api/relationships/[id]
- * Returns a single relationship by ID with denormalized type
+ * Returns a single relationship by ID (must belong to authenticated user)
+ *
+ * Authentication: Required
+ * Ownership: User must own the relationship (403 if not)
  *
  * @param {Object} params - URL parameters containing id
- * @returns {Response} JSON of relationship or 404 if not found
+ * @returns {Response} JSON of relationship or 404/403 if not found/forbidden
  */
-export async function GET({ params, locals }) {
+export async function GET({ params, locals, ...event }) {
   try {
+    // Require authentication (Issue #72)
+    const session = await requireAuth({ locals, ...event })
+    const userId = session.user.id
+
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
@@ -27,11 +35,28 @@ export async function GET({ params, locals }) {
       return new Response('Invalid ID', { status: 400 })
     }
 
-    // Query relationship by ID
-    const result = await database.select().from(relationships).where(eq(relationships.id, id))
+    // Query relationship by ID and user_id (Issue #72: Ownership Verification)
+    const result = await database
+      .select()
+      .from(relationships)
+      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
 
     if (result.length === 0) {
-      return new Response('Relationship not found', { status: 404 })
+      // Check if relationship exists at all (to differentiate 404 vs 403)
+      const anyRelationship = await database
+        .select()
+        .from(relationships)
+        .where(eq(relationships.id, id))
+
+      if (anyRelationship.length > 0) {
+        // Relationship exists but doesn't belong to user
+        return new Response('Forbidden: You do not have access to this relationship', {
+          status: 403
+        })
+      } else {
+        // Relationship doesn't exist at all
+        return new Response('Relationship not found', { status: 404 })
+      }
     }
 
     // Transform to API format (denormalize)
@@ -39,6 +64,11 @@ export async function GET({ params, locals }) {
 
     return json(transformedRelationship)
   } catch (error) {
+    // Handle authentication errors
+    if (error.name === 'AuthenticationError') {
+      return new Response(error.message, { status: error.status })
+    }
+
     console.error('Error fetching relationship:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -47,6 +77,9 @@ export async function GET({ params, locals }) {
 /**
  * PUT /api/relationships/[id]
  * Updates a relationship with business logic validation
+ *
+ * Authentication: Required
+ * Ownership: User must own the relationship and both people (403 if not)
  *
  * Business logic:
  * - Normalizes "mother"/"father" to "parentOf" with parent_role
@@ -58,8 +91,12 @@ export async function GET({ params, locals }) {
  * @param {Request} request - HTTP request with relationship data in body
  * @returns {Response} JSON of updated relationship or error
  */
-export async function PUT({ params, request, locals }) {
+export async function PUT({ params, request, locals, ...event }) {
   try {
+    // Require authentication (Issue #72)
+    const session = await requireAuth({ locals, ...event })
+    const userId = session.user.id
+
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
@@ -83,15 +120,45 @@ export async function PUT({ params, request, locals }) {
       return new Response(validation.error, { status: 400 })
     }
 
-    // Check if relationship exists
-    const existing = await database.select().from(relationships).where(eq(relationships.id, id))
+    // Check if relationship exists and belongs to user (Issue #72: Ownership Verification)
+    const existing = await database
+      .select()
+      .from(relationships)
+      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
 
     if (existing.length === 0) {
-      return new Response('Relationship not found', { status: 404 })
+      // Check if relationship exists at all (to differentiate 404 vs 403)
+      const anyRelationship = await database
+        .select()
+        .from(relationships)
+        .where(eq(relationships.id, id))
+
+      if (anyRelationship.length > 0) {
+        // Relationship exists but doesn't belong to user
+        return new Response('Forbidden: You do not have access to this relationship', {
+          status: 403
+        })
+      } else {
+        // Relationship doesn't exist at all
+        return new Response('Relationship not found', { status: 404 })
+      }
     }
 
     // Normalize relationship (convert mother/father to parentOf)
     const normalized = normalizeRelationship(data.person1Id, data.person2Id, data.type)
+
+    // Verify both people belong to the user (Issue #72: Ownership Verification)
+    const personsOwnedByUser = await checkPersonsOwnedByUser(
+      database,
+      userId,
+      normalized.person1Id,
+      normalized.person2Id
+    )
+    if (!personsOwnedByUser) {
+      return json({ error: 'One or both persons do not exist or do not belong to you' }, {
+        status: 403
+      })
+    }
 
     // For parent relationships, validate child doesn't already have this parent role
     // (excluding the current relationship being updated)
@@ -128,7 +195,7 @@ export async function PUT({ params, request, locals }) {
         type: normalized.type,
         parentRole: normalized.parentRole
       })
-      .where(eq(relationships.id, id))
+      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
       .returning()
 
     const updatedRelationship = result[0]
@@ -138,6 +205,11 @@ export async function PUT({ params, request, locals }) {
 
     return json(transformedRelationship)
   } catch (error) {
+    // Handle authentication errors
+    if (error.name === 'AuthenticationError') {
+      return new Response(error.message, { status: error.status })
+    }
+
     console.error('Error updating relationship:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -145,13 +217,20 @@ export async function PUT({ params, request, locals }) {
 
 /**
  * DELETE /api/relationships/[id]
- * Deletes a relationship by ID
+ * Deletes a relationship by ID (must belong to authenticated user)
+ *
+ * Authentication: Required
+ * Ownership: User must own the relationship (403 if not)
  *
  * @param {Object} params - URL parameters containing id
  * @returns {Response} 204 No Content on success or error
  */
-export async function DELETE({ params, locals }) {
+export async function DELETE({ params, locals, ...event }) {
   try {
+    // Require authentication (Issue #72)
+    const session = await requireAuth({ locals, ...event })
+    const userId = session.user.id
+
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
@@ -161,18 +240,42 @@ export async function DELETE({ params, locals }) {
       return new Response('Invalid ID', { status: 400 })
     }
 
-    // Check if relationship exists before deleting
-    const existing = await database.select().from(relationships).where(eq(relationships.id, id))
+    // Check if relationship exists and belongs to user (Issue #72: Ownership Verification)
+    const existing = await database
+      .select()
+      .from(relationships)
+      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
 
     if (existing.length === 0) {
-      return new Response('Relationship not found', { status: 404 })
+      // Check if relationship exists at all (to differentiate 404 vs 403)
+      const anyRelationship = await database
+        .select()
+        .from(relationships)
+        .where(eq(relationships.id, id))
+
+      if (anyRelationship.length > 0) {
+        // Relationship exists but doesn't belong to user
+        return new Response('Forbidden: You do not have access to this relationship', {
+          status: 403
+        })
+      } else {
+        // Relationship doesn't exist at all
+        return new Response('Relationship not found', { status: 404 })
+      }
     }
 
     // Delete relationship
-    await database.delete(relationships).where(eq(relationships.id, id))
+    await database
+      .delete(relationships)
+      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
 
     return new Response(null, { status: 204 })
   } catch (error) {
+    // Handle authentication errors
+    if (error.name === 'AuthenticationError') {
+      return new Response(error.message, { status: error.status })
+    }
+
     console.error('Error deleting relationship:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -217,6 +320,29 @@ async function hasParentOfRole(database, childId, role, excludeId = null) {
   const result = await query
 
   return result.length > 0
+}
+
+/**
+ * Check if both persons exist and belong to the specified user
+ *
+ * @param {Database} database - Drizzle database instance
+ * @param {number} userId - User ID
+ * @param {number} person1Id - First person ID
+ * @param {number} person2Id - Second person ID
+ * @returns {Promise<boolean>} True if both persons exist and belong to user
+ */
+async function checkPersonsOwnedByUser(database, userId, person1Id, person2Id) {
+  const person1 = await database
+    .select()
+    .from(people)
+    .where(and(eq(people.id, person1Id), eq(people.userId, userId)))
+
+  const person2 = await database
+    .select()
+    .from(people)
+    .where(and(eq(people.id, person2Id), eq(people.userId, userId)))
+
+  return person1.length > 0 && person2.length > 0
 }
 
 /**

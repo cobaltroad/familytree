@@ -4,6 +4,11 @@ import { sql } from 'drizzle-orm'
 /**
  * People table schema
  * Matches existing SQLite database structure
+ *
+ * User Association (Issue #72):
+ * - user_id: Associates each person with a user (multi-user support)
+ * - Foreign key to users table with CASCADE DELETE
+ * - Index on user_id for performance
  */
 export const people = sqliteTable('people', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -12,7 +17,14 @@ export const people = sqliteTable('people', {
   birthDate: text('birth_date'),
   deathDate: text('death_date'),
   gender: text('gender'),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' })
+}, (table) => {
+  return {
+    userIdIdx: index('people_user_id_idx').on(table.userId)
+  }
 })
 
 /**
@@ -22,6 +34,11 @@ export const people = sqliteTable('people', {
  * Relationship types:
  * - "parentOf": person1 is parent of person2 (with parent_role: "mother" or "father")
  * - "spouse": person1 is spouse of person2
+ *
+ * User Association (Issue #72):
+ * - user_id: Associates each relationship with a user (multi-user support)
+ * - Foreign key to users table with CASCADE DELETE
+ * - Index on user_id for performance
  */
 export const relationships = sqliteTable('relationships', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -33,7 +50,14 @@ export const relationships = sqliteTable('relationships', {
     .references(() => people.id, { onDelete: 'cascade' }),
   type: text('type').notNull(),
   parentRole: text('parent_role'),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' })
+}, (table) => {
+  return {
+    userIdIdx: index('relationships_user_id_idx').on(table.userId)
+  }
 })
 
 /**
