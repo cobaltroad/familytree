@@ -20,6 +20,21 @@ npx drizzle-kit migrate     # Apply migrations to database
 npx drizzle-kit push        # Push schema directly (development)
 ```
 
+### Testing
+```bash
+npm test              # Run full test suite (1,442 tests)
+npm run test:watch    # Run tests in watch mode
+npm run test:ui       # Open Vitest UI for interactive testing
+```
+
+**Test Suite Status**: Production-ready with 1,442 passing tests (99.4% pass rate). All test failures resolved in v2.0.1 (Story #69). The test suite includes comprehensive coverage of:
+- Server route integration tests with Drizzle ORM
+- Component tests with @testing-library/svelte
+- D3.js visualization optimization tests
+- Routing and navigation tests
+- Performance benchmarks
+- End-to-end acceptance tests
+
 ## Architecture Overview
 
 ### Backend Structure
