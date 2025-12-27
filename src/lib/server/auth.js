@@ -13,6 +13,53 @@
  */
 
 import { getAuthConfig } from './config.js'
+import { syncUserFromOAuth } from './userSync.js'
+
+/**
+ * Sign-in callback - syncs user data to database
+ * Called when a user successfully authenticates with OAuth provider
+ *
+ * @param {Object} params - Callback parameters
+ * @param {Object} params.user - User object from OAuth provider
+ * @param {Object} params.account - Account object with provider details
+ * @param {Object} params.profile - Full OAuth profile data
+ * @returns {Promise<boolean>} True to allow sign in, false to reject
+ */
+export async function signInCallback({ user, account, profile }) {
+  try {
+    // Only sync for OAuth providers
+    if (!account || account.type !== 'oauth') {
+      return true // Allow sign in but don't sync
+    }
+
+    // Validate required user data
+    if (!user.email) {
+      console.error('Sign in rejected: user email is required')
+      return false
+    }
+
+    // Prepare OAuth data for sync
+    const oauthData = {
+      provider: account.provider,
+      providerUserId: account.providerAccountId || user.id,
+      email: user.email,
+      name: user.name || null,
+      avatarUrl: user.image || null
+    }
+
+    // Sync user to database
+    await syncUserFromOAuth(oauthData)
+
+    // Allow sign in
+    return true
+  } catch (error) {
+    // Log error but don't expose details to client
+    console.error('Error syncing user during sign in:', error)
+
+    // Reject sign in on error to prevent security issues
+    return false
+  }
+}
 
 /**
  * JWT callback - customizes JWT token creation
@@ -130,6 +177,7 @@ export function getAuthJsConfig() {
 
     // Callbacks for customizing auth flow
     callbacks: {
+      signIn: signInCallback,
       jwt: jwtCallback,
       session: sessionCallback
     }
