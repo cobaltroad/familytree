@@ -17,23 +17,22 @@
   let focusTimeoutId
 
   // Focus management with cleanup to prevent race conditions
-  $: if (isOpen && confirmButton) {
-    // Clear any pending focus timeout
-    if (focusTimeoutId) {
+  $: {
+    // Clear any existing timeout first
+    if (focusTimeoutId !== undefined) {
       clearTimeout(focusTimeoutId)
+      focusTimeoutId = undefined
     }
-    // Focus the confirm button when dialog opens
-    focusTimeoutId = setTimeout(() => {
-      // Check if button still exists before focusing (prevent race condition)
-      if (confirmButton) {
-        confirmButton.focus()
-      }
-    }, 0)
-  } else {
-    // Clear timeout when dialog closes
-    if (focusTimeoutId) {
-      clearTimeout(focusTimeoutId)
-      focusTimeoutId = null
+
+    // Only set new timeout if dialog is open and button exists
+    if (isOpen && confirmButton) {
+      focusTimeoutId = setTimeout(() => {
+        // Double-check button still exists before focusing (prevent race condition)
+        if (confirmButton && isOpen) {
+          confirmButton.focus()
+        }
+        focusTimeoutId = undefined
+      }, 0)
     }
   }
 
@@ -92,9 +91,10 @@
 
     return () => {
       document.body.style.overflow = ''
-      // Clear any pending focus timeout on unmount
-      if (focusTimeoutId) {
+      // Clear any pending focus timeout on unmount to prevent race conditions
+      if (focusTimeoutId !== undefined) {
         clearTimeout(focusTimeoutId)
+        focusTimeoutId = undefined
       }
     }
   })
