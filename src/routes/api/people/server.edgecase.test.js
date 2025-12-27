@@ -2,32 +2,27 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { GET, POST } from './+server.js'
+import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
 
 /**
  * Edge Case Tests for People API Collection Endpoints
  * Part of Story 6: Comprehensive Testing and Validation (Issue #65)
  *
- * Tests edge cases, boundary conditions, and unusual input scenarios
+ * Updated for Issue #72: All tests now include authentication
  */
 describe('POST /api/people - Edge Cases', () => {
   let db
   let sqlite
+  let userId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
+
+    // Setup test database with users table and default test user (Issue #72)
+
+    userId = await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -40,7 +35,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'A', lastName: 'Smith' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -52,7 +47,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'John', lastName: 'X' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -65,7 +60,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: longName, lastName: 'Smith' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -78,7 +73,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'John', lastName: longName })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -91,7 +86,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'Mary-Jane', lastName: 'Smith-Jones' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -104,7 +99,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: "D'Angelo", lastName: "O'Brien" })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -117,7 +112,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'Mary Ann', lastName: 'Van Der Berg' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -130,7 +125,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'José', lastName: 'Müller' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -143,7 +138,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: '李', lastName: '明' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -156,7 +151,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'محمد', lastName: 'علي' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -170,7 +165,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: '  John  ', lastName: '  Doe  ' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -184,7 +179,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: '', lastName: 'Doe' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -194,7 +189,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'John', lastName: '' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -204,7 +199,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: '   ', lastName: 'Doe' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -214,7 +209,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'John', lastName: '   ' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -229,7 +224,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -245,7 +240,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -261,7 +256,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -277,7 +272,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -291,7 +286,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -305,7 +300,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -319,7 +314,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -334,7 +329,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -349,7 +344,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -367,7 +362,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -383,7 +378,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -397,7 +392,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -414,7 +409,7 @@ describe('POST /api/people - Edge Cases', () => {
         })
       }
 
-      const response = await POST({ request, locals: { db } })
+      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
       const data = await response.json()
 
       expect(response.status).toBe(201)
@@ -428,7 +423,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 123, lastName: 'Doe' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -438,7 +433,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'John', lastName: true })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -448,7 +443,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: ['John'], lastName: 'Doe' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -458,7 +453,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'John', lastName: { name: 'Doe' } })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -468,7 +463,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: null, lastName: 'Doe' })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -478,7 +473,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'John', lastName: null })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -494,7 +489,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -513,7 +508,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -532,7 +527,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -555,7 +550,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(201)
   })
@@ -565,21 +560,13 @@ describe('GET /api/people - Edge Cases', () => {
   let db
   let sqlite
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sqlite = new Database(':memory:')
-    db = drizzle(sqlite)
 
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
+
+    // Setup test database with users table and default test user (Issue #72)
+
+    userId = await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -589,14 +576,15 @@ describe('GET /api/people - Edge Cases', () => {
   it('should handle large result sets (1000+ people)', async () => {
     // Create 1000 people
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name) VALUES (?, ?)
+      INSERT INTO people (first_name, last_name, user_id)
+      VALUES (?, ?, ?)
     `)
 
     for (let i = 0; i < 1000; i++) {
-      stmt.run(`Person${i}`, `LastName${i}`)
+      stmt.run(`Person${i}`, `LastName${i}`, userId)
     }
 
-    const response = await GET({ locals: { db } })
+    const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -607,10 +595,11 @@ describe('GET /api/people - Edge Cases', () => {
 
   it('should handle people with special characters in names', async () => {
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name) VALUES (?, ?)
-    `).run("D'Angelo", "O'Brien-Smith")
+      INSERT INTO people (first_name, last_name, user_id)
+      VALUES (?, ?, ?)
+    `).run("D'Angelo", "O'Brien-Smith", userId)
 
-    const response = await GET({ locals: { db } })
+    const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -620,10 +609,11 @@ describe('GET /api/people - Edge Cases', () => {
 
   it('should handle people with Unicode characters', async () => {
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name) VALUES (?, ?)
-    `).run('José', 'Müller')
+      INSERT INTO people (first_name, last_name, user_id)
+      VALUES (?, ?, ?)
+    `).run('José', 'Müller', userId)
 
-    const response = await GET({ locals: { db } })
+    const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -633,10 +623,11 @@ describe('GET /api/people - Edge Cases', () => {
 
   it('should handle people with non-Latin scripts', async () => {
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name) VALUES (?, ?)
-    `).run('李', '明')
+      INSERT INTO people (first_name, last_name, user_id)
+      VALUES (?, ?, ?)
+    `).run('李', '明', userId)
 
-    const response = await GET({ locals: { db } })
+    const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -647,17 +638,18 @@ describe('GET /api/people - Edge Cases', () => {
   it('should maintain data consistency across multiple calls', async () => {
     // Insert test data
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name) VALUES (?, ?)
-    `).run('John', 'Doe')
+      INSERT INTO people (first_name, last_name, user_id)
+      VALUES (?, ?, ?)
+    `).run('John', 'Doe', userId)
 
     // Call GET multiple times
-    const response1 = await GET({ locals: { db } })
+    const response1 = await GET(createMockAuthenticatedEvent(db))
     const data1 = await response1.json()
 
-    const response2 = await GET({ locals: { db } })
+    const response2 = await GET(createMockAuthenticatedEvent(db))
     const data2 = await response2.json()
 
-    const response3 = await GET({ locals: { db } })
+    const response3 = await GET(createMockAuthenticatedEvent(db))
     const data3 = await response3.json()
 
     // All responses should be identical

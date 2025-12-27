@@ -3,34 +3,26 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { people } from '$lib/db/schema.js'
 import { GET, POST } from './+server.js'
+import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
 
 /**
  * Test suite for People API Collection Endpoints
  * Tests GET /api/people and POST /api/people
  *
- * Following TDD RED phase: These tests will fail initially
+ * Updated for Issue #72: All tests now include authentication
  */
 describe('GET /api/people', () => {
   let db
   let sqlite
+  let userId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create in-memory database for testing
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Create people table
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
+    // Setup test database with users table and default test user (Issue #72)
+    userId = await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -38,7 +30,8 @@ describe('GET /api/people', () => {
   })
 
   it('should return empty array when no people exist', async () => {
-    const response = await GET({ locals: { db } })
+    const event = createMockAuthenticatedEvent(db)
+    const response = await GET(event)
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -46,19 +39,20 @@ describe('GET /api/people', () => {
   })
 
   it('should return all people as JSON array', async () => {
-    // Arrange: Insert test data
+    // Arrange: Insert test data with user_id (Issue #72)
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, death_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('John', 'Doe', '1980-01-01', null, 'male')
+      INSERT INTO people (first_name, last_name, birth_date, death_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('John', 'Doe', '1980-01-01', null, 'male', userId)
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, death_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Jane', 'Smith', '1985-05-15', null, 'female')
+      INSERT INTO people (first_name, last_name, birth_date, death_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('Jane', 'Smith', '1985-05-15', null, 'female', userId)
 
     // Act
-    const response = await GET({ locals: { db } })
+    const event = createMockAuthenticatedEvent(db)
+    const response = await GET(event)
     const data = await response.json()
 
     // Assert
@@ -91,12 +85,13 @@ describe('GET /api/people', () => {
   it('should return people with death dates', async () => {
     // Arrange
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, death_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Albert', 'Einstein', '1879-03-14', '1955-04-18', 'male')
+      INSERT INTO people (first_name, last_name, birth_date, death_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('Albert', 'Einstein', '1879-03-14', '1955-04-18', 'male', userId)
 
     // Act
-    const response = await GET({ locals: { db } })
+    const event = createMockAuthenticatedEvent(db)
+    const response = await GET(event)
     const data = await response.json()
 
     // Assert
@@ -107,12 +102,13 @@ describe('GET /api/people', () => {
   it('should handle people with null optional fields', async () => {
     // Arrange: Person with minimal data
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, death_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Minimal', 'Person', null, null, null)
+      INSERT INTO people (first_name, last_name, birth_date, death_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('Minimal', 'Person', null, null, null, userId)
 
     // Act
-    const response = await GET({ locals: { db } })
+    const event = createMockAuthenticatedEvent(db)
+    const response = await GET(event)
     const data = await response.json()
 
     // Assert
@@ -127,7 +123,8 @@ describe('GET /api/people', () => {
   })
 
   it('should return Content-Type application/json header', async () => {
-    const response = await GET({ locals: { db } })
+    const event = createMockAuthenticatedEvent(db)
+    const response = await GET(event)
 
     expect(response.headers.get('Content-Type')).toBe('application/json')
   })
@@ -137,7 +134,8 @@ describe('GET /api/people', () => {
     sqlite.close()
 
     // Act
-    const response = await GET({ locals: { db } })
+    const event = createMockAuthenticatedEvent(db)
+    const response = await GET(event)
 
     // Assert
     expect(response.status).toBe(500)
@@ -147,24 +145,15 @@ describe('GET /api/people', () => {
 describe('POST /api/people', () => {
   let db
   let sqlite
+  let userId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create in-memory database for testing
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Create people table
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
+    // Setup test database with users table and default test user (Issue #72)
+    userId = await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -186,7 +175,8 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const response = await POST({ request, locals: { db } })
+    const event = createMockAuthenticatedEvent(db, null, { request })
+    const response = await POST(event)
     const data = await response.json()
 
     // Assert
@@ -201,10 +191,11 @@ describe('POST /api/people', () => {
     })
     expect(data.createdAt).toBeDefined()
 
-    // Verify person was actually inserted
+    // Verify person was actually inserted with user_id (Issue #72)
     const person = sqlite.prepare('SELECT * FROM people WHERE id = ?').get(1)
     expect(person.first_name).toBe('John')
     expect(person.last_name).toBe('Doe')
+    expect(person.user_id).toBe(userId)
   })
 
   it('should create person with minimal required fields only', async () => {
@@ -222,7 +213,8 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const response = await POST({ request, locals: { db } })
+    const event = createMockAuthenticatedEvent(db, null, { request })
+    const response = await POST(event)
     const data = await response.json()
 
     // Assert
@@ -249,7 +241,8 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const response = await POST({ request, locals: { db } })
+    const event = createMockAuthenticatedEvent(db, null, { request })
+    const response = await POST(event)
     const data = await response.json()
 
     // Assert
@@ -263,14 +256,16 @@ describe('POST /api/people', () => {
     const request1 = {
       json: async () => ({ firstName: 'First', lastName: 'Person' })
     }
-    const response1 = await POST({ request: request1, locals: { db } })
+    const event1 = createMockAuthenticatedEvent(db, null, { request: request1 })
+    const response1 = await POST(event1)
     const data1 = await response1.json()
 
     // Create second person
     const request2 = {
       json: async () => ({ firstName: 'Second', lastName: 'Person' })
     }
-    const response2 = await POST({ request: request2, locals: { db } })
+    const event2 = createMockAuthenticatedEvent(db, null, { request: request2 })
+    const response2 = await POST(event2)
     const data2 = await response2.json()
 
     // Assert
@@ -287,7 +282,8 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const response = await POST({ request, locals: { db } })
+    const event = createMockAuthenticatedEvent(db, null, { request })
+    const response = await POST(event)
 
     // Assert
     expect(response.status).toBe(400)
@@ -304,7 +300,8 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const response = await POST({ request, locals: { db } })
+    const event = createMockAuthenticatedEvent(db, null, { request })
+    const response = await POST(event)
 
     // Assert
     expect(response.status).toBe(400)
@@ -321,7 +318,8 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const response = await POST({ request, locals: { db } })
+    const event = createMockAuthenticatedEvent(db, null, { request })
+    const response = await POST(event)
 
     // Assert
     expect(response.status).toBe(400)
@@ -337,7 +335,8 @@ describe('POST /api/people', () => {
       json: async () => requestData
     }
 
-    const response = await POST({ request, locals: { db } })
+    const event = createMockAuthenticatedEvent(db, null, { request })
+    const response = await POST(event)
 
     expect(response.headers.get('Content-Type')).toBe('application/json')
   })
@@ -357,7 +356,8 @@ describe('POST /api/people', () => {
     sqlite.close()
 
     // Act
-    const response = await POST({ request, locals: { db } })
+    const event = createMockAuthenticatedEvent(db, null, { request })
+    const response = await POST(event)
 
     // Assert
     expect(response.status).toBe(500)

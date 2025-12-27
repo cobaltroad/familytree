@@ -1,6 +1,10 @@
+import { setupTestDatabase, createMockAuthenticatedEvent } from "$lib/server/testHelpers.js"
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { setupTestDatabase, createMockAuthenticatedEvent } from "$lib/server/testHelpers.js"
 import Database from 'better-sqlite3'
+import { setupTestDatabase, createMockAuthenticatedEvent } from "$lib/server/testHelpers.js"
 import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { setupTestDatabase, createMockAuthenticatedEvent } from "$lib/server/testHelpers.js"
 import { GET, POST } from './+server.js'
 
 /**
@@ -649,7 +653,7 @@ describe('GET /api/relationships - Edge Cases', () => {
       }
     }
 
-    const response = await GET({ locals: { db } })
+    const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -669,13 +673,13 @@ describe('GET /api/relationships - Edge Cases', () => {
     `).run(1, 3, 'parentOf', 'father')
 
     // Call GET multiple times
-    const response1 = await GET({ locals: { db } })
+    const response1 = await GET(createMockAuthenticatedEvent(db))
     const data1 = await response1.json()
 
-    const response2 = await GET({ locals: { db } })
+    const response2 = await GET(createMockAuthenticatedEvent(db))
     const data2 = await response2.json()
 
-    const response3 = await GET({ locals: { db } })
+    const response3 = await GET(createMockAuthenticatedEvent(db))
     const data3 = await response3.json()
 
     // All responses should be identical
@@ -689,7 +693,7 @@ describe('GET /api/relationships - Edge Cases', () => {
       VALUES (?, ?, ?, ?)
     `).run(1, 2, 'spouse', null)
 
-    const response = await GET({ locals: { db } })
+    const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -704,7 +708,7 @@ describe('GET /api/relationships - Edge Cases', () => {
       VALUES (?, ?, ?, ?)
     `).run(1, 2, 'parentOf', 'mother')
 
-    const response = await GET({ locals: { db } })
+    const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -747,7 +751,7 @@ describe('GET /api/relationships - Edge Cases', () => {
       VALUES (?, ?, ?)
     `).run(2, 3, 'spouse')  // Person 2 and 3 are spouses
 
-    const response = await GET({ locals: { db } })
+    const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
 
     expect(response.status).toBe(200)
