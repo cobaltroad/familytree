@@ -104,7 +104,7 @@ describe('Auth.js Configuration Module', () => {
       config = getAuthJsConfig()
     })
 
-    it('should add user profile data to JWT token on sign in', async () => {
+    it('should add user profile data to JWT token on sign in (unit test - no database)', async () => {
       const token = {}
       const user = {
         id: '123',
@@ -116,7 +116,9 @@ describe('Auth.js Configuration Module', () => {
 
       const result = await config.callbacks.jwt({ token, user, account })
 
-      expect(result.userId).toBe('123')
+      // Note: In unit tests without database, userId will be undefined
+      // See auth.jwtCallback.dbUserId.test.js for integration tests with database
+      expect(result.userId).toBeUndefined()
       expect(result.email).toBe('test@example.com')
       expect(result.name).toBe('Test User')
       expect(result.picture).toBe('https://example.com/avatar.jpg')
@@ -125,7 +127,7 @@ describe('Auth.js Configuration Module', () => {
 
     it('should preserve existing token data on subsequent calls', async () => {
       const token = {
-        userId: '123',
+        userId: 123,
         email: 'test@example.com',
         name: 'Test User',
         picture: 'https://example.com/avatar.jpg',
@@ -137,7 +139,7 @@ describe('Auth.js Configuration Module', () => {
       expect(result).toEqual(token)
     })
 
-    it('should handle user without image gracefully', async () => {
+    it('should handle user without image gracefully (unit test - no database)', async () => {
       const token = {}
       const user = {
         id: '123',
@@ -148,7 +150,8 @@ describe('Auth.js Configuration Module', () => {
 
       const result = await config.callbacks.jwt({ token, user, account })
 
-      expect(result.userId).toBe('123')
+      // Note: In unit tests without database, userId will be undefined
+      expect(result.userId).toBeUndefined()
       expect(result.picture).toBeUndefined()
     })
   })

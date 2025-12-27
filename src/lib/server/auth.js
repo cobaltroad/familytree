@@ -13,7 +13,7 @@
  */
 
 import { getAuthConfig } from './config.js'
-import { syncUserFromOAuth } from './userSync.js'
+import { syncUserFromOAuth, findUserByProviderAndId } from './userSync.js'
 
 /**
  * Sign-in callback - syncs user data to database
@@ -65,16 +65,30 @@ export async function signInCallback({ user, account, profile }) {
  * JWT callback - customizes JWT token creation
  * Adds user profile data to the token on sign in
  *
+ * IMPORTANT: Uses database user ID, not OAuth provider's user ID
+ * This ensures foreign key constraints work correctly (e.g., people.userId -> users.id)
+ *
  * @param {Object} params - Callback parameters
  * @param {Object} params.token - Current JWT token
  * @param {Object} params.user - User object (only on sign in)
  * @param {Object} params.account - Account object (only on sign in)
- * @returns {Object} Updated JWT token
+ * @returns {Promise<Object>} Updated JWT token
  */
 export async function jwtCallback({ token, user, account }) {
   // On sign in, add user data to token
   if (user && account) {
-    token.userId = user.id
+    // Look up the user in the database to get the database ID
+    // The user.id from OAuth is the provider's ID (e.g., Facebook user ID)
+    // We need the database user.id for foreign key relationships
+    const providerUserId = account.providerAccountId || user.id
+    const dbUser = await findUserByProviderAndId(account.provider, providerUserId)
+
+    // If user found in database, use database ID
+    // Otherwise, leave userId undefined (indicates sync error)
+    if (dbUser) {
+      token.userId = dbUser.id // Database ID (numeric)
+    }
+
     token.email = user.email
     token.name = user.name
     token.picture = user.image
