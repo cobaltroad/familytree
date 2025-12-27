@@ -30,6 +30,8 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@auth/core": "^0.41.1",
+    "@auth/sveltekit": "^1.11.1",
     "better-sqlite3": "^12.5.0",
     "d3": "^7.9.0",
     "drizzle-orm": "^0.45.1"
