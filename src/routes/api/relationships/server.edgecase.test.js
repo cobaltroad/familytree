@@ -1,10 +1,7 @@
-import { setupTestDatabase, createMockAuthenticatedEvent } from "$lib/server/testHelpers.js"
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setupTestDatabase, createMockAuthenticatedEvent } from "$lib/server/testHelpers.js"
 import Database from 'better-sqlite3'
-import { setupTestDatabase, createMockAuthenticatedEvent } from "$lib/server/testHelpers.js"
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { setupTestDatabase, createMockAuthenticatedEvent } from "$lib/server/testHelpers.js"
 import { GET, POST } from './+server.js'
 
 /**
@@ -16,60 +13,40 @@ import { GET, POST } from './+server.js'
 describe('POST /api/relationships - Edge Cases', () => {
   let db
   let sqlite
+  let userId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Create tables
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL,
-        person2_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (person1_id) REFERENCES people(id) ON DELETE CASCADE,
-        FOREIGN KEY (person2_id) REFERENCES people(id) ON DELETE CASCADE
-      );
-    `)
+    // Setup test database with users table and default test user (Issue #72)
+    userId = await setupTestDatabase(sqlite, db)
 
     // Insert test people
     sqlite.prepare(`
-      INSERT INTO people (id, first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(1, 'Child', 'Person', '2000-01-01', 'male')
+      INSERT INTO people (id, first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(1, 'Child', 'Person', '2000-01-01', 'male', userId)
 
     sqlite.prepare(`
-      INSERT INTO people (id, first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(2, 'Mother', 'Person', '1970-01-01', 'female')
+      INSERT INTO people (id, first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(2, 'Mother', 'Person', '1970-01-01', 'female', userId)
 
     sqlite.prepare(`
-      INSERT INTO people (id, first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(3, 'Father', 'Person', '1968-01-01', 'male')
+      INSERT INTO people (id, first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(3, 'Father', 'Person', '1968-01-01', 'male', userId)
 
     sqlite.prepare(`
-      INSERT INTO people (id, first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(4, 'Sibling', 'Person', '2002-01-01', 'female')
+      INSERT INTO people (id, first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(4, 'Sibling', 'Person', '2002-01-01', 'female', userId)
 
     sqlite.prepare(`
-      INSERT INTO people (id, first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(5, 'Spouse', 'Person', '1999-01-01', 'female')
+      INSERT INTO people (id, first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(5, 'Spouse', 'Person', '1999-01-01', 'female', userId)
   })
 
   afterEach(() => {
@@ -79,19 +56,17 @@ describe('POST /api/relationships - Edge Cases', () => {
   // Parent Relationship Validation
   it('should prevent creating duplicate mother relationship', async () => {
     // Create first mother relationship: Person 2 is mother of Person 1 (child)
-    await POST({
-      request: {
-        json: async () => ({
-          person1Id: 2,  // Mother
-          person2Id: 1,  // Child
-          type: 'mother'
-        })
-      },
-      locals: { db }
-    })
+    const request1 = {
+      json: async () => ({
+        person1Id: 2,  // Mother
+        person2Id: 1,  // Child
+        type: 'mother'
+      })
+    }
+    await POST(createMockAuthenticatedEvent(db, null, { request: request1 }))
 
     // Attempt to create second mother for same child: Person 3 as mother of Person 1
-    const request = {
+    const request2 = {
       json: async () => ({
         person1Id: 3,  // Different mother
         person2Id: 1,  // Same child
@@ -99,7 +74,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request: request2 }))
 
     expect(response.status).toBe(400)
     const data = await response.json()
@@ -108,19 +83,17 @@ describe('POST /api/relationships - Edge Cases', () => {
 
   it('should prevent creating duplicate father relationship', async () => {
     // Create first father relationship: Person 3 is father of Person 1 (child)
-    await POST({
-      request: {
-        json: async () => ({
-          person1Id: 3,  // Father
-          person2Id: 1,  // Child
-          type: 'father'
-        })
-      },
-      locals: { db }
-    })
+    const request1 = {
+      json: async () => ({
+        person1Id: 3,  // Father
+        person2Id: 1,  // Child
+        type: 'father'
+      })
+    }
+    await POST(createMockAuthenticatedEvent(db, null, { request: request1 }))
 
     // Attempt to create second father for same child: Person 2 as father of Person 1
-    const request = {
+    const request2 = {
       json: async () => ({
         person1Id: 2,  // Different father
         person2Id: 1,  // Same child
@@ -128,7 +101,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request: request2 }))
 
     expect(response.status).toBe(400)
     const data = await response.json()
@@ -137,28 +110,24 @@ describe('POST /api/relationships - Edge Cases', () => {
 
   it('should allow both mother and father (no conflict)', async () => {
     // Create mother: Person 2 is mother of Person 1 (child)
-    const response1 = await POST({
-      request: {
-        json: async () => ({
-          person1Id: 2,  // Mother
-          person2Id: 1,  // Child
-          type: 'mother'
-        })
-      },
-      locals: { db }
-    })
+    const request1 = {
+      json: async () => ({
+        person1Id: 2,  // Mother
+        person2Id: 1,  // Child
+        type: 'mother'
+      })
+    }
+    const response1 = await POST(createMockAuthenticatedEvent(db, null, { request: request1 }))
 
     // Create father: Person 3 is father of Person 1 (same child)
-    const response2 = await POST({
-      request: {
-        json: async () => ({
-          person1Id: 3,  // Father
-          person2Id: 1,  // Same child
-          type: 'father'
-        })
-      },
-      locals: { db }
-    })
+    const request2 = {
+      json: async () => ({
+        person1Id: 3,  // Father
+        person2Id: 1,  // Same child
+        type: 'father'
+      })
+    }
+    const response2 = await POST(createMockAuthenticatedEvent(db, null, { request: request2 }))
 
     expect(response1.status).toBe(201)
     expect(response2.status).toBe(201)
@@ -183,7 +152,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -207,7 +176,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -231,7 +200,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -256,7 +225,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
     const data = await response.json()
@@ -272,7 +241,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -287,9 +256,10 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
-    expect(response.status).toBe(400)
+    // Returns 403 because person doesn't exist (ownership check fails before validation)
+    expect(response.status).toBe(403)
   })
 
   it('should reject relationship with non-existent relatedPersonId', async () => {
@@ -301,9 +271,10 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
-    expect(response.status).toBe(400)
+    // Returns 403 because person doesn't exist (ownership check fails before validation)
+    expect(response.status).toBe(403)
   })
 
   // Invalid Relationship Types
@@ -316,7 +287,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -330,7 +301,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -344,7 +315,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -358,7 +329,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -373,7 +344,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -387,7 +358,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -401,9 +372,10 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
-    expect(response.status).toBe(400)
+    // Returns 403 because negative ID doesn't exist (ownership check fails before validation)
+    expect(response.status).toBe(403)
   })
 
   it('should reject zero personId', async () => {
@@ -415,7 +387,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -429,9 +401,10 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
-    expect(response.status).toBe(400)
+    // Returns 403 because float ID doesn't exist (ownership check fails before validation)
+    expect(response.status).toBe(403)
   })
 
   // Missing Required Fields
@@ -443,7 +416,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -456,7 +429,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -469,7 +442,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     expect(response.status).toBe(400)
   })
@@ -486,7 +459,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -498,33 +471,29 @@ describe('POST /api/relationships - Edge Cases', () => {
   it('should allow multiple spouse relationships for same person', async () => {
     // Add second spouse
     sqlite.prepare(`
-      INSERT INTO people (id, first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(6, 'Spouse2', 'Person', '1998-01-01', 'female')
+      INSERT INTO people (id, first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(6, 'Spouse2', 'Person', '1998-01-01', 'female', userId)
 
     // Create first spouse relationship
-    const response1 = await POST({
-      request: {
-        json: async () => ({
-          person1Id: 1,
-          person2Id: 5,
-          type: 'spouse'
-        })
-      },
-      locals: { db }
-    })
+    const request1 = {
+      json: async () => ({
+        person1Id: 1,
+        person2Id: 5,
+        type: 'spouse'
+      })
+    }
+    const response1 = await POST(createMockAuthenticatedEvent(db, null, { request: request1 }))
 
     // Create second spouse relationship
-    const response2 = await POST({
-      request: {
-        json: async () => ({
-          person1Id: 1,
-          person2Id: 6,
-          type: 'spouse'
-        })
-      },
-      locals: { db }
-    })
+    const request2 = {
+      json: async () => ({
+        person1Id: 1,
+        person2Id: 6,
+        type: 'spouse'
+      })
+    }
+    const response2 = await POST(createMockAuthenticatedEvent(db, null, { request: request2 }))
 
     expect(response1.status).toBe(201)
     expect(response2.status).toBe(201)
@@ -540,19 +509,17 @@ describe('POST /api/relationships - Edge Cases', () => {
   // Duplicate Relationship Prevention
   it('should prevent exact duplicate relationship (same person, related person, type)', async () => {
     // Create first relationship
-    await POST({
-      request: {
-        json: async () => ({
-          person1Id: 1,
-          person2Id: 2,
-          type: 'mother'
-        })
-      },
-      locals: { db }
-    })
+    const request1 = {
+      json: async () => ({
+        person1Id: 1,
+        person2Id: 2,
+        type: 'mother'
+      })
+    }
+    await POST(createMockAuthenticatedEvent(db, null, { request: request1 }))
 
     // Attempt to create duplicate
-    const request = {
+    const request2 = {
       json: async () => ({
         person1Id: 1,
         person2Id: 2,
@@ -560,7 +527,7 @@ describe('POST /api/relationships - Edge Cases', () => {
       })
     }
 
-    const response = await POST({ request, locals: { db } })
+    const response = await POST(createMockAuthenticatedEvent(db, null, { request: request2 }))
 
     expect(response.status).toBe(400)
     const data = await response.json()
@@ -570,17 +537,15 @@ describe('POST /api/relationships - Edge Cases', () => {
   // Bidirectional Relationship Checks
   it('should allow parent of child and child of parent as separate relationships', async () => {
     // Create parent->child relationship (mother of child)
-    const response1 = await POST({
-      request: {
-        json: async () => ({
-          person1Id: 2,  // Mother
-          person2Id: 1,  // Child
-          type: 'parentOf',
-          parentRole: 'mother'
-        })
-      },
-      locals: { db }
-    })
+    const request = {
+      json: async () => ({
+        person1Id: 2,  // Mother
+        person2Id: 1,  // Child
+        type: 'parentOf',
+        parentRole: 'mother'
+      })
+    }
+    const response1 = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
     // This is typically created automatically in the UI, but should work in API
     expect(response1.status).toBe(201)
@@ -598,39 +563,20 @@ describe('POST /api/relationships - Edge Cases', () => {
 describe('GET /api/relationships - Edge Cases', () => {
   let db
   let sqlite
+  let userId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL,
-        person2_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (person1_id) REFERENCES people(id) ON DELETE CASCADE,
-        FOREIGN KEY (person2_id) REFERENCES people(id) ON DELETE CASCADE
-      );
-    `)
+    // Setup test database with users table and default test user (Issue #72)
+    userId = await setupTestDatabase(sqlite, db)
 
     // Insert test people
     for (let i = 1; i <= 10; i++) {
       sqlite.prepare(`
-        INSERT INTO people (id, first_name, last_name) VALUES (?, ?, ?)
-      `).run(i, `Person${i}`, `LastName${i}`)
+        INSERT INTO people (id, first_name, last_name, user_id) VALUES (?, ?, ?, ?)
+      `).run(i, `Person${i}`, `LastName${i}`, userId)
     }
   })
 
@@ -641,15 +587,15 @@ describe('GET /api/relationships - Edge Cases', () => {
   it('should handle large number of relationships (100+)', async () => {
     // Create 100 spouse relationships
     const stmt = sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type)
-      VALUES (?, ?, ?)
+      INSERT INTO relationships (person1_id, person2_id, type, user_id)
+      VALUES (?, ?, ?, ?)
     `)
 
     for (let i = 1; i <= 100; i++) {
       const personId = (i % 10) + 1
       const relatedPersonId = ((i + 1) % 10) + 1
       if (personId !== relatedPersonId) {
-        stmt.run(personId, relatedPersonId, 'spouse')
+        stmt.run(personId, relatedPersonId, 'spouse', userId)
       }
     }
 
@@ -663,14 +609,14 @@ describe('GET /api/relationships - Edge Cases', () => {
   it('should return consistent results across multiple calls', async () => {
     // Create test relationships
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
-    `).run(1, 2, 'parentOf', 'mother')
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(1, 2, 'parentOf', 'mother', userId)
 
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
-    `).run(1, 3, 'parentOf', 'father')
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(1, 3, 'parentOf', 'father', userId)
 
     // Call GET multiple times
     const response1 = await GET(createMockAuthenticatedEvent(db))
@@ -689,9 +635,9 @@ describe('GET /api/relationships - Edge Cases', () => {
 
   it('should handle relationships with null parent_role (spouse)', async () => {
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
-    `).run(1, 2, 'spouse', null)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(1, 2, 'spouse', null, userId)
 
     const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
@@ -704,9 +650,9 @@ describe('GET /api/relationships - Edge Cases', () => {
 
   it('should handle relationships with parent_role set', async () => {
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
-    `).run(1, 2, 'parentOf', 'mother')
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(1, 2, 'parentOf', 'mother', userId)
 
     const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
@@ -725,31 +671,31 @@ describe('GET /api/relationships - Edge Cases', () => {
 
     // Grandparent -> Parent relationships
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
-    `).run(2, 1, 'parentOf', 'mother')  // Person 1 is mother of Person 2
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(2, 1, 'parentOf', 'mother', userId)  // Person 1 is mother of Person 2
 
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
-    `).run(3, 1, 'parentOf', 'father')  // Person 1 is father of Person 3
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(3, 1, 'parentOf', 'father', userId)  // Person 1 is father of Person 3
 
     // Parent -> Child relationships
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
-    `).run(4, 2, 'parentOf', 'mother')  // Person 2 is mother of Person 4
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(4, 2, 'parentOf', 'mother', userId)  // Person 2 is mother of Person 4
 
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
-    `).run(5, 3, 'parentOf', 'father')  // Person 3 is father of Person 5
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(5, 3, 'parentOf', 'father', userId)  // Person 3 is father of Person 5
 
     // Spouse relationships
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type)
-      VALUES (?, ?, ?)
-    `).run(2, 3, 'spouse')  // Person 2 and 3 are spouses
+      INSERT INTO relationships (person1_id, person2_id, type, user_id)
+      VALUES (?, ?, ?, ?)
+    `).run(2, 3, 'spouse', userId)  // Person 2 and 3 are spouses
 
     const response = await GET(createMockAuthenticatedEvent(db))
     const data = await response.json()
