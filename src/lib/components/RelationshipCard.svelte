@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte'
+  import { page } from '$app/stores'
 
   export let person = null
   export let relationshipType = ''
@@ -7,6 +8,12 @@
   export let isMobile = false
 
   const dispatch = createEventDispatcher()
+
+  // Story #84: Get user's defaultPersonId from session
+  $: defaultPersonId = $page?.data?.session?.user?.defaultPersonId
+
+  // Story #84: Check if this card shows the user's profile
+  $: isUserProfile = person && defaultPersonId && person.id === defaultPersonId
 
   let isHovering = false
 
@@ -94,7 +101,12 @@
       </div>
 
       <div class="person-info">
-        <div class="relationship-type">{relationshipType}</div>
+        <div class="relationship-type-row">
+          <span class="relationship-type">{relationshipType}</span>
+          {#if isUserProfile}
+            <span class="you-badge">You</span>
+          {/if}
+        </div>
         <div class="person-name">{person.firstName} {person.lastName}</div>
         {#if lifespan}
           <div class="person-dates">{lifespan}</div>
@@ -225,12 +237,30 @@
     min-width: 0;
   }
 
+  .relationship-type-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
   .relationship-type {
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     color: #666;
-    margin-bottom: 0.25rem;
+    letter-spacing: 0.5px;
+  }
+
+  .you-badge {
+    display: inline-block;
+    background-color: #3b82f6;
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 

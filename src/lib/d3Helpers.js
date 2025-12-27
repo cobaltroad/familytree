@@ -414,7 +414,7 @@ export function updateTreeLinks(g, links, options = {}) {
  * @returns {d3.Selection} - The updated node selection
  */
 export function updateRadialNodes(g, nodes, getColor, onClick, focusPersonId, options = {}) {
-  const { transitionDuration = 300 } = options
+  const { transitionDuration = 300, defaultPersonId = null } = options
 
   // Bind data with key function
   const nodeGroups = g.selectAll('.node')
@@ -462,10 +462,17 @@ export function updateRadialNodes(g, nodes, getColor, onClick, focusPersonId, op
     .attr('r', d => d.depth === 0 ? 40 : 25)
     .attr('fill', d => getColor(d.data.person))
     .attr('stroke', d => {
+      // Story #84: Blue border for user's profile
+      if (defaultPersonId && d.data.person.id === defaultPersonId) return '#3b82f6'
       if (d.data.person.id === focusPersonId) return '#4CAF50'
       return d.data.person.deathDate ? '#666' : '#333'
     })
-    .attr('stroke-width', d => d.data.person.id === focusPersonId ? 3 : 2)
+    .attr('stroke-width', d => {
+      // Story #84: Thicker border for user's profile
+      if (defaultPersonId && d.data.person.id === defaultPersonId) return 4
+      if (d.data.person.id === focusPersonId) return 3
+      return 2
+    })
     .attr('stroke-dasharray', d => d.data.person.deathDate ? '3,3' : '0')
     .on('click', (event, d) => {
       event.stopPropagation()
@@ -578,7 +585,7 @@ export function updateRadialLinks(g, links, options = {}) {
  * @returns {d3.Selection} - The updated node selection
  */
 export function updatePedigreeNodes(g, nodes, getColor, onClick, focusPersonId, options = {}) {
-  const { transitionDuration = 300, nodeWidth = 80, nodeHeight = 40 } = options
+  const { transitionDuration = 300, nodeWidth = 80, nodeHeight = 40, defaultPersonId = null } = options
 
   // Bind data with key function
   const nodeGroups = g.selectAll('.node')
@@ -641,10 +648,17 @@ export function updatePedigreeNodes(g, nodes, getColor, onClick, focusPersonId, 
   mergedNodes.select('rect')
     .attr('fill', d => getColor(d.data.person))
     .attr('stroke', d => {
+      // Story #84: Blue border for user's profile
+      if (defaultPersonId && d.data.person.id === defaultPersonId) return '#3b82f6'
       if (d.data.person.id === focusPersonId) return '#4CAF50'
       return d.data.person.deathDate ? '#666' : '#333'
     })
-    .attr('stroke-width', d => d.data.person.id === focusPersonId ? 3 : 2)
+    .attr('stroke-width', d => {
+      // Story #84: Thicker border for user's profile
+      if (defaultPersonId && d.data.person.id === defaultPersonId) return 4
+      if (d.data.person.id === focusPersonId) return 3
+      return 2
+    })
     .attr('stroke-dasharray', d => d.data.person.deathDate ? '3,3' : '0')
     .on('click', (event, d) => {
       event.stopPropagation()

@@ -18,6 +18,28 @@ import { users } from '$lib/db/schema.js'
 import { eq, and } from 'drizzle-orm'
 
 /**
+ * Finds a user by their database ID
+ *
+ * @param {number} userId - User's database ID
+ * @returns {Promise<Object|null>} User object (with defaultPersonId) or null if not found
+ *
+ * @example
+ * const user = await getUserById(123)
+ * if (user && user.defaultPersonId) {
+ *   console.log('User default person ID:', user.defaultPersonId)
+ * }
+ */
+export async function getUserById(userId) {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  return user || null
+}
+
+/**
  * Finds a user by provider and provider user ID
  *
  * @param {string} provider - OAuth provider name (e.g., 'facebook')

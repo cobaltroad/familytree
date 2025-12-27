@@ -13,7 +13,7 @@
  */
 
 import { getAuthConfig } from './config.js'
-import { syncUserFromOAuth, findUserByProviderAndId } from './userSync.js'
+import { syncUserFromOAuth, findUserByProviderAndId, getUserById } from './userSync.js'
 import { shouldCreateDefaultPerson, createDefaultPersonFromProfile } from './defaultPerson.js'
 
 /**
@@ -122,10 +122,13 @@ export async function jwtCallback({ token, user, account }) {
  * Session callback - customizes session object
  * Maps JWT token data to session object for client access
  *
+ * Story #82: Fetches user's defaultPersonId from database and adds to session
+ * This allows components to access defaultPersonId for default focus in tree views
+ *
  * @param {Object} params - Callback parameters
  * @param {Object} params.session - Current session object
  * @param {Object} params.token - JWT token
- * @returns {Object} Updated session object
+ * @returns {Promise<Object>} Updated session object
  */
 export async function sessionCallback({ session, token }) {
   // Add user data from token to session
@@ -135,6 +138,21 @@ export async function sessionCallback({ session, token }) {
     name: token.name,
     image: token.picture,
     provider: token.provider
+  }
+
+  // Story #82: Fetch defaultPersonId from database
+  // Only fetch if we have a valid userId
+  if (token.userId) {
+    try {
+      const dbUser = await getUserById(token.userId)
+      if (dbUser && dbUser.defaultPersonId) {
+        session.user.defaultPersonId = dbUser.defaultPersonId
+      }
+    } catch (error) {
+      // Log error but don't block session creation
+      console.error('Error fetching defaultPersonId in session callback:', error)
+      // defaultPersonId will be undefined, which is fine (falls back to first root person)
+    }
   }
 
   return session

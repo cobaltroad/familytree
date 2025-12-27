@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte'
+  import { page } from '$app/stores'
   import TwoColumnLayout from './components/TwoColumnLayout.svelte'
   import CollapsibleSection from './components/CollapsibleSection.svelte'
   import CollapsibleActionPanel from './components/CollapsibleActionPanel.svelte'
@@ -26,6 +27,12 @@
   import { openPanels } from '../stores/panelStore.js'
 
   const dispatch = createEventDispatcher()
+
+  // Story #84: Get user's defaultPersonId from session
+  $: defaultPersonId = $page?.data?.session?.user?.defaultPersonId
+
+  // Story #84: Check if current person is the user's profile
+  $: isUserProfile = person && defaultPersonId && person.id === defaultPersonId
 
   // Spouse Panel references (for collapsing after success)
   let spousePanelDesktop = null
@@ -287,7 +294,12 @@
         <!-- Desktop/Tablet: Two-column layout with cards -->
         <TwoColumnLayout>
           <div slot="left">
-            <h2>{person ? 'Edit Person' : 'Add New Person'}</h2>
+            <div class="header-with-badge">
+              <h2>{person ? 'Edit Person' : 'Add New Person'}</h2>
+              {#if isUserProfile}
+                <span class="profile-badge">Your Profile</span>
+              {/if}
+            </div>
             <PersonFormFields {person} on:submit={handleSubmit} />
           </div>
 
@@ -467,7 +479,12 @@
         </TwoColumnLayout>
       {:else}
         <!-- Mobile: Collapsible sections -->
-        <h2>{person ? 'Edit Person' : 'Add New Person'}</h2>
+        <div class="header-with-badge">
+          <h2>{person ? 'Edit Person' : 'Add New Person'}</h2>
+          {#if isUserProfile}
+            <span class="profile-badge">Your Profile</span>
+          {/if}
+        </div>
 
         <CollapsibleSection title="Personal Information" expanded={true}>
           <PersonFormFields {person} on:submit={handleSubmit} />
@@ -735,10 +752,30 @@
     outline-offset: 2px;
   }
 
+  .header-with-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
   h2 {
-    margin: 0 0 1.5rem 0;
+    margin: 0;
     font-size: 1.5rem;
     color: #333;
+  }
+
+  .profile-badge {
+    display: inline-block;
+    background-color: #3b82f6;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
   }
 
   .mobile-cards {

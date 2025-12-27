@@ -1,6 +1,7 @@
 <script>
   import { onMount, afterUpdate } from 'svelte'
   import * as d3 from 'd3'
+  import { page } from '$app/stores'
   import { getNodeColor, buildAncestorTree } from './treeHelpers.js'
   import { createZoomBehavior, updatePedigreeNodes, updateTreeLinks } from './d3Helpers.js'
   import { modal } from '../stores/modalStore.js'
@@ -14,10 +15,27 @@
   let focusPersonId = null
   let initialized = false
 
-  // Default focus person to first root
+  // Story #82: Get user's defaultPersonId from session
+  $: defaultPersonId = $page?.data?.session?.user?.defaultPersonId
+
+  // Story #82: Default focus person
+  // Priority: 1) User's defaultPersonId (if exists), 2) First root person, 3) First person
   $: if ($people.length > 0 && !focusPersonId) {
-    const roots = $rootPeople
-    focusPersonId = roots.length > 0 ? roots[0].id : $people[0].id
+    // Try defaultPersonId first (if user is logged in and has one)
+    if (defaultPersonId) {
+      const defaultPerson = $people.find(p => p.id === defaultPersonId)
+      if (defaultPerson) {
+        focusPersonId = defaultPersonId
+      } else {
+        // Fallback if defaultPersonId doesn't exist in people list
+        const roots = $rootPeople
+        focusPersonId = roots.length > 0 ? roots[0].id : $people[0].id
+      }
+    } else {
+      // No defaultPersonId - use first root person
+      const roots = $rootPeople
+      focusPersonId = roots.length > 0 ? roots[0].id : $people[0].id
+    }
   }
 
   $: focusPerson = $people.find(p => p.id === focusPersonId)
@@ -83,7 +101,8 @@
       {
         transitionDuration: 300,
         nodeWidth: 80,
-        nodeHeight: 40
+        nodeHeight: 40,
+        defaultPersonId // Story #84: Pass defaultPersonId for visual indicator
       }
     )
   }
