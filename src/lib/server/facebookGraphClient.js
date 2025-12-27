@@ -204,3 +204,84 @@ export async function fetchFacebookProfile(accessToken) {
     throw new Error(`Failed to fetch Facebook profile: ${error.message}`)
   }
 }
+
+/**
+ * Fetches any user's profile from Facebook Graph API
+ * Stories #78 and #80: Facebook Profile Picture Import and Data Pre-population
+ *
+ * Unlike fetchFacebookProfile() which fetches "me" (authenticated user),
+ * this function fetches ANY user's public profile data by user ID or username.
+ *
+ * Requests the following fields:
+ * - first_name, last_name: For person name
+ * - birthday: For birthDate (only if user has made it public)
+ * - gender: For gender (only if user has made it public)
+ * - picture.type(large): For high-quality profile picture (always public)
+ *
+ * Privacy Handling:
+ * - Profile pictures are always public with public_profile permission
+ * - Birthday and gender may not be returned if user's privacy settings restrict them
+ * - The function handles missing fields gracefully
+ *
+ * @param {string} accessToken - Facebook access token from OAuth flow
+ * @param {string} userIdentifier - Facebook user ID (numeric) or username
+ * @returns {Promise<Object>} Facebook profile object
+ * @throws {Error} If access token or user identifier is missing, or API request fails
+ *
+ * @example
+ * // Fetch by numeric user ID
+ * const profile = await fetchFacebookUserProfile(accessToken, '123456789')
+ *
+ * @example
+ * // Fetch by username
+ * const profile = await fetchFacebookUserProfile(accessToken, 'zuck')
+ *
+ * @example
+ * // Handle privacy-restricted fields
+ * const profile = await fetchFacebookUserProfile(accessToken, '123')
+ * // profile.birthday may be undefined if user hid it
+ * // profile.gender may be undefined if user hid it
+ * // profile.picture is always available
+ */
+export async function fetchFacebookUserProfile(accessToken, userIdentifier) {
+  if (!accessToken || typeof accessToken !== 'string' || accessToken.trim() === '') {
+    throw new Error('Access token is required')
+  }
+
+  if (!userIdentifier || typeof userIdentifier !== 'string' || userIdentifier.trim() === '') {
+    throw new Error('User identifier is required')
+  }
+
+  // Get API version from config
+  const config = getAuthConfig()
+  const apiVersion = config.facebook.apiVersion || 'v19.0'
+
+  // Build Graph API URL with fields
+  // Note: picture.type(large) requests a higher resolution profile picture
+  const fields = [
+    'id',
+    'first_name',
+    'last_name',
+    'birthday', // Only returned if user made it public
+    'gender', // Only returned if user made it public
+    'picture.type(large)' // Profile pictures are always public
+  ].join(',')
+
+  const url = `https://graph.facebook.com/${apiVersion}/${userIdentifier}?fields=${fields}&access_token=${accessToken}`
+
+  try {
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(
+        `Facebook Graph API error: ${response.status} ${response.statusText}`
+      )
+    }
+
+    const profile = await response.json()
+    return profile
+  } catch (error) {
+    // Wrap any error with a consistent message
+    throw new Error(`Failed to fetch Facebook profile: ${error.message}`)
+  }
+}

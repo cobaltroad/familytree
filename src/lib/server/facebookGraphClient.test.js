@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   fetchFacebookProfile,
+  fetchFacebookUserProfile,
   extractPersonDataFromProfile,
   parseFacebookBirthday
 } from './facebookGraphClient.js'
@@ -280,5 +281,180 @@ describe('fetchFacebookProfile', () => {
     await expect(fetchFacebookProfile(null)).rejects.toThrow('Access token is required')
     await expect(fetchFacebookProfile('')).rejects.toThrow('Access token is required')
     await expect(fetchFacebookProfile(undefined)).rejects.toThrow('Access token is required')
+  })
+})
+
+describe('fetchFacebookUserProfile', () => {
+  beforeEach(() => {
+    // Reset fetch mock before each test
+    global.fetch = vi.fn()
+  })
+
+  it('should fetch any user profile by user ID with correct fields', async () => {
+    const mockProfile = {
+      id: '987654321',
+      first_name: 'Jane',
+      last_name: 'Smith',
+      birthday: '06/15/1985',
+      gender: 'female',
+      picture: {
+        data: {
+          url: 'https://example.com/jane-photo.jpg'
+        }
+      }
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockProfile
+    })
+
+    const accessToken = 'test-access-token'
+    const userId = '987654321'
+    const result = await fetchFacebookUserProfile(accessToken, userId)
+
+    // Verify fetch was called with correct URL for specific user
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining(`https://graph.facebook.com/v19.0/${userId}`)
+    )
+
+    // Verify fields parameter includes all required fields
+    const callUrl = global.fetch.mock.calls[0][0]
+    expect(callUrl).toContain('fields=')
+    expect(callUrl).toContain('first_name')
+    expect(callUrl).toContain('last_name')
+    expect(callUrl).toContain('birthday')
+    expect(callUrl).toContain('gender')
+    expect(callUrl).toContain('picture.type(large)')
+
+    // Verify access token is in URL
+    expect(callUrl).toContain(`access_token=${accessToken}`)
+
+    expect(result).toEqual(mockProfile)
+  })
+
+  it('should fetch user profile by username', async () => {
+    const mockProfile = {
+      id: '100000123456789',
+      first_name: 'Mark',
+      last_name: 'Zuckerberg',
+      picture: {
+        data: {
+          url: 'https://example.com/zuck-photo.jpg'
+        }
+      }
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockProfile
+    })
+
+    const accessToken = 'test-access-token'
+    const username = 'zuck'
+    const result = await fetchFacebookUserProfile(accessToken, username)
+
+    // Verify fetch was called with username
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining(`https://graph.facebook.com/v19.0/${username}`)
+    )
+
+    expect(result).toEqual(mockProfile)
+  })
+
+  it('should request large profile picture', async () => {
+    const mockProfile = {
+      id: '123',
+      first_name: 'Test',
+      picture: {
+        data: {
+          url: 'https://example.com/large-photo.jpg'
+        }
+      }
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockProfile
+    })
+
+    await fetchFacebookUserProfile('token', '123')
+
+    const callUrl = global.fetch.mock.calls[0][0]
+    expect(callUrl).toContain('picture.type(large)')
+  })
+
+  it('should handle privacy-restricted fields gracefully', async () => {
+    // User has restricted birthday and gender from public access
+    const mockProfile = {
+      id: '123456789',
+      first_name: 'Private',
+      last_name: 'User',
+      picture: {
+        data: {
+          url: 'https://example.com/photo.jpg'
+        }
+      }
+      // No birthday or gender fields returned
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockProfile
+    })
+
+    const result = await fetchFacebookUserProfile('token', '123456789')
+
+    expect(result).toEqual(mockProfile)
+    expect(result.birthday).toBeUndefined()
+    expect(result.gender).toBeUndefined()
+  })
+
+  it('should handle user not found errors', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found'
+    })
+
+    await expect(fetchFacebookUserProfile('token', 'invalid-user')).rejects.toThrow(
+      'Failed to fetch Facebook profile'
+    )
+  })
+
+  it('should handle permission errors', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      statusText: 'Forbidden'
+    })
+
+    await expect(fetchFacebookUserProfile('token', '123')).rejects.toThrow(
+      'Failed to fetch Facebook profile'
+    )
+  })
+
+  it('should handle network errors', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
+
+    await expect(fetchFacebookUserProfile('token', '123')).rejects.toThrow(
+      'Failed to fetch Facebook profile'
+    )
+  })
+
+  it('should handle missing access token', async () => {
+    await expect(fetchFacebookUserProfile(null, '123')).rejects.toThrow('Access token is required')
+    await expect(fetchFacebookUserProfile('', '123')).rejects.toThrow('Access token is required')
+    await expect(fetchFacebookUserProfile(undefined, '123')).rejects.toThrow(
+      'Access token is required'
+    )
+  })
+
+  it('should handle missing user identifier', async () => {
+    await expect(fetchFacebookUserProfile('token', null)).rejects.toThrow('User identifier is required')
+    await expect(fetchFacebookUserProfile('token', '')).rejects.toThrow('User identifier is required')
+    await expect(fetchFacebookUserProfile('token', undefined)).rejects.toThrow(
+      'User identifier is required'
+    )
   })
 })

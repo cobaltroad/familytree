@@ -61,5 +61,31 @@ export const api = {
       method: 'DELETE'
     })
     if (!response.ok) throw new Error('Failed to delete relationship')
+  },
+
+  /**
+   * Fetches Facebook profile data for import
+   * Stories #78 and #80: Facebook Profile Picture Import and Data Pre-population
+   *
+   * @param {string} facebookUrl - Facebook profile URL, user ID, or username
+   * @returns {Promise<Object>} Person data ready for form pre-population
+   * @throws {Error} If request fails
+   *
+   * @example
+   * const personData = await api.fetchFacebookProfile('facebook.com/zuck')
+   * // Returns: { firstName, lastName, birthDate, gender, photoUrl }
+   */
+  async fetchFacebookProfile(facebookUrl) {
+    const response = await fetch(`${API_BASE}/facebook/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ facebookUrl })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to fetch Facebook profile')
+    }
+    const data = await response.json()
+    return data.personData
   }
 }
