@@ -10,7 +10,8 @@
     lastName: '',
     birthDate: '',
     deathDate: '',
-    gender: ''
+    gender: '',
+    photoUrl: ''
   }
 
   let isAlive = true
@@ -22,7 +23,8 @@
       lastName: person.lastName || '',
       birthDate: person.birthDate || '',
       deathDate: person.deathDate || '',
-      gender: person.gender || ''
+      gender: person.gender || '',
+      photoUrl: person.photoUrl || ''
     }
     isAlive = !person.deathDate
   }
@@ -36,7 +38,8 @@
       ...formData,
       birthDate: formData.birthDate || null,
       deathDate: formData.deathDate || null,
-      gender: formData.gender || null
+      gender: formData.gender || null,
+      photoUrl: formData.photoUrl || null
     }
 
     if (person) {
@@ -56,7 +59,8 @@
         lastName: '',
         birthDate: '',
         deathDate: '',
-        gender: ''
+        gender: '',
+        photoUrl: ''
       }
       isAlive = true
     }
@@ -81,6 +85,16 @@
       type="text"
       bind:value={formData.lastName}
       required
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="photoUrl">Photo URL</label>
+    <input
+      id="photoUrl"
+      type="url"
+      bind:value={formData.photoUrl}
+      placeholder="https://example.com/photo.jpg"
     />
   </div>
 
@@ -174,7 +188,8 @@
   }
 
   .form-group input[type="text"],
-  .form-group input[type="date"] {
+  .form-group input[type="date"],
+  .form-group input[type="url"] {
     width: 100%;
     padding: 0.5rem;
     border: 1px solid #ccc;

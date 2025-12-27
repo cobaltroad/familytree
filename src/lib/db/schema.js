@@ -9,6 +9,9 @@ import { sql } from 'drizzle-orm'
  * - user_id: Associates each person with a user (multi-user support)
  * - Foreign key to users table with CASCADE DELETE
  * - Index on user_id for performance
+ *
+ * Photo Support (Story #77):
+ * - photo_url: URL to person's photo (nullable, for avatar display)
  */
 export const people = sqliteTable('people', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -17,6 +20,7 @@ export const people = sqliteTable('people', {
   birthDate: text('birth_date'),
   deathDate: text('death_date'),
   gender: text('gender'),
+  photoUrl: text('photo_url'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   userId: integer('user_id')
     .notNull()
@@ -62,7 +66,12 @@ export const relationships = sqliteTable('relationships', {
 
 /**
  * Users table schema
- * Stores user authentication and profile data for Google OAuth
+ * Stores user authentication and profile data for OAuth providers
+ *
+ * Default Person (Story #81):
+ * - default_person_id: Links user to their personal Person record
+ * - Nullable - not all users may have a default person
+ * - Foreign key to people table with SET NULL on delete
  */
 export const users = sqliteTable(
   'users',
@@ -75,7 +84,9 @@ export const users = sqliteTable(
     providerUserId: text('provider_user_id'),
     emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(true),
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
-    lastLoginAt: text('last_login_at')
+    lastLoginAt: text('last_login_at'),
+    defaultPersonId: integer('default_person_id')
+      .references(() => people.id, { onDelete: 'set null' })
   },
   (table) => {
     return {

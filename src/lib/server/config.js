@@ -13,14 +13,15 @@
  * Optional Environment Variables:
  * - FACEBOOK_CALLBACK_URL: OAuth redirect URI (defaults to localhost:5173)
  * - FACEBOOK_API_VERSION: Facebook Graph API version (defaults to v19.0)
- * - FACEBOOK_SCOPES: Comma-separated OAuth scopes (defaults to email,public_profile)
+ * - FACEBOOK_SCOPES: Comma-separated OAuth scopes (defaults to email,public_profile,user_birthday,user_gender)
  */
 
 // Configuration constants
 const MIN_AUTH_SECRET_LENGTH = 32
 const DEFAULT_CALLBACK_URL = 'http://localhost:5173/auth/callback/facebook'
 const DEFAULT_API_VERSION = 'v19.0'
-const DEFAULT_SCOPES = 'email,public_profile'
+// Story #79: Added user_birthday and user_gender permissions for default person creation
+const DEFAULT_SCOPES = 'email,public_profile,user_birthday,user_gender'
 
 /**
  * Validates that a required environment variable exists and is not empty

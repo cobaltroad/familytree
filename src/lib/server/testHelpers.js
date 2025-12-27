@@ -53,6 +53,7 @@ export function createMockAuthenticatedEvent(db, session = null, additionalProps
 
 /**
  * SQL script to create users table for testing
+ * Updated for Story #81: Added default_person_id field
  */
 export const CREATE_USERS_TABLE_SQL = `
   CREATE TABLE users (
@@ -64,12 +65,15 @@ export const CREATE_USERS_TABLE_SQL = `
     provider_user_id TEXT,
     email_verified INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_login_at TEXT
+    last_login_at TEXT,
+    default_person_id INTEGER,
+    FOREIGN KEY (default_person_id) REFERENCES people(id) ON DELETE SET NULL
   )
 `
 
 /**
  * SQL script to create people table with user_id for testing (Issue #72)
+ * Updated for Story #77: Added photo_url field
  */
 export const CREATE_PEOPLE_TABLE_SQL = `
   CREATE TABLE people (
@@ -79,6 +83,7 @@ export const CREATE_PEOPLE_TABLE_SQL = `
     birth_date TEXT,
     death_date TEXT,
     gender TEXT,
+    photo_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     user_id INTEGER NOT NULL DEFAULT 1,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

@@ -14,10 +14,13 @@
 
 import { getAuthConfig } from './config.js'
 import { syncUserFromOAuth, findUserByProviderAndId } from './userSync.js'
+import { shouldCreateDefaultPerson, createDefaultPersonFromProfile } from './defaultPerson.js'
 
 /**
- * Sign-in callback - syncs user data to database
+ * Sign-in callback - syncs user data to database and creates default person
  * Called when a user successfully authenticates with OAuth provider
+ *
+ * Story #81: Now creates default Person from Facebook profile on first login
  *
  * @param {Object} params - Callback parameters
  * @param {Object} params.user - User object from OAuth provider
@@ -48,7 +51,24 @@ export async function signInCallback({ user, account, profile }) {
     }
 
     // Sync user to database
-    await syncUserFromOAuth(oauthData)
+    const syncedUser = await syncUserFromOAuth(oauthData)
+
+    // Story #81: Auto-create default person from Facebook profile on first login
+    // Only for Facebook provider (where we have additional profile data)
+    if (account.provider === 'facebook' && profile) {
+      try {
+        // Check if user needs a default person
+        if (await shouldCreateDefaultPerson(syncedUser.id)) {
+          // Create Person from Facebook profile (ONE TIME ONLY)
+          await createDefaultPersonFromProfile(syncedUser.id, profile)
+          console.log('Created default person for user:', syncedUser.id)
+        }
+      } catch (error) {
+        // Log error but don't block sign-in if default person creation fails
+        console.error('Error creating default person:', error)
+        // Still allow sign in - user can manually add themselves later
+      }
+    }
 
     // Allow sign in
     return true

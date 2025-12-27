@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit'
 import { db } from '$lib/db/client.js'
-import { people } from '$lib/db/schema.js'
+import { people, users } from '$lib/db/schema.js'
 import { eq, and } from 'drizzle-orm'
 import { parseId, transformPersonToAPI, validatePersonData } from '$lib/server/personHelpers.js'
 import { requireAuth } from '$lib/server/session.js'
@@ -139,15 +139,23 @@ export async function PUT({ params, request, locals, ...event }) {
     }
 
     // Update person
+    // Story #77: Now includes photoUrl
+    const updateData = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      birthDate: data.birthDate !== undefined ? data.birthDate : null,
+      deathDate: data.deathDate !== undefined ? data.deathDate : null,
+      gender: data.gender !== undefined ? data.gender : null
+    }
+
+    // Only update photoUrl if it's explicitly provided in the request
+    if (data.photoUrl !== undefined) {
+      updateData.photoUrl = data.photoUrl
+    }
+
     const result = await database
       .update(people)
-      .set({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        birthDate: data.birthDate !== undefined ? data.birthDate : null,
-        deathDate: data.deathDate !== undefined ? data.deathDate : null,
-        gender: data.gender !== undefined ? data.gender : null
-      })
+      .set(updateData)
       .where(and(eq(people.id, personId), eq(people.userId, userId)))
       .returning()
 
@@ -175,6 +183,7 @@ export async function PUT({ params, request, locals, ...event }) {
  *
  * Authentication: Required
  * Ownership: User must own the person (403 if not)
+ * Story #83: BLOCKS deletion of user's own default person (403 Forbidden)
  *
  * @param {Object} params - URL parameters containing id
  * @returns {Response} 204 No Content on success, or error
@@ -216,6 +225,19 @@ export async function DELETE({ params, locals, ...event }) {
         // Person doesn't exist at all
         return new Response('Person not found', { status: 404 })
       }
+    }
+
+    // Story #83: Prevent deletion of user's own default person
+    // Check if this person is the user's default person
+    const [user] = await database
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+
+    if (user && user.defaultPersonId === personId) {
+      // HARD BLOCK: Cannot delete your own profile
+      return new Response('Forbidden: Cannot delete your own profile. This is your default person in the family tree.', { status: 403 })
     }
 
     // Delete person (relationships will cascade delete due to foreign key)

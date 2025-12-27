@@ -46,13 +46,15 @@ describe('Sign-in Page', () => {
   })
 
   describe('Facebook Login Button', () => {
-    it('should link to Auth.js Facebook sign-in endpoint', () => {
+    it('should submit to Auth.js Facebook sign-in endpoint', () => {
       // Act
-      render(SignInPage)
+      const { container } = render(SignInPage)
 
       // Assert
-      const facebookButton = screen.getByRole('button', { name: /continue with facebook/i })
-      expect(facebookButton.getAttribute('href')).toBe('/auth/signin/facebook')
+      const form = container.querySelector('form.signin-form')
+      expect(form).toBeTruthy()
+      expect(form.getAttribute('action')).toBe('/auth/signin/facebook')
+      expect(form.getAttribute('method')).toBe('POST')
     })
 
     it('should have Facebook brand color', () => {
@@ -111,14 +113,15 @@ describe('Sign-in Page', () => {
   })
 
   describe('Accessibility', () => {
-    it('should have proper ARIA labels', () => {
+    it('should have proper button role', () => {
       // Act
       render(SignInPage)
 
       // Assert
       const facebookButton = screen.getByRole('button', { name: /continue with facebook/i })
       expect(facebookButton).toBeTruthy()
-      expect(facebookButton.getAttribute('role')).toBe('button')
+      // Button elements have implicit role="button", so getAttribute('role') will be null
+      expect(facebookButton.tagName.toLowerCase()).toBe('button')
     })
 
     it('should have sufficient color contrast', () => {

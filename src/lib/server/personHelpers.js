@@ -23,6 +23,7 @@ function toRFC3339(sqliteDateTime) {
  * Always includes all fields (including null values) for consistent API interface
  *
  * Issue #72: Now includes userId for multi-user support
+ * Story #77: Now includes photoUrl for photo storage
  *
  * @param {Object} person - Person record from database
  * @returns {Object} Transformed person object
@@ -35,6 +36,7 @@ export function transformPersonToAPI(person) {
     birthDate: person.birthDate !== undefined ? person.birthDate : null,
     deathDate: person.deathDate !== undefined ? person.deathDate : null,
     gender: person.gender !== undefined && person.gender !== '' ? person.gender : null,
+    photoUrl: person.photoUrl !== undefined ? person.photoUrl : null,
     createdAt: toRFC3339(person.createdAt),
     userId: person.userId
   }
@@ -94,6 +96,8 @@ function isValidDate(dateString) {
 /**
  * Validates person data for create/update operations
  *
+ * Story #77: Added photoUrl validation
+ *
  * @param {Object} data - Person data from request body
  * @returns {Object} Validation result { valid: boolean, error: string|null }
  */
@@ -133,6 +137,13 @@ export function validatePersonData(data) {
     }
     if (!validGenders.includes(data.gender)) {
       return { valid: false, error: 'gender must be one of: male, female, other, unspecified (lowercase)' }
+    }
+  }
+
+  // Validate photoUrl if provided (Story #77)
+  if (data.photoUrl !== undefined && data.photoUrl !== null) {
+    if (typeof data.photoUrl !== 'string') {
+      return { valid: false, error: 'photoUrl must be a string' }
     }
   }
 
