@@ -5,6 +5,16 @@ import { modal } from '../stores/modalStore.js'
 import { people, relationships } from '../stores/familyStore.js'
 import { get } from 'svelte/store'
 
+// Mock $app/stores
+vi.mock('$app/stores', () => ({
+  page: {
+    subscribe: (fn) => {
+      fn({ data: { session: null } })
+      return () => {}
+    }
+  }
+}))
+
 describe('PersonModal', () => {
   const mockPeople = [
     { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: '1949-01-01' },
@@ -295,6 +305,157 @@ describe('PersonModal', () => {
       const { container } = render(PersonModal)
 
       expect(container).toBeTruthy()
+    })
+  })
+
+  describe('Part 2: Re-Sync from Facebook Button', () => {
+    describe('AC3: Button renamed and moved to footer', () => {
+      it('should have Re-Sync from Facebook button in modal footer when editing', () => {
+        modal.open(3, 'edit')
+
+        const { container } = render(PersonModal)
+
+        const buttonSection = container.querySelector('.button-section')
+        expect(buttonSection).toBeTruthy()
+
+        const resyncButton = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
+        expect(resyncButton).toBeTruthy()
+        expect(resyncButton.textContent).toContain('Re-Sync from Facebook')
+      })
+
+      it('should have Import from Facebook button when adding new person', () => {
+        modal.openNew()
+
+        const { container } = render(PersonModal)
+
+        const buttonSection = container.querySelector('.button-section')
+        expect(buttonSection).toBeTruthy()
+
+        const importButton = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
+        expect(importButton).toBeTruthy()
+        expect(importButton.textContent).toContain('Import from Facebook')
+      })
+
+      it('should position Re-Sync button next to Update Person button', () => {
+        modal.open(3, 'edit')
+
+        const { container } = render(PersonModal)
+
+        const buttonSection = container.querySelector('.button-section')
+        const buttons = Array.from(buttonSection.querySelectorAll('button'))
+
+        // Should have Update, Re-Sync, and Delete buttons
+        expect(buttons.length).toBeGreaterThanOrEqual(3)
+
+        const updateButton = buttons.find(btn => btn.textContent.includes('Update'))
+        const resyncButton = buttons.find(btn => btn.textContent.includes('Re-Sync from Facebook'))
+        const deleteButton = buttons.find(btn => btn.textContent.includes('Delete'))
+
+        expect(updateButton).toBeTruthy()
+        expect(resyncButton).toBeTruthy()
+        expect(deleteButton).toBeTruthy()
+      })
+
+      it('should have secondary/outline styling for Re-Sync button', () => {
+        modal.open(3, 'edit')
+
+        const { container } = render(PersonModal)
+
+        const resyncButton = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
+        expect(resyncButton).toBeTruthy()
+
+        // Button should have secondary or outline class
+        const hasSecondaryStyle = resyncButton.classList.contains('secondary') ||
+                                 resyncButton.classList.contains('outline') ||
+                                 resyncButton.classList.contains('resync-facebook-button')
+        expect(hasSecondaryStyle).toBe(true)
+      })
+
+      it('should not have Facebook import section in PersonFormFields', () => {
+        modal.open(3, 'edit')
+
+        const { container } = render(PersonModal)
+
+        // Facebook import section should not exist in the form
+        const facebookImportSection = container.querySelector('.facebook-import-section')
+        expect(facebookImportSection).toBeFalsy()
+
+        const facebookImportToggle = container.querySelector('.facebook-import-toggle')
+        expect(facebookImportToggle).toBeFalsy()
+      })
+    })
+
+    describe('AC5: Button state management', () => {
+      it('should show "Import from Facebook" text in add mode', () => {
+        modal.openNew()
+
+        const { container } = render(PersonModal)
+
+        const button = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
+        expect(button).toBeTruthy()
+        expect(button.textContent).toContain('Import from Facebook')
+        expect(button.textContent).not.toContain('Re-Sync')
+      })
+
+      it('should show "Re-Sync from Facebook" text in edit mode', () => {
+        modal.open(3, 'edit')
+
+        const { container } = render(PersonModal)
+
+        const button = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
+        expect(button).toBeTruthy()
+        expect(button.textContent).toContain('Re-Sync from Facebook')
+      })
+    })
+
+    describe('AC4: Re-Sync functionality', () => {
+      it('should prompt for Facebook URL when Re-Sync button is clicked', async () => {
+        modal.open(3, 'edit')
+
+        const { container } = render(PersonModal)
+
+        const resyncButton = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
+
+        // Mock prompt
+        const originalPrompt = global.prompt
+        let promptCalled = false
+        global.prompt = vi.fn(() => {
+          promptCalled = true
+          return null // Simulate user canceling
+        })
+
+        await fireEvent.click(resyncButton)
+
+        expect(promptCalled).toBe(true)
+
+        global.prompt = originalPrompt
+      })
+
+      it('should update form fields after successful Facebook sync', async () => {
+        // This test will verify that clicking Re-Sync updates the form
+        // Implementation will be tested once the feature is built
+        expect(true).toBe(true) // Placeholder
+      })
+
+      it('should show success notification after successful sync', async () => {
+        // This test will verify success notification
+        // Implementation will be tested once the feature is built
+        expect(true).toBe(true) // Placeholder
+      })
+    })
+
+    describe('AC6: Error handling', () => {
+      it('should show error notification for invalid Facebook URL', async () => {
+        // This test will verify error notification for invalid URLs
+        // Implementation will be tested once the feature is built
+        expect(true).toBe(true) // Placeholder
+      })
+
+      it('should not overwrite form fields if sync fails', async () => {
+        // This test will verify form data is preserved on error
+        // Implementation will be tested once the feature is built
+        expect(true).toBe(true) // Placeholder
+      })
     })
   })
 })

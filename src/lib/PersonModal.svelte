@@ -28,6 +28,10 @@
 
   const dispatch = createEventDispatcher()
 
+  // Facebook import state
+  let facebookUrl = ''
+  let isImporting = false
+
   // Story #84: Get user's defaultPersonId from session
   $: defaultPersonId = $page?.data?.session?.user?.defaultPersonId
 
@@ -278,6 +282,68 @@
     pendingDeleteRelationship = null
     pendingDeletePerson = null
     pendingDeleteType = null
+  }
+
+  // Facebook Re-Sync/Import handler
+  async function handleFacebookSync() {
+    // Prompt user for Facebook URL
+    const url = prompt('Enter Facebook profile URL, username, or user ID:')
+
+    if (!url || !url.trim()) {
+      return // User canceled or entered empty string
+    }
+
+    facebookUrl = url.trim()
+    isImporting = true
+
+    try {
+      const personData = await api.fetchFacebookProfile(facebookUrl)
+
+      // Update the person object with Facebook data
+      // We need to get a reference to the PersonFormFields component
+      // For now, we'll dispatch an event that PersonFormFields can listen to
+      // Actually, we'll directly update the person data in the modal
+
+      // Pre-populate form fields with Facebook data
+      if (person) {
+        // Update existing person
+        const updates = {}
+        if (personData.firstName) updates.firstName = personData.firstName
+        if (personData.lastName) updates.lastName = personData.lastName
+        if (personData.birthDate) updates.birthDate = personData.birthDate
+        if (personData.gender) updates.gender = personData.gender
+        if (personData.photoUrl) updates.photoUrl = personData.photoUrl
+
+        // Optimistically update the person
+        await updatePerson(person.id, { ...person, ...updates })
+      } else {
+        // For new person, we need to communicate with PersonFormFields
+        // This is tricky - let's dispatch a custom event that PersonFormFields can listen to
+        dispatch('facebookDataFetched', personData)
+      }
+
+      // Build success message
+      const importedFields = []
+      if (personData.firstName || personData.lastName) importedFields.push('name')
+      if (personData.birthDate) importedFields.push('birth date')
+      if (personData.gender) importedFields.push('gender')
+      if (personData.photoUrl) importedFields.push('photo')
+
+      if (importedFields.length > 0) {
+        successNotification(
+          `${person ? 'Re-synced' : 'Imported'} ${importedFields.join(', ')} from Facebook profile`
+        )
+      } else {
+        errorNotification('Profile found but no additional data available (check privacy settings)')
+      }
+
+      // Clear Facebook URL
+      facebookUrl = ''
+    } catch (error) {
+      errorNotification(error.message || 'Failed to sync Facebook profile')
+    } finally {
+      isImporting = false
+    }
   }
 </script>
 
@@ -662,9 +728,20 @@
       {/if}
 
       <div class="button-section">
-        <button type="submit" form="person-form" class="update-button">
-          {person ? 'Update' : 'Add'} Person
-        </button>
+        <div class="left-buttons">
+          <button type="submit" form="person-form" class="update-button">
+            {person ? 'Update' : 'Add'} Person
+          </button>
+          <button
+            type="button"
+            class="resync-facebook-button"
+            data-testid="resync-facebook"
+            on:click={handleFacebookSync}
+            disabled={isImporting}
+          >
+            {isImporting ? 'Syncing...' : (person ? 'Re-Sync from Facebook' : 'Import from Facebook')}
+          </button>
+        </div>
         {#if person}
           <button class="delete-button" on:click={handleDelete}>
             Delete Person
@@ -794,6 +871,7 @@
   .button-section {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 1.5rem;
     border-top: 1px solid #e0e0e0;
     background: #fafafa;
@@ -801,7 +879,13 @@
     bottom: 0;
   }
 
-  .update-button, .delete-button {
+  .left-buttons {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .update-button, .delete-button, .resync-facebook-button {
     padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 4px;
@@ -822,6 +906,34 @@
 
   .update-button:focus {
     outline: 2px solid #4CAF50;
+    outline-offset: 2px;
+  }
+
+  .resync-facebook-button {
+    background-color: white;
+    color: #1877f2;
+    border: 2px solid #1877f2;
+  }
+
+  .resync-facebook-button:hover:not(:disabled) {
+    background-color: #f0f7ff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(24, 119, 242, 0.2);
+  }
+
+  .resync-facebook-button:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .resync-facebook-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    border-color: #ccc;
+    color: #999;
+  }
+
+  .resync-facebook-button:focus {
+    outline: 2px solid #1877f2;
     outline-offset: 2px;
   }
 
@@ -857,6 +969,18 @@
 
     .button-section {
       padding: 1rem;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .left-buttons {
+      width: 100%;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .update-button, .delete-button, .resync-facebook-button {
+      width: 100%;
     }
   }
 
