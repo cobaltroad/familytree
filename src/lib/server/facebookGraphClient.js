@@ -244,17 +244,28 @@ export async function fetchFacebookProfile(accessToken) {
  * // profile.picture is always available
  */
 export async function fetchFacebookUserProfile(accessToken, userIdentifier) {
+  console.log('[FB-IMPORT] Graph Client: fetchFacebookUserProfile called')
+  console.log('[FB-IMPORT] Graph Client: User identifier:', userIdentifier)
+  console.log('[FB-IMPORT] Graph Client: Access token check:', {
+    hasToken: !!accessToken,
+    tokenPrefix: accessToken ? accessToken.substring(0, 10) + '...' : 'N/A',
+    tokenLength: accessToken ? accessToken.length : 0
+  })
+
   if (!accessToken || typeof accessToken !== 'string' || accessToken.trim() === '') {
+    console.error('[FB-IMPORT] Graph Client: Access token is missing or invalid')
     throw new Error('Access token is required')
   }
 
   if (!userIdentifier || typeof userIdentifier !== 'string' || userIdentifier.trim() === '') {
+    console.error('[FB-IMPORT] Graph Client: User identifier is missing or invalid')
     throw new Error('User identifier is required')
   }
 
   // Get API version from config
   const config = getAuthConfig()
   const apiVersion = config.facebook.apiVersion || 'v19.0'
+  console.log('[FB-IMPORT] Graph Client: API version:', apiVersion)
 
   // Build Graph API URL with fields
   // Note: picture.type(large) requests a higher resolution profile picture
@@ -267,21 +278,97 @@ export async function fetchFacebookUserProfile(accessToken, userIdentifier) {
     'picture.type(large)' // Profile pictures are always public
   ].join(',')
 
+  console.log('[FB-IMPORT] Graph Client: Fields requested:', fields)
+
   const url = `https://graph.facebook.com/${apiVersion}/${userIdentifier}?fields=${fields}&access_token=${accessToken}`
 
+  // Log URL without access token for security
+  const urlWithoutToken = `https://graph.facebook.com/${apiVersion}/${userIdentifier}?fields=${fields}&access_token=***`
+  console.log('[FB-IMPORT] Graph Client: Graph API URL (token hidden):', urlWithoutToken)
+
   try {
+    console.log('[FB-IMPORT] Graph Client: Making fetch request to Facebook Graph API...')
     const response = await fetch(url)
 
+    console.log('[FB-IMPORT] Graph Client: Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: {
+        contentType: response.headers.get('content-type')
+      }
+    })
+
     if (!response.ok) {
+      console.error('[FB-IMPORT] Graph Client: Response not OK')
+
+      // Try to get error details from response body
+      let errorBody
+      try {
+        errorBody = await response.json()
+        console.error('[FB-IMPORT] Graph Client: Facebook error response body:', errorBody)
+      } catch (e) {
+        console.error('[FB-IMPORT] Graph Client: Could not parse error response as JSON')
+        // If we can't parse the error, throw a generic error with status
+        throw new Error(
+          `Facebook Graph API error: ${response.status} ${response.statusText}`
+        )
+      }
+
+      // Parse Facebook error codes for more specific error messages
+      if (errorBody && errorBody.error) {
+        const fbError = errorBody.error
+        const errorCode = fbError.code
+        const errorSubcode = fbError.error_subcode
+
+        console.log('[FB-IMPORT] Graph Client: Facebook error code:', errorCode, 'subcode:', errorSubcode)
+
+        // Error code 100: Various permission and access issues
+        if (errorCode === 100) {
+          // Subcode 33: Object does not exist or cannot be loaded
+          if (errorSubcode === 33) {
+            throw new Error('Facebook profile not found or inaccessible')
+          }
+          // Generic error code 100 (permission issues)
+          throw new Error('Facebook profile not found or inaccessible')
+        }
+
+        // Error code 190: Invalid or expired OAuth token
+        if (errorCode === 190) {
+          throw new Error('Invalid access token')
+        }
+
+        // Error code 803: Username/alias does not exist
+        if (errorCode === 803) {
+          throw new Error('Facebook username does not exist')
+        }
+
+        // Other errors - include Facebook's message
+        throw new Error(`Facebook API error: ${fbError.message}`)
+      }
+
+      // Fallback if error body doesn't have expected structure
       throw new Error(
         `Facebook Graph API error: ${response.status} ${response.statusText}`
       )
     }
 
     const profile = await response.json()
+    console.log('[FB-IMPORT] Graph Client: Profile data received:', profile)
     return profile
   } catch (error) {
-    // Wrap any error with a consistent message
+    // If the error is already one of our custom errors, re-throw it
+    if (error.message.includes('Facebook profile not found') ||
+        error.message.includes('Invalid access token') ||
+        error.message.includes('Facebook username does not exist') ||
+        error.message.includes('Facebook API error:')) {
+      throw error
+    }
+
+    // Wrap network or other errors with a consistent message
+    console.error('[FB-IMPORT] Graph Client: Error in fetch:', error)
+    console.error('[FB-IMPORT] Graph Client: Error message:', error.message)
+    console.error('[FB-IMPORT] Graph Client: Error stack:', error.stack)
     throw new Error(`Failed to fetch Facebook profile: ${error.message}`)
   }
 }

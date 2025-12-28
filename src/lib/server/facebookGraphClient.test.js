@@ -306,7 +306,10 @@ describe('fetchFacebookUserProfile', () => {
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockProfile
+      json: async () => mockProfile,
+      headers: {
+        get: (name) => 'application/json'
+      }
     })
 
     const accessToken = 'test-access-token'
@@ -347,7 +350,10 @@ describe('fetchFacebookUserProfile', () => {
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockProfile
+      json: async () => mockProfile,
+      headers: {
+        get: (name) => 'application/json'
+      }
     })
 
     const accessToken = 'test-access-token'
@@ -375,7 +381,10 @@ describe('fetchFacebookUserProfile', () => {
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockProfile
+      json: async () => mockProfile,
+      headers: {
+        get: (name) => 'application/json'
+      }
     })
 
     await fetchFacebookUserProfile('token', '123')
@@ -400,7 +409,10 @@ describe('fetchFacebookUserProfile', () => {
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockProfile
+      json: async () => mockProfile,
+      headers: {
+        get: (name) => 'application/json'
+      }
     })
 
     const result = await fetchFacebookUserProfile('token', '123456789')
@@ -456,5 +468,134 @@ describe('fetchFacebookUserProfile', () => {
     await expect(fetchFacebookUserProfile('token', undefined)).rejects.toThrow(
       'User identifier is required'
     )
+  })
+
+  it('should handle Facebook error code 100 subcode 33 (object does not exist)', async () => {
+    const errorResponse = {
+      error: {
+        message: "Object with ID 'kenna.holman.98' does not exist, cannot be loaded due to missing permissions",
+        type: 'OAuthException',
+        code: 100,
+        error_subcode: 33,
+        fbtrace_id: 'AbCdEfGhIjK'
+      }
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: async () => errorResponse,
+      headers: {
+        get: (name) => 'application/json'
+      }
+    })
+
+    await expect(fetchFacebookUserProfile('token', 'kenna.holman.98')).rejects.toThrow(
+      'Facebook profile not found or inaccessible'
+    )
+  })
+
+  it('should handle Facebook error code 100 with missing permissions', async () => {
+    const errorResponse = {
+      error: {
+        message: 'Permissions error',
+        type: 'OAuthException',
+        code: 100,
+        fbtrace_id: 'AbCdEfGhIjK'
+      }
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: async () => errorResponse,
+      headers: {
+        get: (name) => 'application/json'
+      }
+    })
+
+    await expect(fetchFacebookUserProfile('token', 'someuser')).rejects.toThrow(
+      'Facebook profile not found or inaccessible'
+    )
+  })
+
+  it('should handle Facebook error code 803 (object alias does not exist)', async () => {
+    const errorResponse = {
+      error: {
+        message: "The alias you requested does not exist",
+        type: 'OAuthException',
+        code: 803,
+        fbtrace_id: 'AbCdEfGhIjK'
+      }
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      json: async () => errorResponse,
+      headers: {
+        get: (name) => 'application/json'
+      }
+    })
+
+    await expect(fetchFacebookUserProfile('token', 'invalid.username')).rejects.toThrow(
+      'Facebook username does not exist'
+    )
+  })
+
+  it('should handle invalid OAuth token error', async () => {
+    const errorResponse = {
+      error: {
+        message: 'Invalid OAuth access token',
+        type: 'OAuthException',
+        code: 190,
+        fbtrace_id: 'AbCdEfGhIjK'
+      }
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      json: async () => errorResponse,
+      headers: {
+        get: (name) => 'application/json'
+      }
+    })
+
+    await expect(fetchFacebookUserProfile('invalid-token', '123')).rejects.toThrow(
+      'Invalid access token'
+    )
+  })
+
+  it('should handle usernames with special characters (dots and numbers)', async () => {
+    const mockProfile = {
+      id: '100012345678901',
+      first_name: 'Kenna',
+      last_name: 'Holman',
+      picture: {
+        data: {
+          url: 'https://example.com/kenna-photo.jpg'
+        }
+      }
+    }
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockProfile,
+      headers: {
+        get: (name) => 'application/json'
+      }
+    })
+
+    const result = await fetchFacebookUserProfile('token', 'kenna.holman.98')
+
+    // Verify username is passed correctly (should be URL-encoded if needed)
+    const callUrl = global.fetch.mock.calls[0][0]
+    expect(callUrl).toContain('kenna.holman.98')
+    expect(result).toEqual(mockProfile)
   })
 })
