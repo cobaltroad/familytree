@@ -106,10 +106,11 @@ export async function updatePerson(personId, updatedData) {
  * If the API call fails, the temporary person is removed from the UI.
  *
  * @param {Object} personData - New person data
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} Created person object from server
  *
  * @example
- * await createPerson({ firstName: 'John', lastName: 'Doe', birthDate: '1980-01-01' })
+ * const newPerson = await createPerson({ firstName: 'John', lastName: 'Doe', birthDate: '1980-01-01' })
+ * console.log(newPerson.id) // Real server ID
  */
 export async function createPerson(personData) {
   // Initialize action and capture current state
@@ -132,10 +133,16 @@ export async function createPerson(personData) {
       p.id === tempId ? serverPerson : p
     )
     people.set(updatedPeople)
+
+    // Return the server person for caller's use
+    return serverPerson
   } catch (err) {
     // Remove temporary person on error (rollback to original state)
     people.set(currentPeople)
     errorNotification('Failed to create person')
+
+    // Re-throw error so caller knows it failed
+    throw err
   }
 }
 
