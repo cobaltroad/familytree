@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import { api } from '$lib/api.js'
   import * as notifications from '../../stores/notificationStore.js'
+  import PhotoPreview from './PhotoPreview.svelte'
 
   export let person = null
 
@@ -144,6 +145,16 @@
 </script>
 
 <form id="person-form" on:submit|preventDefault={handleSubmit}>
+  <!-- Photo Preview Section -->
+  <div class="photo-section photo-preview-section">
+    <PhotoPreview
+      photoUrl={formData.photoUrl}
+      firstName={formData.firstName}
+      lastName={formData.lastName}
+      size={100}
+    />
+  </div>
+
   <!-- Facebook Import Section -->
   <div class="facebook-import-section">
     <button
@@ -289,6 +300,15 @@
 </form>
 
 <style>
+  /* Photo Preview Section */
+  .photo-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem 0;
+  }
+
   /* Facebook Import Section */
   .facebook-import-section {
     margin-bottom: 1.5rem;

@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte'
   import { page } from '$app/stores'
+  import PhotoPreview from './PhotoPreview.svelte'
 
   export let person = null
   export let relationshipType = ''
@@ -94,11 +95,12 @@
     on:mouseleave={handleMouseLeave}
   >
     <div class="card-content">
-      <div class="photo-placeholder avatar person-icon">
-        <span class="initials">
-          {person.firstName?.[0] || ''}{person.lastName?.[0] || ''}
-        </span>
-      </div>
+      <PhotoPreview
+        photoUrl={person.photoUrl}
+        firstName={person.firstName}
+        lastName={person.lastName}
+        size={48}
+      />
 
       <div class="person-info">
         <div class="relationship-type-row">
@@ -214,24 +216,6 @@
     font-size: 1rem;
   }
 
-  .photo-placeholder {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .initials {
-    color: white;
-    font-weight: 600;
-    font-size: 1.125rem;
-    text-transform: uppercase;
-  }
-
   .person-info {
     flex: 1;
     min-width: 0;
@@ -300,15 +284,6 @@
   @media (max-width: 768px) {
     .relationship-card {
       padding: 0.875rem;
-    }
-
-    .photo-placeholder {
-      width: 40px;
-      height: 40px;
-    }
-
-    .initials {
-      font-size: 1rem;
     }
 
     .person-name {

@@ -1,6 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/svelte'
+import { writable } from 'svelte/store'
 import RelationshipCard from './RelationshipCard.svelte'
+
+// Mock $app/stores
+vi.mock('$app/stores', () => ({
+  page: writable({
+    data: {
+      session: null
+    }
+  })
+}))
 
 describe('RelationshipCard', () => {
   const mockPerson = {
@@ -78,7 +88,7 @@ describe('RelationshipCard', () => {
       expect(container.textContent.toLowerCase()).toContain('present')
     })
 
-    it('should display photo placeholder', () => {
+    it('should display photo preview component', () => {
       const { container } = render(RelationshipCard, {
         props: {
           person: mockPerson,
@@ -86,8 +96,9 @@ describe('RelationshipCard', () => {
         }
       })
 
-      const placeholder = container.querySelector('.photo-placeholder, .avatar, .person-icon')
-      expect(placeholder).toBeTruthy()
+      // Should render PhotoPreview component
+      const photoPreview = container.querySelector('.photo-preview-container, .photo-placeholder')
+      expect(photoPreview).toBeTruthy()
     })
 
     it('should handle person without birth date', () => {
