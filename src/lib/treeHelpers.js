@@ -4,6 +4,17 @@
  */
 
 /**
+ * Helper function to check if a relationship is a parent-child relationship
+ * Handles both denormalized (type="mother"/"father") and normalized (type="parentOf") formats
+ * The API returns denormalized relationships, but we support both for compatibility
+ * @param {Object} rel - Relationship object
+ * @returns {boolean} - True if relationship is a parent-child relationship
+ */
+function isParentChildRelationship(rel) {
+  return rel.type === 'mother' || rel.type === 'father' || rel.type === 'parentOf'
+}
+
+/**
  * Get color based on person's gender
  * @param {Object} person - Person object with gender property
  * @returns {string} - Hex color code
@@ -26,7 +37,7 @@ export function getNodeColor(person) {
 export function findRootPeople(people, relationships) {
   return people.filter(person => {
     const hasParent = relationships.some(rel =>
-      rel.type === 'parentOf' && rel.person2Id === person.id
+      isParentChildRelationship(rel) && rel.person2Id === person.id
     )
     return !hasParent
   })
@@ -40,16 +51,15 @@ export function findRootPeople(people, relationships) {
  * @returns {Object} - Object with mother and father properties
  */
 export function findParents(personId, relationships, people) {
+  // API returns denormalized format: type="mother" or type="father"
   const motherRel = relationships.find(rel =>
-    rel.type === 'parentOf' &&
     rel.person2Id === personId &&
-    rel.parentRole === 'mother'
+    (rel.type === 'mother' || (rel.type === 'parentOf' && rel.parentRole === 'mother'))
   )
 
   const fatherRel = relationships.find(rel =>
-    rel.type === 'parentOf' &&
     rel.person2Id === personId &&
-    rel.parentRole === 'father'
+    (rel.type === 'father' || (rel.type === 'parentOf' && rel.parentRole === 'father'))
   )
 
   return {
@@ -69,7 +79,7 @@ export function findParents(personId, relationships, people) {
  */
 export function findChildren(personId, relationships, people) {
   const childRels = relationships.filter(rel =>
-    rel.type === 'parentOf' && rel.person1Id === personId
+    isParentChildRelationship(rel) && rel.person1Id === personId
   )
 
   return childRels
@@ -87,7 +97,7 @@ export function findChildren(personId, relationships, people) {
 export function buildDescendantTree(person, people, relationships) {
   // Get children
   const childRels = relationships.filter(rel =>
-    rel.type === 'parentOf' && rel.person1Id === person.id
+    isParentChildRelationship(rel) && rel.person1Id === person.id
   )
 
   const children = childRels.map(rel => {
@@ -104,7 +114,7 @@ export function buildDescendantTree(person, people, relationships) {
 
     // Find the other parent of this child
     const otherParentRel = relationships.find(rel =>
-      rel.type === 'parentOf' &&
+      isParentChildRelationship(rel) &&
       rel.person2Id === firstChildId &&
       rel.person1Id !== person.id
     )
@@ -115,7 +125,7 @@ export function buildDescendantTree(person, people, relationships) {
       // Verify this person is co-parent of ALL children
       const isCoParentOfAll = childRels.every(childRel => {
         return relationships.some(rel =>
-          rel.type === 'parentOf' &&
+          isParentChildRelationship(rel) &&
           rel.person1Id === coParentId &&
           rel.person2Id === childRel.person2Id
         )
@@ -192,7 +202,7 @@ export function assignGenerations(people, relationships) {
       generations.set(personId, generation)
 
       const childRels = relationships.filter(rel =>
-        rel.type === 'parentOf' && rel.person1Id === personId
+        isParentChildRelationship(rel) && rel.person1Id === personId
       )
 
       childRels.forEach(rel => traverse(rel.person2Id, generation + 1))

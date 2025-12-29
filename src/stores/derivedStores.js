@@ -107,10 +107,12 @@ export const rootPeople = derived(
   ([$people, $relationshipsByPerson]) => {
     return $people.filter(person => {
       const rels = $relationshipsByPerson.get(person.id) || []
-      // Check if any relationship shows this person as a child (person2Id with parentOf type)
-      const hasParent = rels.some(rel =>
-        rel.type === 'parentOf' && rel.person2Id === person.id
-      )
+      // Check if any relationship shows this person as a child (person2Id with parent type)
+      // Note: API returns denormalized format with type="mother" or type="father"
+      const hasParent = rels.some(rel => {
+        const isParentRelationship = rel.type === 'mother' || rel.type === 'father' || rel.type === 'parentOf'
+        return isParentRelationship && rel.person2Id === person.id
+      })
       return !hasParent
     })
   }
@@ -157,14 +159,18 @@ export function createPersonRelationships(personId) {
       const rels = $relationshipsByPerson.get(personId) || []
 
       // Find mother and father
+      // Note: API returns denormalized relationships with type="mother" or type="father"
+      // (not type="parentOf"), so we need to check for both formats
       let mother = null
       let father = null
 
       rels.forEach(rel => {
-        if (rel.type === 'parentOf' && rel.person2Id === personId) {
-          if (rel.parentRole === 'mother') {
+        // Check if this person is the child (person2Id)
+        if (rel.person2Id === personId) {
+          // API returns denormalized format: type="mother" or type="father"
+          if (rel.type === 'mother' || (rel.type === 'parentOf' && rel.parentRole === 'mother')) {
             mother = $peopleById.get(rel.person1Id) || null
-          } else if (rel.parentRole === 'father') {
+          } else if (rel.type === 'father' || (rel.type === 'parentOf' && rel.parentRole === 'father')) {
             father = $peopleById.get(rel.person1Id) || null
           }
         }
@@ -186,8 +192,10 @@ export function createPersonRelationships(personId) {
         const parentRels = [...motherRels, ...fatherRels]
 
         // Find all children of these parents
+        // Note: API returns denormalized format with type="mother" or type="father"
         parentRels.forEach(rel => {
-          if (rel.type === 'parentOf' && rel.person2Id !== personId) {
+          const isParentRelationship = rel.type === 'mother' || rel.type === 'father' || rel.type === 'parentOf'
+          if (isParentRelationship && rel.person2Id !== personId) {
             // This is a sibling (another child of the parent)
             if (!siblingIds.has(rel.person2Id)) {
               siblingIds.add(rel.person2Id)
@@ -201,12 +209,18 @@ export function createPersonRelationships(personId) {
       }
 
       // Find children
+      // Note: API returns denormalized format with type="mother" or type="father"
       const children = []
       rels.forEach(rel => {
-        if (rel.type === 'parentOf' && rel.person1Id === personId) {
-          const child = $peopleById.get(rel.person2Id)
-          if (child) {
-            children.push(child)
+        // Check if this person is the parent (person1Id)
+        if (rel.person1Id === personId) {
+          // Accept both denormalized (type="mother"/"father") and normalized (type="parentOf") formats
+          const isParentRelationship = rel.type === 'mother' || rel.type === 'father' || rel.type === 'parentOf'
+          if (isParentRelationship) {
+            const child = $peopleById.get(rel.person2Id)
+            if (child) {
+              children.push(child)
+            }
           }
         }
       })
