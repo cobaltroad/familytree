@@ -6,6 +6,11 @@
   import { createRelationship } from '../stores/actions/relationshipActions.js'
   import { success as successNotification, error as errorNotification } from '../stores/notificationStore.js'
   import { modal } from '../stores/modalStore.js'
+  import {
+    needsParentRoleSelection,
+    buildRelationshipPayloads,
+    validateRelationshipData
+  } from './smartRelationshipUtils.js'
 
   // Props
   export let isOpen = false
@@ -56,6 +61,7 @@
   let isUrlValid = false
   let showValidation = false
   let fallbackMode = false // New: Track if we're in fallback mode after import failure
+  let selectedParentRole = null // For ambiguous gender cases when adding child
 
   // Editable fields after import
   let editableFirstName = ''
@@ -90,6 +96,9 @@
     ? `Will be added as ${relationshipOptions.find(o => o.value === relationshipType)?.label}`
     : ''
 
+  // Check if parent role selection is needed (for ambiguous gender when adding child)
+  $: needsRoleSelection = focusPerson && needsParentRoleSelection(relationshipType, focusPerson.gender)
+
   function closeModal() {
     dispatch('close')
     resetForm()
@@ -103,6 +112,7 @@
     isUrlValid = false
     showValidation = false
     fallbackMode = false
+    selectedParentRole = null
     editableFirstName = ''
     editableLastName = ''
     editableGender = ''
@@ -184,10 +194,25 @@
   /**
    * Creates person and relationship atomically
    * Issue #87: Saves facebookUrl as metadata for future reference
+   * Issue #88: Uses bidirectional relationship handling utilities
    * Works in both normal mode (successful import) and fallback mode (manual entry)
    */
   async function handleCreateAndAdd() {
     if (!importedData || !focusPerson) return
+
+    // Validate relationship data before proceeding
+    const validation = validateRelationshipData({
+      relationshipType,
+      focusPersonId: focusPerson.id,
+      newPersonId: 999, // Temporary ID for validation
+      focusPersonGender: focusPerson.gender,
+      selectedParentRole
+    })
+
+    if (!validation.valid) {
+      errorNotification(validation.error)
+      return
+    }
 
     // Prepare person data from editable fields
     const personData = {
@@ -216,53 +241,20 @@
       const createdPerson = await createPerson(personData)
       createdPersonId = createdPerson.id
 
-      // Step 2: Determine relationship type based on selection and focus person gender
-      let relType = relationshipType
-      let parentRole = null
+      // Step 2: Build relationship payloads using utility function (Issue #88)
+      // This handles bidirectional spouse relationships and proper person1/person2 ordering
+      const relationshipPayloads = buildRelationshipPayloads({
+        relationshipType,
+        focusPersonId: focusPerson.id,
+        newPersonId: createdPerson.id,
+        focusPersonGender: focusPerson.gender,
+        selectedParentRole
+      })
 
-      if (relationshipType === 'child') {
-        // Focus person is parent of new person
-        if (focusPerson.gender === 'female') {
-          relType = 'mother'
-          parentRole = 'mother'
-        } else if (focusPerson.gender === 'male') {
-          relType = 'father'
-          parentRole = 'father'
-        } else {
-          // Default to 'mother' for non-binary/unspecified
-          relType = 'mother'
-          parentRole = 'mother'
-        }
-      } else if (relationshipType === 'mother' || relationshipType === 'father') {
-        // New person is parent of focus person
-        relType = relationshipType
-        parentRole = relationshipType
+      // Step 3: Create all relationships (1 for parent/child, 2 for spouse)
+      for (const relationshipData of relationshipPayloads) {
+        await createRelationship(relationshipData)
       }
-
-      // Step 3: Create relationship
-      let relationshipData
-
-      if (relationshipType === 'spouse') {
-        // For spouse relationships, order should be focus person first
-        relationshipData = {
-          person1Id: focusPerson.id,
-          person2Id: createdPerson.id,
-          type: 'spouse'
-        }
-      } else {
-        // For parent-child relationships
-        relationshipData = {
-          person1Id: relationshipType === 'child' ? focusPerson.id : createdPerson.id,
-          person2Id: relationshipType === 'child' ? createdPerson.id : focusPerson.id,
-          type: relType
-        }
-
-        if (parentRole) {
-          relationshipData.parentRole = parentRole
-        }
-      }
-
-      await createRelationship(relationshipData)
 
       // Success!
       successNotification(`${editableFirstName} ${editableLastName} added as ${relationshipOptions.find(o => o.value === relationshipType)?.label}`)
@@ -380,6 +372,32 @@
                 <p><strong>Birth Date:</strong> {editableBirthDate}</p>
               {/if}
               <p class="relationship-preview"><strong>{relationshipPreview}</strong></p>
+            </div>
+          {/if}
+
+          <!-- Parent Role Selection (for ambiguous gender when adding child) -->
+          {#if needsRoleSelection}
+            <div class="parent-role-selection">
+              <h4>Select Parent Role</h4>
+              <p class="role-hint">Since the parent's gender is not specified, please select their role:</p>
+              <div class="role-buttons">
+                <button
+                  class="role-button"
+                  class:selected={selectedParentRole === 'mother'}
+                  on:click={() => selectedParentRole = 'mother'}
+                  aria-label="Select Mother role"
+                >
+                  Mother
+                </button>
+                <button
+                  class="role-button"
+                  class:selected={selectedParentRole === 'father'}
+                  on:click={() => selectedParentRole = 'father'}
+                  aria-label="Select Father role"
+                >
+                  Father
+                </button>
+              </div>
             </div>
           {/if}
 
@@ -651,6 +669,54 @@
     border-top: 1px solid #ddd;
     color: #1877f2 !important;
     font-size: 1.05rem;
+  }
+
+  .parent-role-selection {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .parent-role-selection h4 {
+    color: #856404;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+  }
+
+  .role-hint {
+    color: #856404;
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+  }
+
+  .role-buttons {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .role-button {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .role-button:hover {
+    border-color: #4CAF50;
+    background: #f0f8f0;
+  }
+
+  .role-button.selected {
+    border-color: #4CAF50;
+    background: #4CAF50;
+    color: white;
   }
 
   .editable-fields {
