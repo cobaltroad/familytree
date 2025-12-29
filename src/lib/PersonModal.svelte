@@ -14,6 +14,7 @@
   import LinkExistingParent from './LinkExistingParent.svelte'
   import LinkExistingSpouse from './LinkExistingSpouse.svelte'
   import LinkExistingChildren from './LinkExistingChildren.svelte'
+  import SmartRelationshipCreator from './SmartRelationshipCreator.svelte'
   import { modal } from '../stores/modalStore.js'
   import { peopleById, createPersonRelationships, relationshipsByPerson } from '../stores/derivedStores.js'
   import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
@@ -51,6 +52,10 @@
   let pendingDeleteRelationship = null
   let pendingDeletePerson = null
   let pendingDeleteType = null
+
+  // SmartRelationshipCreator modal state
+  let isSmartRelationshipCreatorOpen = false
+  let smartRelationshipFocusPersonId = null
 
   // Responsive breakpoint detection
   let windowWidth = 0
@@ -282,6 +287,19 @@
     pendingDeleteRelationship = null
     pendingDeletePerson = null
     pendingDeleteType = null
+  }
+
+  // SmartRelationshipCreator handlers
+  function openSmartRelationshipCreator() {
+    if (person) {
+      smartRelationshipFocusPersonId = person.id
+      isSmartRelationshipCreatorOpen = true
+    }
+  }
+
+  function closeSmartRelationshipCreator() {
+    isSmartRelationshipCreatorOpen = false
+    smartRelationshipFocusPersonId = null
   }
 
   // Facebook Re-Sync/Import handler
@@ -536,6 +554,19 @@
                   />
                 </div>
               </CollapsibleActionPanel>
+
+              <!-- Add from Facebook button -->
+              <div class="add-from-facebook-section">
+                <button
+                  class="add-from-facebook-button"
+                  data-testid="add-from-facebook-button"
+                  aria-label="Add family member from Facebook profile"
+                  on:click={openSmartRelationshipCreator}
+                  type="button"
+                >
+                  Add from Facebook
+                </button>
+              </div>
             {:else}
               <div class="empty-relationships">
                 <p>Add person details to view relationships</p>
@@ -724,6 +755,19 @@
               </div>
             </CollapsibleActionPanel>
           </CollapsibleSection>
+
+          <!-- Add from Facebook button (Mobile) -->
+          <div class="add-from-facebook-section mobile">
+            <button
+              class="add-from-facebook-button"
+              data-testid="add-from-facebook-button"
+              aria-label="Add family member from Facebook profile"
+              on:click={openSmartRelationshipCreator}
+              type="button"
+            >
+              Add from Facebook
+            </button>
+          </div>
         {/if}
       {/if}
 
@@ -751,6 +795,13 @@
     </div>
   </div>
 {/if}
+
+<!-- SmartRelationshipCreator Modal -->
+<SmartRelationshipCreator
+  isOpen={isSmartRelationshipCreatorOpen}
+  focusPersonId={smartRelationshipFocusPersonId}
+  on:close={closeSmartRelationshipCreator}
+/>
 
 <!-- Confirmation Dialog for Relationship Deletion -->
 <ConfirmationDialog
@@ -948,6 +999,46 @@
 
   .delete-button:focus {
     outline: 2px solid #f44336;
+    outline-offset: 2px;
+  }
+
+  .add-from-facebook-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e0e0e0;
+  }
+
+  .add-from-facebook-section.mobile {
+    margin: 1rem;
+    padding: 1rem 0;
+  }
+
+  .add-from-facebook-button {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    background-color: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(24, 119, 242, 0.2);
+  }
+
+  .add-from-facebook-button:hover {
+    background-color: #166fe5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(24, 119, 242, 0.3);
+  }
+
+  .add-from-facebook-button:active {
+    transform: translateY(0);
+  }
+
+  .add-from-facebook-button:focus {
+    outline: 2px solid #1877f2;
     outline-offset: 2px;
   }
 
