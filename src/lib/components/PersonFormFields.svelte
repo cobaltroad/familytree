@@ -17,9 +17,12 @@
   }
 
   let isAlive = true
+  let currentPersonId = null
 
-  // Reactive update when person prop changes
-  $: if (person) {
+  // Reactive update when person prop changes to a DIFFERENT person
+  // Only update formData if we're editing a different person than before
+  // This prevents overwriting user edits during reactive re-renders
+  $: if (person && person.id !== currentPersonId) {
     formData = {
       firstName: person.firstName || '',
       lastName: person.lastName || '',
@@ -29,6 +32,19 @@
       photoUrl: person.photoUrl || ''
     }
     isAlive = !person.deathDate
+    currentPersonId = person.id
+  } else if (!person && currentPersonId !== null) {
+    // Person was cleared (switched to add mode)
+    formData = {
+      firstName: '',
+      lastName: '',
+      birthDate: '',
+      deathDate: '',
+      gender: '',
+      photoUrl: ''
+    }
+    isAlive = true
+    currentPersonId = null
   }
 
   $: if (isAlive) {

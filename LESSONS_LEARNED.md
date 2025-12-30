@@ -199,6 +199,133 @@ Key files for relationship handling:
 - `src/lib/PersonModal.parentDisplay.test.js` - Parent display test suite
 - `src/stores/derivedStores.test.js` - Derived store test coverage
 
+## Svelte Reactivity: Form State Management
+
+### Issue: Name Fields Not Editable in PersonModal (December 2025)
+
+**Symptoms:**
+- Users unable to type in firstName and lastName input fields when editing existing person
+- Input fields appeared editable (no disabled/readonly attributes) but characters would not persist
+- Typed text would disappear immediately after being entered
+- Other fields (birthDate, gender, etc.) worked correctly
+
+**Root Cause:**
+Overly aggressive reactive statement in `PersonFormFields.svelte` was overwriting formData on every reactive cycle:
+
+```javascript
+// PROBLEMATIC CODE - runs on every reactive cycle
+$: if (person) {
+  formData = {
+    firstName: person.firstName || '',
+    lastName: person.lastName || '',
+    // ... other fields
+  }
+}
+```
+
+The reactive statement (`$:`) would trigger on:
+- Component re-renders
+- Window resize events (responsive breakpoints)
+- Store updates
+- Any reactive recalculation
+
+Each trigger would overwrite `formData` with original `person` values, erasing user edits.
+
+**Files Affected:**
+- `src/lib/components/PersonFormFields.svelte` - Form component with reactive statements
+
+**Solution:**
+Track which person is currently being edited using `currentPersonId`. Only update formData when switching to a DIFFERENT person:
+
+```javascript
+let currentPersonId = null
+
+// Only update formData when person ID changes (editing different person)
+$: if (person && person.id !== currentPersonId) {
+  formData = {
+    firstName: person.firstName || '',
+    lastName: person.lastName || '',
+    // ... other fields
+  }
+  currentPersonId = person.id
+} else if (!person && currentPersonId !== null) {
+  // Switched to add mode - clear form
+  formData = { /* empty values */ }
+  currentPersonId = null
+}
+```
+
+### Key Lessons
+
+1. **Reactive Statements Run Frequently**
+   - Svelte's `$:` reactive statements trigger on ANY dependency change
+   - Dependencies include props, variables, stores, and even window events
+   - Cannot assume reactive statements only run when props explicitly change
+   - Always guard against unnecessary executions
+
+2. **Preserve User Input During Reactivity**
+   - When populating forms from props, track the identity of the data source (e.g., ID)
+   - Only reset form state when switching to edit DIFFERENT data
+   - Never overwrite local form state during routine reactive cycles
+   - User edits must persist across re-renders
+
+3. **Test Realistic User Interactions**
+   - Unit tests must simulate character-by-character typing (not just final value)
+   - Test that edits persist during component lifecycle events
+   - Verify behavior during window resize, store updates, and other reactive triggers
+   - Integration tests should exercise full modal workflows
+
+4. **Form State Management Pattern**
+   - **Track data identity**: Store ID of currently edited record
+   - **Guard updates**: Only update form when data identity changes
+   - **Handle mode switches**: Clear form when switching from edit → add mode
+   - **Preserve edits**: Never reset during reactive re-renders
+
+### Testing Approach (TDD Methodology)
+
+**RED Phase - 9 Failing Tests:**
+- Created `PersonFormFields.nameEditing.test.js`
+- Tests demonstrated bug: 6 failed (edit mode), 3 passed (add mode)
+- Simulated realistic typing: character-by-character input
+- Verified no readonly/disabled attributes
+
+**GREEN Phase - Fix Implementation:**
+- Added `currentPersonId` tracking in PersonFormFields.svelte
+- Modified reactive statement to check ID before updating
+- All 9 unit tests passed
+
+**REFACTOR Phase - Integration Testing:**
+- Created `PersonModal.nameEditing.integration.test.js` (4 tests)
+- End-to-end workflows: open modal → edit → submit
+- Switching between different people in modal
+- All 13 new tests passed + 69 existing tests passed (82 total)
+
+### Best Practices for Svelte Forms
+
+**✅ DO:**
+- Track the identity of data being edited (ID, key, etc.)
+- Use guards to prevent unnecessary reactive updates
+- Test with realistic user interactions (incremental typing)
+- Document why reactive guards exist
+- Handle both edit mode and add mode explicitly
+
+**❌ DON'T:**
+- Assume reactive statements only run when you expect them to
+- Overwrite local form state unconditionally in reactive blocks
+- Test only with final values (miss incremental input bugs)
+- Rely on prop changes being "infrequent" or "controlled"
+- Mix concerns (data loading and user input preservation)
+
+### Code Review Checklist
+
+When reviewing Svelte form components:
+- [ ] Are reactive statements guarded against unnecessary executions?
+- [ ] Does the component track data identity (ID) to detect actual changes?
+- [ ] Will user input persist during window resize, store updates, re-renders?
+- [ ] Are tests simulating realistic user interactions (incremental typing)?
+- [ ] Is there clear documentation about reactive statement purpose?
+- [ ] Does the component handle both edit and add modes correctly?
+
 ## Version History
 
 - **December 2025**: Initial lessons learned from parent display bug fix
@@ -206,6 +333,13 @@ Key files for relationship handling:
   - Solution: Dual format support in all relationship lookups
   - Tests added: 13 parent display tests, 33 derived store tests
   - Commit: [See git log for parent display fix]
+
+- **December 2025**: Svelte reactivity form state management
+  - Root cause: Reactive statement overwriting user input on every cycle
+  - Solution: Track currentPersonId to only update on person identity change
+  - Tests added: 9 unit tests (PersonFormFields.nameEditing.test.js), 4 integration tests (PersonModal.nameEditing.integration.test.js)
+  - Total test suite: 82 tests passing
+  - Documentation: `/Users/cobaltroad/Source/familytree/docs/BUG_FIX_NAME_EDITING.md`
 
 ---
 
