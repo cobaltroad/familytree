@@ -1,15 +1,40 @@
 const API_BASE = '/api'
 
+/**
+ * Creates an error object with HTTP status code attached
+ * This allows the UI to handle different error types appropriately
+ *
+ * @param {Response} response - Fetch response object
+ * @param {string} defaultMessage - Default error message
+ * @returns {Promise<Error>} Error object with status property
+ */
+async function createApiError(response, defaultMessage) {
+  let errorMessage = defaultMessage
+  try {
+    // Try to get error message from response body
+    const text = await response.text()
+    if (text) {
+      errorMessage = text
+    }
+  } catch (e) {
+    // If we can't read the response body, use default message
+  }
+
+  const error = new Error(errorMessage)
+  error.status = response.status
+  return error
+}
+
 export const api = {
   async getAllPeople() {
     const response = await fetch(`${API_BASE}/people`)
-    if (!response.ok) throw new Error('Failed to fetch people')
+    if (!response.ok) throw await createApiError(response, 'Failed to fetch people')
     return response.json()
   },
 
   async getPerson(id) {
     const response = await fetch(`${API_BASE}/people/${id}`)
-    if (!response.ok) throw new Error('Failed to fetch person')
+    if (!response.ok) throw await createApiError(response, 'Failed to fetch person')
     return response.json()
   },
 
@@ -19,7 +44,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(person)
     })
-    if (!response.ok) throw new Error('Failed to create person')
+    if (!response.ok) throw await createApiError(response, 'Failed to create person')
     return response.json()
   },
 
@@ -29,7 +54,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(person)
     })
-    if (!response.ok) throw new Error('Failed to update person')
+    if (!response.ok) throw await createApiError(response, 'Failed to update person')
     return response.json()
   },
 
@@ -37,12 +62,12 @@ export const api = {
     const response = await fetch(`${API_BASE}/people/${id}`, {
       method: 'DELETE'
     })
-    if (!response.ok) throw new Error('Failed to delete person')
+    if (!response.ok) throw await createApiError(response, 'Failed to delete person')
   },
 
   async getAllRelationships() {
     const response = await fetch(`${API_BASE}/relationships`)
-    if (!response.ok) throw new Error('Failed to fetch relationships')
+    if (!response.ok) throw await createApiError(response, 'Failed to fetch relationships')
     return response.json()
   },
 
@@ -52,7 +77,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(relationship)
     })
-    if (!response.ok) throw new Error('Failed to create relationship')
+    if (!response.ok) throw await createApiError(response, 'Failed to create relationship')
     return response.json()
   },
 
@@ -60,7 +85,7 @@ export const api = {
     const response = await fetch(`${API_BASE}/relationships/${id}`, {
       method: 'DELETE'
     })
-    if (!response.ok) throw new Error('Failed to delete relationship')
+    if (!response.ok) throw await createApiError(response, 'Failed to delete relationship')
   },
 
   /**

@@ -63,9 +63,12 @@ describe('POST /api/facebook/profile', () => {
 
   describe('input validation', () => {
     beforeEach(() => {
-      // Mock authenticated session (any provider works)
+      // Mock authenticated session with access token (required for Facebook API calls)
       mockEvent.locals.getSession.mockResolvedValue({
-        user: { id: 1 }
+        user: {
+          id: 1,
+          accessToken: 'mock-facebook-access-token-12345'
+        }
       })
     })
 
@@ -112,9 +115,12 @@ describe('POST /api/facebook/profile', () => {
 
   describe('profile fetching', () => {
     beforeEach(() => {
-      // Mock authenticated session
+      // Mock authenticated session with access token (required for Facebook API calls)
       mockEvent.locals.getSession.mockResolvedValue({
-        user: { id: 1 }
+        user: {
+          id: 1,
+          accessToken: 'mock-facebook-access-token-12345'
+        }
       })
     })
 
@@ -246,9 +252,12 @@ describe('POST /api/facebook/profile', () => {
 
   describe('error handling', () => {
     beforeEach(() => {
-      // Mock authenticated session
+      // Mock authenticated session with access token (required for Facebook API calls)
       mockEvent.locals.getSession.mockResolvedValue({
-        user: { id: 1 }
+        user: {
+          id: 1,
+          accessToken: 'mock-facebook-access-token-12345'
+        }
       })
     })
 

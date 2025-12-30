@@ -326,6 +326,294 @@ When reviewing Svelte form components:
 - [ ] Is there clear documentation about reactive statement purpose?
 - [ ] Does the component handle both edit and add modes correctly?
 
+## Authentication and Frontend Error Handling
+
+### Issue: Person Records Not Appearing (December 2025)
+
+**Symptoms:**
+- Users reported person records not appearing in the UI
+- API calls failing silently with no user feedback
+- Unauthenticated users could load the page but couldn't access data
+- Suspicion of data isolation issues or orphaned records
+
+**Root Cause Investigation:**
+Initial investigation revealed the database schema was **already correct** with proper `user_id` foreign keys on both `people` and `relationships` tables. Data isolation was working at the database level.
+
+The actual problems were:
+1. **Missing Frontend Authentication Guards** - No check for authenticated session before loading page
+2. **Poor API Error Handling** - Errors didn't include HTTP status codes, preventing detection of 401 (unauthorized) responses
+3. **Silent Failures** - 401 errors from API were swallowed without redirecting to sign-in
+
+**Files Affected:**
+- `src/lib/api.js` - API client with inadequate error handling
+- `src/routes/+page.svelte` - Main page without authentication checks
+- `src/routes/+page.js` - Page config with prerendering enabled (incompatible with auth)
+
+**Solution:**
+
+1. **Enhanced API Error Handling** (`src/lib/api.js`):
+   ```javascript
+   function createApiError(message, response) {
+     const error = new Error(message)
+     error.status = response.status
+     return error
+   }
+
+   // All API methods now attach HTTP status to errors
+   if (!response.ok) {
+     const error = await response.json()
+     throw createApiError(error.error || 'Request failed', response)
+   }
+   ```
+
+2. **Page-Level Authentication Guards** (`src/routes/+page.svelte`):
+   ```javascript
+   onMount(async () => {
+     // Check session on mount
+     const session = await getSession()
+     if (!session?.user) {
+       goto('/signin')
+       return
+     }
+
+     try {
+       // Load data...
+     } catch (err) {
+       // Handle 401 (expired session)
+       if (err.status === 401) {
+         goto('/signin')
+         return
+       }
+       // Handle other errors...
+     }
+   })
+   ```
+
+3. **Disabled Prerendering** (`src/routes/+page.js`):
+   ```javascript
+   export const prerender = false // Can't prerender authenticated pages
+   ```
+
+### Key Lessons
+
+1. **Authentication Must Be Checked Early**
+   - Check for authenticated session before attempting to load protected data
+   - Redirect to sign-in BEFORE making API calls that will fail
+   - Don't assume SvelteKit handles authentication automatically
+   - Unauthenticated pages should redirect immediately (not show broken UI)
+
+2. **API Errors Must Include HTTP Status Codes**
+   - JavaScript `Error` objects don't have status codes by default
+   - Attach `error.status = response.status` to all API errors
+   - Frontend needs status codes to distinguish error types (401 vs 403 vs 404 vs 500)
+   - Never swallow error details from server responses
+
+3. **Different Error Types Need Different Handling**
+   - **401 Unauthorized**: Redirect to sign-in (session expired or missing)
+   - **403 Forbidden**: Show error message (authenticated but not allowed)
+   - **404 Not Found**: Show "not found" UI
+   - **500 Server Error**: Show generic error, possibly retry
+   - Design error handling strategy for each status code
+
+4. **Prerendering and Authentication Don't Mix**
+   - SvelteKit's `prerender` option generates static HTML at build time
+   - Authenticated pages need runtime session checks
+   - Set `export const prerender = false` for protected routes
+   - Document why prerendering is disabled
+
+5. **Test Database Schema Before Assuming Issues**
+   - The initial suspicion was data isolation issues (missing userId)
+   - Database schema was actually correct - problem was in frontend
+   - Always verify assumptions with direct database inspection
+   - Don't assume problems are in one layer without checking
+
+### Testing Approach (TDD Methodology)
+
+**RED Phase - 6 Failing Tests:**
+- Created `src/lib/api.auth.test.js` (later moved)
+- Tests demonstrated missing HTTP status codes on errors
+- Could not distinguish 401 from other error types
+
+**GREEN Phase - Implementation:**
+- Added `createApiError()` helper to API client
+- All API methods now attach `status` to errors
+- Page component checks session and handles 401 errors
+- All 6 authentication tests passed
+
+**REFACTOR Phase:**
+- Test file moved from `src/routes/` to `src/lib/tests/` (SvelteKit naming issue)
+- Created comprehensive documentation in `AUTHENTICATION_FIX_SUMMARY.md`
+- Updated Facebook profile tests to include `accessToken` in mock sessions
+- Total: 1,750+ tests passing
+
+### Best Practices for SvelteKit Authentication
+
+**✅ DO:**
+- Check session in `onMount()` before loading protected data
+- Attach HTTP status codes to all API errors
+- Handle 401 errors with redirect to sign-in
+- Set `prerender = false` for authenticated routes
+- Test with both authenticated and unauthenticated states
+- Document authentication requirements in components
+
+**❌ DON'T:**
+- Assume authentication is handled automatically
+- Let API errors lose HTTP status information
+- Show broken UI to unauthenticated users
+- Enable prerendering for protected routes
+- Swallow 401 errors without redirecting
+- Rely on backend to redirect (frontend should handle it)
+
+### Code Review Checklist
+
+When reviewing authentication-related code:
+- [ ] Does the page check for authenticated session before loading data?
+- [ ] Are API errors preserving HTTP status codes?
+- [ ] Is 401 handled with redirect to sign-in?
+- [ ] Is `prerender = false` set for protected routes?
+- [ ] Are tests covering both authenticated and unauthenticated scenarios?
+- [ ] Is the authentication flow documented?
+
+## SvelteKit File Naming Conventions
+
+### Issue: Reserved File Name Breaking Application (December 2025)
+
+**Symptoms:**
+- Error: "Files prefixed with + are reserved (saw src/routes/+page.auth.test.js)"
+- Development server would not start
+- Application completely broken - users could not access the app
+- Critical production-blocking issue
+
+**Root Cause:**
+A test file was created at `src/routes/+page.auth.test.js`, violating SvelteKit's reserved file naming convention.
+
+In SvelteKit, files with `+` prefix in the `src/routes/` directory are **reserved for framework files**:
+- `+page.svelte` - Page components
+- `+page.js` / `+page.ts` - Page load functions
+- `+page.server.js` / `+page.server.ts` - Server-only page logic
+- `+layout.svelte` - Layout components
+- `+layout.js` / `+layout.ts` - Layout load functions
+- `+server.js` / `+server.ts` - API endpoints
+- `+error.svelte` - Error pages
+
+**Files Affected:**
+- `src/routes/+page.auth.test.js` - Problematic test file (created during authentication fix)
+
+**Solution:**
+
+1. **Moved test file to proper location:**
+   - FROM: `src/routes/+page.auth.test.js`
+   - TO: `src/lib/tests/page.auth.test.js`
+
+2. **Updated import paths:**
+   ```javascript
+   // Before (in src/routes/)
+   import Page from './+page.svelte'
+   import * as familyStore from '../stores/familyStore.js'
+
+   // After (in src/lib/tests/)
+   import Page from '../../routes/+page.svelte'
+   import * as familyStore from '../../stores/familyStore.js'
+   ```
+
+3. **Created documentation:**
+   - `TESTING_GUIDELINES.md` - Comprehensive testing documentation to prevent recurrence
+
+### Key Lessons
+
+1. **Never Use Reserved File Patterns**
+   - SvelteKit reserves `+` prefix for framework files
+   - Test files should NEVER use `+` prefix regardless of location
+   - This is a hard error that breaks the entire application
+   - No workarounds - must follow SvelteKit conventions strictly
+
+2. **Test File Placement Strategies**
+   - **Option A (Recommended)**: Place tests in `src/lib/tests/` directory
+     - Clean separation from routes
+     - Easy to find and organize
+     - No naming conflicts possible
+
+   - **Option B**: Co-locate tests with components in `src/lib/components/`
+     - `Button.svelte` and `Button.test.js` side-by-side
+     - Good for component-specific tests
+     - Still avoid `+` prefix
+
+   - **Option C**: Root-level `tests/` directory
+     - Separation of test and source code
+     - Mirrors `src/` structure
+     - Good for large projects
+
+3. **Framework Conventions Are Non-Negotiable**
+   - SvelteKit (like Next.js, Nuxt, etc.) has strict file naming rules
+   - Framework conventions supersede personal preferences
+   - Breaking conventions breaks the app immediately
+   - Always consult framework docs when creating special files
+
+4. **Error Messages Are Helpful**
+   - SvelteKit's error message was clear: "Files prefixed with + are reserved"
+   - Read error messages carefully - they often tell you exactly what's wrong
+   - Framework errors about file naming are usually non-negotiable
+
+5. **Document Team Conventions**
+   - Create `TESTING_GUIDELINES.md` or similar
+   - Document where test files should go
+   - Include examples of correct file placement
+   - Reference in onboarding docs
+
+### Testing Approach
+
+**Immediate Fix (Critical Bug):**
+- Identified problematic file from error message
+- Moved to `src/lib/tests/` directory
+- Updated import paths
+- Verified dev server starts successfully
+- Confirmed app is accessible
+
+**Prevention:**
+- Created `TESTING_GUIDELINES.md` with:
+  - SvelteKit reserved file patterns
+  - Correct test file placement strategies
+  - Quick reference for developers
+  - Examples of do's and don'ts
+
+### Best Practices for SvelteKit File Organization
+
+**✅ DO:**
+- Place test files in `src/lib/tests/` directory
+- Use descriptive test file names (e.g., `page.auth.test.js`, `api.people.test.js`)
+- Keep route directory clean (only `+` prefix framework files)
+- Document file organization conventions in README or guidelines
+- Consult SvelteKit docs when creating new file types
+
+**❌ DON'T:**
+- Use `+` prefix for non-framework files (especially tests)
+- Place test files directly in `src/routes/` directory
+- Assume file naming conventions from other frameworks apply
+- Ignore framework-specific error messages
+- Create custom file patterns without checking docs
+
+### Quick Reference: SvelteKit File Patterns
+
+| Pattern | Purpose | Location | Example |
+|---------|---------|----------|---------|
+| `+page.svelte` | Page component | `src/routes/` | `src/routes/+page.svelte` |
+| `+page.js` | Page load function | `src/routes/` | `src/routes/about/+page.js` |
+| `+server.js` | API endpoint | `src/routes/api/` | `src/routes/api/people/+server.js` |
+| `+layout.svelte` | Layout component | `src/routes/` | `src/routes/+layout.svelte` |
+| `+error.svelte` | Error page | `src/routes/` | `src/routes/+error.svelte` |
+| `*.test.js` | Test files | `src/lib/tests/` | `src/lib/tests/page.auth.test.js` |
+| `ComponentName.svelte` | Components | `src/lib/components/` | `src/lib/components/PersonModal.svelte` |
+
+### Code Review Checklist
+
+When reviewing file structure changes:
+- [ ] Are all test files outside `src/routes/` directory?
+- [ ] Do test files avoid using `+` prefix?
+- [ ] Are `+` prefix files only framework files (page, layout, server)?
+- [ ] Is the file organization documented?
+- [ ] Will the structure be obvious to new developers?
+- [ ] Does the dev server start without file naming errors?
+
 ## Version History
 
 - **December 2025**: Initial lessons learned from parent display bug fix
@@ -340,6 +628,19 @@ When reviewing Svelte form components:
   - Tests added: 9 unit tests (PersonFormFields.nameEditing.test.js), 4 integration tests (PersonModal.nameEditing.integration.test.js)
   - Total test suite: 82 tests passing
   - Documentation: `/Users/cobaltroad/Source/familytree/docs/BUG_FIX_NAME_EDITING.md`
+
+- **December 2025**: Authentication and frontend error handling
+  - Root cause: Missing frontend auth guards, API errors without HTTP status codes
+  - Solution: Check session in onMount, attach status codes to all errors, handle 401 with redirect
+  - Tests added: 6 authentication error handling tests
+  - Total test suite: 1,750+ tests passing
+  - Documentation: `AUTHENTICATION_FIX_SUMMARY.md`
+
+- **December 2025**: SvelteKit file naming conventions
+  - Root cause: Test file using reserved `+` prefix in routes directory
+  - Solution: Moved test files to `src/lib/tests/`, documented file organization
+  - Critical fix: Application was completely broken
+  - Documentation: `TESTING_GUIDELINES.md`
 
 ---
 
