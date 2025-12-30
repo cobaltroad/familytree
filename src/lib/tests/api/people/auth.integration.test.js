@@ -16,8 +16,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { people, users, sessions } from '$lib/db/schema.js'
-import { GET, POST } from './+server.js'
-import { GET as GET_BY_ID, PUT, DELETE } from './[id]/+server.js'
+import { GET, POST } from '../../../../routes/api/people/+server.js'
+import { GET as GET_BY_ID, PUT, DELETE } from '../../../../routes/api/people/[id]/+server.js'
 
 describe('People API - Authentication Integration', () => {
   let db

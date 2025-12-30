@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { load } from './+layout.server.js'
+import { load } from '../../routes/+layout.server.js'
 
 describe('Layout Server Load Function', () => {
   describe('Session Loading', () => {

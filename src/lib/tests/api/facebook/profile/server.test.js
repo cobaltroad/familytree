@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { POST } from './+server.js' // Note: File is +server.js, not server.js
+import { POST } from '../../../../../routes/api/facebook/profile/+server.js'
 import * as facebookGraphClient from '$lib/server/facebookGraphClient.js'
 import * as facebookProfileParser from '$lib/server/facebookProfileParser.js'
 

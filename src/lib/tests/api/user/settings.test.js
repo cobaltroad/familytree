@@ -16,7 +16,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { eq } from 'drizzle-orm'
 import { users, sessions } from '$lib/db/schema.js'
-import { PATCH } from './+server.js'
+import { PATCH } from '../../../../routes/api/user/settings/+server.js'
 
 describe('User Settings API - PATCH /api/user/settings', () => {
   let db

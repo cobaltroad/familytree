@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { GET, POST } from './+server.js'
-import { GET as GET_ONE, PUT, DELETE } from './[id]/+server.js'
+import { GET, POST } from '../../../../routes/api/people/+server.js'
+import { GET as GET_ONE, PUT, DELETE } from '../../../../routes/api/people/[id]/+server.js'
 import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
 
 /**

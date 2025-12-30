@@ -21,7 +21,7 @@ import { users, people } from '$lib/db/schema.js'
 import { eq } from 'drizzle-orm'
 import { syncUserFromOAuth } from '$lib/server/userSync.js'
 import { jwtCallback, sessionCallback } from '$lib/server/auth.js'
-import { POST } from './+server.js'
+import { POST } from '../../../../routes/api/people/+server.js'
 
 describe.sequential('End-to-End: Create Person with OAuth Authentication', () => {
   let testUserId

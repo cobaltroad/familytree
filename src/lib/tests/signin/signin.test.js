@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/svelte'
-import SignInPage from './+page.svelte'
+import SignInPage from '../../../routes/signin/+page.svelte'
 
 describe('Sign-in Page', () => {
   describe('Page Rendering', () => {

@@ -17,8 +17,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { people, relationships, users, sessions } from '$lib/db/schema.js'
-import { GET, POST } from './+server.js'
-import { GET as GET_BY_ID, PUT, DELETE } from './[id]/+server.js'
+import { GET, POST } from '../../../../routes/api/relationships/+server.js'
+import { GET as GET_BY_ID, PUT, DELETE } from '../../../../routes/api/relationships/[id]/+server.js'
 
 describe('Relationships API - Authentication Integration', () => {
   let db

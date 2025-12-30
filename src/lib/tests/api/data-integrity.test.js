@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { GET as getPeople, POST as postPerson } from './people/+server.js'
-import { GET as getPerson, PUT as putPerson, DELETE as deletePerson } from './people/[id]/+server.js'
-import { GET as getRelationships, POST as postRelationship } from './relationships/+server.js'
-import { DELETE as deleteRelationship } from './relationships/[id]/+server.js'
+import { GET as getPeople, POST as postPerson } from '../../../routes/api/people/+server.js'
+import { GET as getPerson, PUT as putPerson, DELETE as deletePerson } from '../../../routes/api/people/[id]/+server.js'
+import { GET as getRelationships, POST as postRelationship } from '../../../routes/api/relationships/+server.js'
+import { DELETE as deleteRelationship } from '../../../routes/api/relationships/[id]/+server.js'
 
 /**
  * Data Integrity Tests for SvelteKit API Routes

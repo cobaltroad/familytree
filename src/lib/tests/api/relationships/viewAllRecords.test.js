@@ -9,7 +9,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { eq } from 'drizzle-orm'
 import { people, relationships, users, sessions } from '$lib/db/schema.js'
-import { GET } from './+server.js'
+import { GET } from '../../../../routes/api/relationships/+server.js'
 
 describe('Relationships API - view_all_records Feature Flag', () => {
   let db

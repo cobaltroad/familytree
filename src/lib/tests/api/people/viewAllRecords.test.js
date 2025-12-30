@@ -14,7 +14,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { eq } from 'drizzle-orm'
 import { people, users, sessions } from '$lib/db/schema.js'
-import { GET } from './+server.js'
+import { GET } from '../../../../routes/api/people/+server.js'
 
 describe('People API - view_all_records Feature Flag', () => {
   let db
