@@ -112,5 +112,27 @@ export const api = {
     }
     const data = await response.json()
     return data.personData
+  },
+
+  /**
+   * Updates current user's settings
+   *
+   * @param {Object} settings - Settings object
+   * @param {boolean} settings.viewAllRecords - Feature flag to bypass data isolation
+   * @returns {Promise<Object>} Updated settings
+   * @throws {Error} If request fails
+   *
+   * @example
+   * const settings = await api.updateUserSettings({ viewAllRecords: true })
+   * // Returns: { viewAllRecords: true }
+   */
+  async updateUserSettings(settings) {
+    const response = await fetch(`${API_BASE}/user/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    })
+    if (!response.ok) throw await createApiError(response, 'Failed to update user settings')
+    return response.json()
   }
 }

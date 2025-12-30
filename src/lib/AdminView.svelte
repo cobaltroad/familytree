@@ -1,10 +1,50 @@
 <script>
   import { people, relationships } from '../stores/familyStore.js'
   import { peopleById } from '../stores/derivedStores.js'
+  import { api } from './api.js'
+  import { onMount } from 'svelte'
 
   // Reactive statements to get data
   $: peopleList = $people || []
   $: relationshipsList = $relationships || []
+
+  // View all records feature flag state
+  let viewAllRecords = false
+  let loading = false
+  let error = null
+
+  // Check if user's view_all_records is enabled on mount
+  onMount(async () => {
+    try {
+      // Get current user from session data embedded in page
+      const response = await fetch('/api/user/settings')
+      if (response.ok) {
+        const settings = await response.json()
+        viewAllRecords = settings.viewAllRecords
+      }
+    } catch (err) {
+      console.error('Failed to load user settings:', err)
+    }
+  })
+
+  // Toggle view all records
+  async function toggleViewAllRecords() {
+    loading = true
+    error = null
+    try {
+      const newValue = !viewAllRecords
+      const updated = await api.updateUserSettings({ viewAllRecords: newValue })
+      viewAllRecords = updated.viewAllRecords
+
+      // Reload data to reflect new filter
+      window.location.reload()
+    } catch (err) {
+      error = err.message
+      console.error('Failed to update settings:', err)
+    } finally {
+      loading = false
+    }
+  }
 
   // Helper function to get person name by ID
   function getPersonName(personId) {
@@ -30,6 +70,54 @@
 <div class="admin-container">
   <h2>Admin View - Database Records</h2>
   <p class="subtitle">Development tool for viewing all records and verifying data isolation</p>
+
+  <!-- View All Records Toggle -->
+  <div class="control-panel">
+    <div class="toggle-section">
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          bind:checked={viewAllRecords}
+          on:change={toggleViewAllRecords}
+          disabled={loading}
+          class="toggle-checkbox"
+        />
+        <span class="toggle-slider"></span>
+        <span class="toggle-text">
+          View All Users' Records
+        </span>
+      </label>
+      {#if loading}
+        <span class="loading-indicator">Updating...</span>
+      {/if}
+      {#if error}
+        <span class="error-message">{error}</span>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Visual Banner -->
+  {#if viewAllRecords}
+    <div class="banner banner-warning">
+      <svg class="banner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+      </svg>
+      <div>
+        <strong>Viewing ALL users' records</strong>
+        <p>You are seeing records from all users in the database. This bypasses data isolation.</p>
+      </div>
+    </div>
+  {:else}
+    <div class="banner banner-info">
+      <svg class="banner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+      </svg>
+      <div>
+        <strong>Viewing only your records</strong>
+        <p>You are seeing only records that belong to you (data isolation active).</p>
+      </div>
+    </div>
+  {/if}
 
   <!-- People Table -->
   <section class="table-section">
@@ -122,6 +210,132 @@
     max-width: 1400px;
     margin: 0 auto;
     padding: 1.5rem;
+  }
+
+  /* Control Panel Styles */
+  .control-panel {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .toggle-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .toggle-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+    background-color: #ccc;
+    border-radius: 24px;
+    transition: background-color 0.3s;
+  }
+
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+  }
+
+  .toggle-checkbox:checked + .toggle-slider {
+    background-color: #FF9800;
+  }
+
+  .toggle-checkbox:checked + .toggle-slider::after {
+    transform: translateX(24px);
+  }
+
+  .toggle-checkbox:disabled + .toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .toggle-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .loading-indicator {
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+  }
+
+  .error-message {
+    color: #d32f2f;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  /* Banner Styles */
+  .banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid;
+  }
+
+  .banner-info {
+    background: #E3F2FD;
+    border-color: #2196F3;
+    color: #0D47A1;
+  }
+
+  .banner-warning {
+    background: #FFF3E0;
+    border-color: #FF9800;
+    color: #E65100;
+  }
+
+  .banner-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .banner strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 1rem;
+  }
+
+  .banner p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
   }
 
   h2 {

@@ -115,6 +115,7 @@ The application includes comprehensive Facebook OAuth integration for user authe
 - `name`: Display name
 - `photoUrl`: Profile picture URL
 - `defaultPersonId`: FK to people table (user's family tree record)
+- `view_all_records`: Boolean flag to bypass data isolation (default: false)
 - `createdAt`, `updatedAt`: Timestamps
 
 **People Table** (enhanced):
@@ -208,6 +209,89 @@ All tests follow TDD methodology (RED → GREEN → REFACTOR) with 100% passing 
 - **Invalid URLs**: Clear error messages for malformed Facebook URLs
 - **Private Profiles**: Returns 400 error when profile not accessible
 - **Legacy Users**: Existing users without default person (graceful fallback)
+
+### Admin View and Data Isolation Controls
+
+The application includes an Admin view for debugging and data inspection, along with a feature flag system for controlling data visibility.
+
+#### Admin View Component
+
+**Location**: Accessible via `#/admin` route (wrench icon 🔧 in navigation)
+
+**Features**:
+- **People Table**: Displays all person records with ID, Name, Birth/Death dates, Gender, Photo URL, and User ID
+- **Relationships Table**: Displays all relationship records with IDs, person names, type, parent role, and User ID
+- **Record Counts**: Badge indicators showing total count for each table
+- **Responsive Design**: Horizontal scrolling tables on smaller screens
+- **Data Isolation Visibility**: User ID column highlighted in green to verify multi-user data separation
+- **Empty States**: Clear messages when no records exist
+
+**Purpose**: Development and debugging tool to inspect database records and verify data isolation is working correctly.
+
+#### Feature Flag: View All Records
+
+**Description**: Per-user feature flag that controls whether a user sees only their own records (default) or all records from all users in the database.
+
+**Database Field**:
+- Column: `users.view_all_records` (INTEGER, defaults to 0/false)
+- Location: `src/lib/db/schema.js`
+- Migration: `drizzle/0001_dear_annihilus.sql`
+
+**API Endpoints**:
+- `GET /api/user/settings` - Retrieve current user's settings
+- `PATCH /api/user/settings` - Update settings (accepts `{ viewAllRecords: boolean }`)
+  - Authentication required
+  - Users can only update their own settings
+  - Returns updated settings object
+
+**Behavior**:
+- **Flag OFF (default)**: User sees only their own people and relationships
+  - `/api/people` filters by `user_id = current_user.id`
+  - `/api/relationships` filters by `user_id = current_user.id`
+  - Blue info banner: "Viewing only your records - data isolation active"
+
+- **Flag ON**: User sees ALL records from all users
+  - `/api/people` returns all people (no user_id filter)
+  - `/api/relationships` returns all relationships (no user_id filter)
+  - Orange warning banner: "Viewing ALL users' records - You are seeing records from all users in the database"
+
+**UI Controls** (in AdminView):
+- **Toggle Switch**: Custom styled toggle for "View All Users' Records"
+  - Orange background when enabled
+  - Loading indicator during updates
+  - Error handling with user feedback
+- **Visual Banners**: Clear indication of current viewing mode
+- **Auto-refresh**: Page reloads after toggling to display new data
+
+**Security**:
+- Per-user flag (not global setting)
+- Each user controls their own flag independently
+- Requires authentication to toggle
+- No elevation of privileges required
+- Defaults to safe mode (data isolation active)
+
+**Use Cases**:
+1. **Debugging**: Developers can verify data isolation is working correctly
+2. **Admin Review**: Admin users can inspect all records without direct database access
+3. **Testing**: QA can verify multi-user scenarios
+4. **Development**: Easier to see test data from multiple users
+
+**Testing**:
+- 25 comprehensive tests covering:
+  - Database schema changes (6 tests)
+  - User settings API endpoint (9 tests)
+  - People API flag behavior (8 tests)
+  - Relationships API flag behavior (2 tests)
+- All tests follow TDD methodology
+- Integration tests verify end-to-end behavior
+
+**Implementation Files**:
+- Schema: `src/lib/db/schema.js`
+- Settings API: `src/routes/api/user/settings/+server.js`
+- People API: `src/routes/api/people/+server.js` (modified GET handler)
+- Relationships API: `src/routes/api/relationships/+server.js` (modified GET handler)
+- Frontend: `src/lib/AdminView.svelte` (toggle UI)
+- API Client: `src/lib/api.js` (updateUserSettings method)
 
 ### Database Access with Drizzle ORM
 The application uses Drizzle ORM for type-safe database queries:

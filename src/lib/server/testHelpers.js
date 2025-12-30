@@ -54,6 +54,7 @@ export function createMockAuthenticatedEvent(db, session = null, additionalProps
 /**
  * SQL script to create users table for testing
  * Updated for Story #81: Added default_person_id field
+ * Updated for Feature Flag: Added view_all_records field
  */
 export const CREATE_USERS_TABLE_SQL = `
   CREATE TABLE users (
@@ -67,6 +68,7 @@ export const CREATE_USERS_TABLE_SQL = `
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_login_at TEXT,
     default_person_id INTEGER,
+    view_all_records INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (default_person_id) REFERENCES people(id) ON DELETE SET NULL
   )
 `

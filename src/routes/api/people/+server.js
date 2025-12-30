@@ -1,18 +1,20 @@
 import { json } from '@sveltejs/kit'
 import { db } from '$lib/db/client.js'
-import { people } from '$lib/db/schema.js'
+import { people, users } from '$lib/db/schema.js'
 import { eq } from 'drizzle-orm'
 import { transformPeopleToAPI, validatePersonData, transformPersonToAPI } from '$lib/server/personHelpers.js'
 import { requireAuth } from '$lib/server/session.js'
 
 /**
  * GET /api/people
- * Returns all people from the database for the authenticated user
+ * Returns people from the database for the authenticated user
  *
  * Authentication: Required
- * Data Isolation: Only returns people belonging to the current user
+ * Data Isolation: Behavior depends on view_all_records flag:
+ *   - When false (default): Only returns people belonging to current user
+ *   - When true: Returns ALL people from all users (for debugging/admin)
  *
- * @returns {Response} JSON array of user's people
+ * @returns {Response} JSON array of people
  */
 export async function GET({ locals, ...event }) {
   try {
@@ -23,11 +25,36 @@ export async function GET({ locals, ...event }) {
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
-    // Query only people belonging to the current user (Issue #72: Data Isolation)
-    const userPeople = await database
-      .select()
-      .from(people)
-      .where(eq(people.userId, userId))
+    // Check user's view_all_records flag (with fallback for tests without users table)
+    let viewAllRecords = false
+    try {
+      const currentUserResult = await database
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+
+      if (currentUserResult.length > 0) {
+        viewAllRecords = currentUserResult[0].viewAllRecords || false
+      }
+    } catch (error) {
+      // If users table doesn't exist (e.g., in some tests), default to false
+      viewAllRecords = false
+    }
+
+    // Query based on flag
+    let userPeople
+    if (viewAllRecords) {
+      // View ALL records from all users (bypassing data isolation)
+      userPeople = await database
+        .select()
+        .from(people)
+    } else {
+      // View only own records (default behavior - data isolation)
+      userPeople = await database
+        .select()
+        .from(people)
+        .where(eq(people.userId, userId))
+    }
 
     // Transform to API format
     const transformedPeople = transformPeopleToAPI(userPeople)

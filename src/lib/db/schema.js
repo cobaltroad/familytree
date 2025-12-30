@@ -72,6 +72,12 @@ export const relationships = sqliteTable('relationships', {
  * - default_person_id: Links user to their personal Person record
  * - Nullable - not all users may have a default person
  * - Foreign key to people table with SET NULL on delete
+ *
+ * Feature Flag - View All Records:
+ * - view_all_records: Boolean flag to bypass data isolation
+ * - When true: User sees ALL records in database (for debugging/admin)
+ * - When false: User sees only their own records (default behavior)
+ * - Default: false (maintains existing data isolation behavior)
  */
 export const users = sqliteTable(
   'users',
@@ -86,7 +92,8 @@ export const users = sqliteTable(
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
     lastLoginAt: text('last_login_at'),
     defaultPersonId: integer('default_person_id')
-      .references(() => people.id, { onDelete: 'set null' })
+      .references(() => people.id, { onDelete: 'set null' }),
+    viewAllRecords: integer('view_all_records', { mode: 'boolean' }).notNull().default(false)
   },
   (table) => {
     return {

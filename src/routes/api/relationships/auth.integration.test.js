@@ -48,7 +48,9 @@ describe('Relationships API - Authentication Integration', () => {
         provider_user_id TEXT,
         email_verified INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_login_at TEXT
+        last_login_at TEXT,
+        default_person_id INTEGER,
+        view_all_records INTEGER NOT NULL DEFAULT 0
       )
     `)
 
