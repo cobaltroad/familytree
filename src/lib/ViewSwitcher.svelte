@@ -6,7 +6,8 @@
   const views = [
     { path: '/pedigree', label: 'Pedigree', icon: '📊' },
     { path: '/timeline', label: 'Timeline', icon: '📅' },
-    { path: '/radial', label: 'Radial', icon: '⭕' }
+    { path: '/radial', label: 'Radial', icon: '⭕' },
+    { path: '/admin', label: 'Admin', icon: '🔧' }
   ]
 
   // Normalize current path for comparison (treat '/' and '/tree' as '/pedigree')

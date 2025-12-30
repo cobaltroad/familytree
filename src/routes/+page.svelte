@@ -7,6 +7,7 @@
   import TimelineView from '$lib/TimelineView.svelte'
   import PedigreeView from '$lib/PedigreeView.svelte'
   import RadialView from '$lib/RadialView.svelte'
+  import AdminView from '$lib/AdminView.svelte'
   import ViewSwitcher from '$lib/ViewSwitcher.svelte'
   import PersonModal from '$lib/PersonModal.svelte'
   import * as familyStore from '../stores/familyStore.js'
@@ -84,6 +85,8 @@
     <PedigreeView />
   {:else if normalizedPath === '/radial'}
     <RadialView />
+  {:else if normalizedPath === '/admin'}
+    <AdminView />
   {:else}
     <PedigreeView />
   {/if}
