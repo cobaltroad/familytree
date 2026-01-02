@@ -1101,6 +1101,238 @@ See also:
 - `src/lib/server/recovery.e2e.test.js` - 216 lines of E2E tests
 - Commit 564fba9: feat: add automatic database recovery from backups on startup
 
+## Network View Force Optimization and Sibling Computation
+
+### Story #100: Spouse Proximity Enhancement (January 2026)
+
+**Feature:**
+Implemented custom D3 force to position married/partnered couples close together (60-80px apart) in the force-directed network view, making family units easily identifiable.
+
+**Implementation Approach:**
+- Created `createSpouseForce()` custom force function in `d3Helpers.js`
+- Adjusted link parameters: spouse links have 60px distance (vs 100px default) and 1.5x strength
+- Enhanced hover highlighting to include spouse nodes and links with purple styling
+- Integrated with existing force simulation without performance degradation
+
+**Test Coverage:**
+- 22 comprehensive tests (16 unit tests, 4 integration tests, 2 performance tests)
+- TDD methodology: RED → GREEN → REFACTOR
+- Tests verify spouse positioning, force strength, link parameters, edge cases
+- Performance validated: <5s settle time with 50 spouse pairs, <10ms force calculation
+
+### Key Lessons
+
+1. **Custom D3 Forces Integrate Seamlessly**
+   - D3's force simulation API allows custom forces to be added alongside built-in forces
+   - Custom forces receive `alpha` parameter for simulation cooling (scales force strength over time)
+   - Forces must modify node velocity (`vx`, `vy`) not position directly
+   - Custom forces work in conjunction with collision detection (no manual overlap handling needed)
+   - Pattern: Calculate offset from target, apply proportional force scaled by alpha
+
+2. **Force Parameter Tuning Strategy**
+   - **Distance**: Controls spacing between connected nodes (60-150px typical range)
+   - **Strength**: Controls how strongly force pulls nodes (0.5-2.0 typical range)
+   - **Alpha**: Simulation cooling rate (0.0228 default, affects how long forces apply)
+   - **Combination**: Custom force + adjusted link parameters = best results
+   - **Testing**: Use integration tests to verify visual positioning (tolerance ±20px for physics variance)
+
+3. **Bidirectional Relationship Data Structure**
+   - Spouse relationships stored as TWO database records (A→B and B→A) for bidirectionality
+   - Network view needs to extract spouse pairs from relationships to avoid duplicate force application
+   - Use Set-based deduplication: `new Set([id1, id2].sort().join('-'))` ensures unique pairs
+   - Custom force operates on pairs (not individual links) for symmetric behavior
+
+4. **Testing Physics Simulations**
+   - Physics simulations have inherent variance (random initial positions, floating point precision)
+   - Tests must use tolerance ranges (±20px) not exact positions
+   - Test final settled state, not intermediate animation frames
+   - Performance tests validate settle time (<5s) not exact node positions
+   - Integration tests verify RELATIVE positioning (spouse closer than non-spouse)
+
+5. **Hover Highlighting Enhancement**
+   - Filter links by type on hover (`links.filter(d => d.type === 'spouse')`)
+   - Highlight spouse nodes with purple border (`stroke-width: 4, stroke: purple`)
+   - Brighten spouse links on hover (`stroke: #a855f7` brighter purple)
+   - Use D3 data join with node IDs for accurate highlighting (avoid index-based selection)
+   - Reset all styling on mouseout (remove classes/attributes)
+
+### Story #101: Children Grouping Enhancement (January 2026)
+
+**Feature:**
+Optimized force simulation link parameters to cluster children near their parents (75px distance, 1.2x strength) for improved family unit visualization in network view.
+
+**Implementation Approach:**
+- Modified `createForceSimulation()` to accept dynamic link distance/strength functions
+- Link distance: spouse=60px, parent-child=75px, sibling=100px (vs uniform 100px)
+- Link strength: spouse=1.5x, parent-child=1.2x, sibling=1.0x (vs uniform 1.0x)
+- Null/undefined link type handling for data integrity
+
+**Test Coverage:**
+- 13 comprehensive tests (4 distance tests, 4 strength tests, 4 integration tests, 1 performance test)
+- TDD methodology: RED → GREEN → REFACTOR
+- All 55 network tests passing after implementation
+
+### Key Lessons
+
+1. **Dynamic Link Parameters for Relationship Types**
+   - D3 force simulation accepts **functions** for distance and strength (not just scalars)
+   - Pattern: `distance: d => d.type === 'spouse' ? 60 : d.type === 'parentOf' ? 75 : 100`
+   - Allows per-relationship-type customization without creating separate simulations
+   - Better performance than multiple force layers (single simulation, dynamic parameters)
+   - Document default values in code comments for future tuning
+
+2. **Hierarchical Spacing Strategy**
+   - **Spouse pairs (60px)**: Tightest spacing for immediate family unit
+   - **Parent-child (75px)**: Medium spacing keeps children near parents
+   - **Siblings (100px)**: Default spacing allows natural grouping via shared parents
+   - Spacing hierarchy creates visual family clusters without explicit grouping logic
+   - Combine with custom spouse force for optimal family unit visualization
+
+3. **Test Tolerance for Physics Variance**
+   - Integration tests with force simulation need wider tolerance (±20-30px)
+   - Physics variance from: random initial positions, floating point precision, simulation steps
+   - Use `expect(distance).toBeLessThan(threshold)` not `expect().toBeCloseTo()`
+   - Test RELATIVE positioning: "children closer to parents than to unrelated nodes"
+   - Performance tests: validate settle time (<5s) not exact final positions
+
+4. **Null/Undefined Link Type Handling**
+   - Always provide fallback for missing/undefined link types in dynamic functions
+   - Pattern: `d => d?.type === 'spouse' ? 60 : 100` (optional chaining + fallback)
+   - Prevents NaN or undefined being passed to force simulation (causes crashes)
+   - Log warnings for unexpected link types (helps catch data integrity issues)
+   - Test edge cases: null type, undefined type, unknown type string
+
+### Bug Fix: Sibling Calculation - Multiple Root Causes (January 2026)
+
+**Symptoms (Initial Bug):**
+- Network view showed parent-child pairs incorrectly connected by sibling links (gray dotted lines)
+- Fathers appeared as siblings of their own children in visualization
+- Data integrity issue: people who shared a parent included the parent themselves
+
+**First Fix (computeSiblingLinks in treeHelpers.js):**
+- Root cause: `computeSiblingLinks()` created sibling links for ANY two people sharing a parent
+- No check for parent-child relationship between the siblings themselves
+- Solution: Pre-build Set of parent-child pairs, exclude from sibling links
+- Fixed visualization in network view
+- 16 tests in treeHelpers.test.js passing
+
+**Symptoms (Second Bug - Different Location):**
+- PersonModal STILL showed fathers as siblings after first fix
+- Specific case: Rudy Dollete's modal showed father Aquilino as sibling
+- First fix addressed network view but not modal display
+
+**Second Fix (derivedStores.js):**
+- Root cause: **Different sibling computation** in `createPersonRelationships()` used by modal
+- Bidirectional relationship index caused the bug:
+  - When finding Rudy's siblings, looked up ALL relationships involving father Aquilino
+  - Included both Aquilino→Rudy (where Aquilino is parent) AND Bernardo→Aquilino (where Aquilino is child)
+  - Code incorrectly added Aquilino as Rudy's sibling from the second relationship
+- Solution: Only consider relationships where parent is in person1Id (parent role)
+  ```javascript
+  const isParentInParentRole = rel.person1Id === motherId || rel.person1Id === fatherId
+  ```
+- 37 tests in derivedStores.test.js passing
+
+### Key Lessons
+
+1. **Sibling Computation Can Exist in Multiple Locations**
+   - Network view: `computeSiblingLinks()` in treeHelpers.js (for visualization links)
+   - Modal display: `createPersonRelationships()` in derivedStores.js (for UI relationships)
+   - Bug fix in ONE location doesn't fix the same logic bug in ANOTHER location
+   - **Critical**: Search codebase for ALL sibling computation logic when fixing sibling bugs
+   - Consider consolidating duplicate logic into shared helper function
+
+2. **Bidirectional Indexes Require Careful Filtering**
+   - Relationship indexes store BOTH directions: person1→person2 AND person2→person1
+   - Bidirectional helps performance (O(1) lookup from either side)
+   - BUT: When filtering, must check WHICH side person is on (person1Id or person2Id)
+   - Example bug: Looking up parent's relationships includes them as CHILD in grandparent relationship
+   - **Solution**: Always filter by role (person1Id for parent role, person2Id for child role)
+
+3. **Sibling Definition Must Exclude Parents and Children**
+   - **Correct**: Siblings = people who share at least one parent BUT are NOT parent/child themselves
+   - **Incorrect**: Siblings = people who share at least one parent (missing exclusion)
+   - Three exclusions needed:
+     1. Exclude the person themselves (obvious)
+     2. Exclude the person's parents (person can share parent with their parent!)
+     3. Exclude the person's children (person can share parent with their child!)
+   - Edge case: Multi-generational data integrity issues (person has child with their own parent)
+
+4. **Test with Real-World Data**
+   - Backup database had actual edge case: person who shared parent with their own father
+   - Synthetic test data often misses these edge cases (too "clean")
+   - **Best practice**: Import real backup data into test fixtures
+   - Create tests from actual user-reported bugs (Rudy/Aquilino case)
+   - Test multi-generational families with complex relationships
+
+5. **TDD for Bug Fixes in Multiple Locations**
+   - **RED Phase**: Write failing test for EACH location (network view AND modal)
+   - **GREEN Phase**: Fix bug in EACH location
+   - **REFACTOR Phase**: Consider consolidating duplicate logic
+   - Don't assume fixing one location fixes all instances of the bug
+   - Use grep/search to find all instances of "sibling" logic in codebase
+
+6. **Documentation of Edge Cases**
+   - Add extensive inline comments explaining WHY checks exist
+   - Document the concrete example that caused the bug (Rudy/Aquilino, Bernardo IDs)
+   - Explain bidirectional index behavior in comments
+   - Future developers need context to avoid reintroducing bugs
+   - Example commit message should explain root cause in detail
+
+### Testing Approach (TDD Methodology)
+
+**First Fix (computeSiblingLinks):**
+- **RED**: Created 4 failing tests demonstrating parent-child pairs as siblings
+- **GREEN**: Added Set-based exclusion of parent-child pairs
+- **REFACTOR**: Optimized from O(n × m × k) to O(n × m + k) with pre-built Set
+- Tests: 16 treeHelpers tests passing
+
+**Second Fix (derivedStores.js):**
+- **RED**: Created 5 failing tests based on backup data (Rudy/Aquilino case)
+- **GREEN**: Added `isParentInParentRole` constraint to sibling filtering
+- **REFACTOR**: Added 50+ lines of documentation explaining bug and fix
+- Tests: 37 derivedStores tests passing, 16 treeHelpers tests passing
+- Integration: 3 NetworkView tests passing
+
+### Best Practices for Sibling Computation
+
+**✅ DO:**
+- Search entire codebase for sibling computation logic (multiple locations possible)
+- Exclude person's parents AND children from sibling list (not just the person)
+- Test with real-world data from backups (catches edge cases synthetic data misses)
+- Add extensive comments explaining WHY exclusions exist
+- Use TDD methodology for each location separately
+- Consider consolidating duplicate logic into shared helper
+- Test multi-generational families with complex relationships
+- Filter bidirectional indexes by role (person1Id vs person2Id)
+
+**❌ DON'T:**
+- Assume fixing sibling logic in one location fixes all instances
+- Only exclude the person themselves from siblings (must exclude parents/children too)
+- Test only with synthetic "clean" data (misses edge cases)
+- Skip documentation of complex filtering logic
+- Fix bug without adding test that would have caught it originally
+- Use bidirectional indexes without role-based filtering
+- Assume all relationship data is perfect (handle integrity issues gracefully)
+
+### Code Review Checklist for Sibling Logic
+
+When reviewing sibling computation code:
+- [ ] Are ALL instances of sibling logic in codebase identified and fixed?
+- [ ] Does it exclude person's parents from sibling list?
+- [ ] Does it exclude person's children from sibling list?
+- [ ] Does it handle bidirectional relationship indexes correctly?
+- [ ] Are tests using real-world data (not just synthetic)?
+- [ ] Is the filtering logic documented with inline comments?
+- [ ] Does it handle data integrity issues gracefully (person sharing parent with parent)?
+- [ ] Are both network view AND modal display tested?
+- [ ] Is there consideration for consolidating duplicate logic?
+
+### Related Commits
+
+- Commit 0248208: fix: exclude parent-child pairs from sibling links (first fix - network view)
+- Commit 2ef4a7f: fix: prevent parents and grandparents from appearing as siblings in modal (second fix - derivedStores.js)
+
 ## Version History
 
 - **December 2025**: Initial lessons learned from parent display bug fix
@@ -1149,6 +1381,35 @@ See also:
   - Tests added: 45 comprehensive tests (22 unit, 14 integration, 9 E2E) - 1,110 lines total
   - Total test suite: 1,840+ tests passing
   - Commit: 564fba9 feat: add automatic database recovery from backups on startup
+
+- **January 2026**: Story #100 - Spouse Proximity Enhancement in Network View
+  - Feature: Custom D3 force positions married couples 60-80px apart in network visualization
+  - Implementation: createSpouseForce() custom force, adjusted link parameters (60px distance, 1.5x strength)
+  - Tests added: 22 tests (16 unit, 4 integration, 2 performance)
+  - Total test suite: 1,840+ tests passing
+  - Commit: b48aca5 feat: enhance network view with spouse proximity force (closes #100)
+
+- **January 2026**: Story #101 - Children Grouping in Network View
+  - Feature: Optimized link parameters to cluster children near parents (75px distance, 1.2x strength)
+  - Implementation: Dynamic link distance/strength functions based on relationship type
+  - Tests added: 13 tests (4 distance, 4 strength, 4 integration, 1 performance)
+  - Total test suite: 55 network tests passing (all network enhancements)
+  - Commit: 1aab409 feat: improve children grouping in network view (closes #101)
+
+- **January 2026**: Sibling calculation bug - Network view (First fix)
+  - Root cause: computeSiblingLinks() created sibling links between parents and children
+  - Solution: Pre-build Set of parent-child pairs, exclude from sibling links
+  - Tests added: 4 comprehensive tests in treeHelpers.test.js
+  - Total: 16 treeHelpers tests passing
+  - Commit: 0248208 fix: exclude parent-child pairs from sibling links
+
+- **January 2026**: Sibling calculation bug - PersonModal (Second fix)
+  - Root cause: Different sibling computation in derivedStores.js, bidirectional index bug
+  - Solution: Filter to only include relationships where parent is in person1Id (parent role)
+  - Tests added: 5 comprehensive tests based on real backup data (Rudy/Aquilino case)
+  - Total: 37 derivedStores tests passing, 16 treeHelpers tests passing
+  - Commit: 2ef4a7f fix: prevent parents and grandparents from appearing as siblings in modal
+  - Key lesson: Sibling logic existed in multiple locations - must fix all instances
 
 ---
 
