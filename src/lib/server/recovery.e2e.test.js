@@ -20,17 +20,43 @@ import { users } from '$lib/db/schema.js'
 
 // Test constants
 const TEST_E2E_BACKUPS_DIR = path.join(process.cwd(), 'test-e2e-backups')
+const PROD_DB_PATH = path.join(process.cwd(), 'familytree.db')
+const PROD_DB_BACKUP_PATH = path.join(process.cwd(), 'familytree.db.e2e-backup')
 
 describe('End-to-End Database Recovery', () => {
   beforeEach(async () => {
+    // Back up production database before tests
+    // E2E tests may modify the production DB during recovery
+    try {
+      await fs.copyFile(PROD_DB_PATH, PROD_DB_BACKUP_PATH)
+    } catch (error) {
+      // Production DB might not exist yet
+    }
+
     // Create test backups directory
     await fs.mkdir(TEST_E2E_BACKUPS_DIR, { recursive: true })
 
     // Clean users table before each test
-    await db.delete(users)
+    try {
+      await db.delete(users)
+    } catch (error) {
+      // Table might not exist if database was replaced
+    }
   })
 
   afterEach(async () => {
+    // Restore production database after tests
+    try {
+      await fs.copyFile(PROD_DB_BACKUP_PATH, PROD_DB_PATH)
+      await fs.unlink(PROD_DB_BACKUP_PATH)
+
+      // Reconnect to restored database
+      const { reconnectDatabase } = await import('$lib/db/client.js')
+      reconnectDatabase()
+    } catch (error) {
+      // Backup might not exist
+    }
+
     // Clean up test backups directory
     try {
       const files = await fs.readdir(TEST_E2E_BACKUPS_DIR)
@@ -43,7 +69,11 @@ describe('End-to-End Database Recovery', () => {
     }
 
     // Clean users table after each test
-    await db.delete(users)
+    try {
+      await db.delete(users)
+    } catch (error) {
+      // Table might not exist if database was replaced
+    }
   })
 
   it('should attempt recovery workflow with backup file', async () => {

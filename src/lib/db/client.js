@@ -12,10 +12,29 @@ const __dirname = dirname(__filename)
 const dbPath = join(__dirname, '../../../familytree.db')
 
 // Create SQLite connection
-const sqlite = new Database(dbPath)
+let sqlite = new Database(dbPath)
 
 // Create Drizzle ORM instance
-export const db = drizzle(sqlite)
+let db = drizzle(sqlite)
 
-// Export the raw sqlite connection if needed
-export { sqlite }
+/**
+ * Reconnects to the database by closing the existing connection and opening a new one.
+ * This is necessary after database file replacement (e.g., during recovery from backup).
+ *
+ * @returns {void}
+ */
+export function reconnectDatabase() {
+  try {
+    // Close existing connection
+    sqlite.close()
+  } catch (error) {
+    // Connection might already be closed, ignore error
+  }
+
+  // Create new connection
+  sqlite = new Database(dbPath)
+  db = drizzle(sqlite)
+}
+
+// Export the db instance and sqlite connection
+export { db, sqlite }

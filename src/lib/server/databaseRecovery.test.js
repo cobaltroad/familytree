@@ -32,9 +32,19 @@ import { users } from '$lib/db/schema.js'
 // Test constants
 const TEST_BACKUPS_DIR = path.join(process.cwd(), 'test-backups')
 const TEST_DB_PATH = path.join(process.cwd(), 'test-familytree.db')
+const PROD_DB_PATH = path.join(process.cwd(), 'familytree.db')
+const PROD_DB_BACKUP_PATH = path.join(process.cwd(), 'familytree.db.test-backup')
 
 describe('Database Recovery Module', () => {
   beforeEach(async () => {
+    // Back up production database before tests
+    // Some tests modify the production DB when testing recoverDatabaseIfNeeded
+    try {
+      await fs.copyFile(PROD_DB_PATH, PROD_DB_BACKUP_PATH)
+    } catch (error) {
+      // Production DB might not exist yet
+    }
+
     // Create test backups directory
     try {
       await fs.mkdir(TEST_BACKUPS_DIR, { recursive: true })
@@ -51,6 +61,18 @@ describe('Database Recovery Module', () => {
   })
 
   afterEach(async () => {
+    // Restore production database after tests
+    try {
+      await fs.copyFile(PROD_DB_BACKUP_PATH, PROD_DB_PATH)
+      await fs.unlink(PROD_DB_BACKUP_PATH)
+
+      // Reconnect to restored database
+      const { reconnectDatabase } = await import('$lib/db/client.js')
+      reconnectDatabase()
+    } catch (error) {
+      // Backup might not exist
+    }
+
     // Clean up test backups directory
     try {
       const files = await fs.readdir(TEST_BACKUPS_DIR)
@@ -262,6 +284,52 @@ COMMIT;
       expect(result.message).toContain('restored')
     })
 
+    it('should delete existing database file before restoring from SQL dump', async () => {
+      // RED PHASE: This test will fail because the current implementation
+      // doesn't delete the existing database, causing CREATE TABLE conflicts
+
+      // Arrange: Create existing database with tables
+      const { exec } = await import('child_process')
+      const { promisify } = await import('util')
+      const execAsync = promisify(exec)
+
+      // Create existing database with users table
+      await execAsync(`sqlite3 "${TEST_DB_PATH}" "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT); INSERT INTO users VALUES (1, 'old@example.com');"`)
+
+      // Create a SQL dump backup with CREATE TABLE statement (without IF NOT EXISTS)
+      const sqlDump = `
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  email TEXT NOT NULL,
+  name TEXT,
+  provider TEXT NOT NULL,
+  provider_user_id TEXT,
+  email_verified INTEGER DEFAULT 1 NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+DELETE FROM users;
+INSERT INTO users (id, email, name, provider, provider_user_id, email_verified)
+VALUES (1, 'restored@example.com', 'Restored User', 'facebook', 'fb_restored', 1);
+COMMIT;
+      `
+      const backupPath = path.join(TEST_BACKUPS_DIR, 'familytree_20260101_120000.sql')
+      await fs.writeFile(backupPath, sqlDump)
+
+      // Act: Restore from backup (should delete existing DB first)
+      const result = await restoreFromBackup(backupPath, TEST_DB_PATH)
+
+      // Assert: Should succeed even with existing database
+      expect(result.success).toBe(true)
+      expect(result.type).toBe('sql')
+      expect(result.message).toContain('restored')
+
+      // Verify the new data was restored (not the old data)
+      const { stdout } = await execAsync(`sqlite3 "${TEST_DB_PATH}" "SELECT email FROM users WHERE id = 1;"`)
+      expect(stdout.trim()).toBe('restored@example.com')
+    })
+
     it('should restore from binary DB file', async () => {
       // Arrange: Create a binary DB backup
       const backupPath = path.join(TEST_BACKUPS_DIR, 'familytree_20260101_120000.db')
@@ -304,12 +372,20 @@ COMMIT;
   describe('verifyUserExists', () => {
     beforeEach(async () => {
       // Clean users table before each test
-      await db.delete(users)
+      try {
+        await db.delete(users)
+      } catch (error) {
+        // Table might not exist if database was replaced
+      }
     })
 
     afterEach(async () => {
       // Clean users table after each test
-      await db.delete(users)
+      try {
+        await db.delete(users)
+      } catch (error) {
+        // Table might not exist if database was replaced
+      }
     })
 
     it('should return true if user exists by ID', async () => {
@@ -350,12 +426,20 @@ COMMIT;
   describe('recoverDatabaseIfNeeded', () => {
     beforeEach(async () => {
       // Clean users table before each test
-      await db.delete(users)
+      try {
+        await db.delete(users)
+      } catch (error) {
+        // Table might not exist if database was replaced
+      }
     })
 
     afterEach(async () => {
       // Clean users table after each test
-      await db.delete(users)
+      try {
+        await db.delete(users)
+      } catch (error) {
+        // Table might not exist if database was replaced
+      }
     })
 
     it('should not recover if user exists', async () => {
@@ -461,11 +545,19 @@ COMMIT;
 
   describe('Integration scenarios', () => {
     beforeEach(async () => {
-      await db.delete(users)
+      try {
+        await db.delete(users)
+      } catch (error) {
+        // Table might not exist if database was replaced
+      }
     })
 
     afterEach(async () => {
-      await db.delete(users)
+      try {
+        await db.delete(users)
+      } catch (error) {
+        // Table might not exist if database was replaced
+      }
     })
 
     it('should handle complete recovery workflow', async () => {

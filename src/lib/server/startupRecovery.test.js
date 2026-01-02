@@ -125,12 +125,13 @@ describe('Startup Recovery Integration', () => {
       }
 
       // Act: Check with missing user (will attempt recovery)
-      const result = await checkAndRecoverUser(session)
+      // Use a non-existent backups directory to ensure no backups are found
+      const result = await checkAndRecoverUser(session, '/nonexistent/backups/path')
 
       // Assert: Should have recovery details
       expect(result.attemptedRecovery).toBe(true)
       expect(result.recoveryResult).toBeDefined()
-      // Recovery should fail (no backups in default location)
+      // Recovery should fail (no backups in specified location)
       expect(result.recoveryResult.recovered).toBe(false)
     })
 

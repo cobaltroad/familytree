@@ -18,7 +18,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { exec } from 'child_process'
 import { promisify } from 'util'
-import { db } from '$lib/db/client.js'
+import { db, reconnectDatabase } from '$lib/db/client.js'
 import { users } from '$lib/db/schema.js'
 import { eq } from 'drizzle-orm'
 
@@ -163,14 +163,19 @@ export async function restoreFromBackup(backupPath, dbPath) {
         const dbDir = path.dirname(dbPath)
         await fs.mkdir(dbDir, { recursive: true })
 
-        // Initialize empty database if it doesn't exist
-        // This ensures we have a valid SQLite database file
+        // Delete existing database file if it exists
+        // This prevents CREATE TABLE conflicts when restoring from backup
         try {
-          await fs.access(dbPath)
-        } catch {
-          // File doesn't exist, create empty SQLite database
-          await execAsync(`sqlite3 "${dbPath}" "VACUUM;"`)
+          await fs.unlink(dbPath)
+        } catch (error) {
+          // File doesn't exist, which is fine
+          if (error.code !== 'ENOENT') {
+            throw error // Re-throw if it's a different error (permission, etc.)
+          }
         }
+
+        // Create fresh empty database
+        await execAsync(`sqlite3 "${dbPath}" "VACUUM;"`)
 
         // Execute SQL statements using sqlite3 CLI
         // This is safer than using db.run() for multiple statements
@@ -306,6 +311,13 @@ export async function recoverDatabaseIfNeeded(userId, backupsDir = 'backups') {
   }
 
   console.log(restoreResult.message)
+
+  // Reconnect to database after file replacement
+  // This ensures the ORM client uses the new database file
+  // Only reconnect if we restored the production database (familytree.db)
+  if (dbPath.endsWith('familytree.db')) {
+    reconnectDatabase()
+  }
 
   // Verify user exists after recovery
   const userExistsAfterRecovery = await verifyUserExists(userId)
