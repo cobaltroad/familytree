@@ -390,14 +390,14 @@ describe('POST /api/relationships', () => {
       expect(errorText).toContain('already exists')
     })
 
-    it('should reject inverse spouse relationship', async () => {
+    it('should ALLOW inverse spouse relationship (bidirectional)', async () => {
       // Arrange: Create relationship person1 -> person2
       sqlite.prepare(`
         INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
       VALUES (?, ?, ?, ?, ?)
       `).run(1, 2, 'spouse', null, userId)
 
-      // Act: Try to create inverse person2 -> person1
+      // Act: Create inverse person2 -> person1 (bidirectional relationship)
       const request = new Request('http://localhost/api/relationships', {
         method: 'POST',
         body: JSON.stringify({
@@ -410,10 +410,12 @@ describe('POST /api/relationships', () => {
 
       const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
 
-      // Assert
-      expect(response.status).toBe(400)
-      const errorText = await response.text()
-      expect(errorText).toContain('already exists')
+      // Assert: Bidirectional spouse relationships are ALLOWED (required for QuickAddSpouse feature)
+      expect(response.status).toBe(201)
+      const relationship = await response.json()
+      expect(relationship.person1Id).toBe(2)
+      expect(relationship.person2Id).toBe(1)
+      expect(relationship.type).toBe('spouse')
     })
 
     it('should reject inverse parent relationship', async () => {

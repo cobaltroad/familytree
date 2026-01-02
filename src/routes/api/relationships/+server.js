@@ -237,17 +237,17 @@ async function relationshipExists(database, person1Id, person2Id, type) {
     return result.length > 0
   }
 
-  // For spouse relationships, check both directions
+  // For spouse relationships, only check for exact duplicate (same direction)
+  // We allow bidirectional spouse relationships (person1->person2 AND person2->person1)
+  // but prevent exact duplicates (same person1Id and person2Id)
   const result = await database
     .select()
     .from(relationships)
     .where(
       and(
         eq(relationships.type, type),
-        or(
-          and(eq(relationships.person1Id, person1Id), eq(relationships.person2Id, person2Id)),
-          and(eq(relationships.person1Id, person2Id), eq(relationships.person2Id, person1Id))
-        )
+        eq(relationships.person1Id, person1Id),
+        eq(relationships.person2Id, person2Id)
       )
     )
 
