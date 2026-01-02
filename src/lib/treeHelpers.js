@@ -263,3 +263,61 @@ export function findSpouse(personId, relationships, people) {
   const spouseId = spouseRel.person1Id === personId ? spouseRel.person2Id : spouseRel.person1Id
   return people.find(p => p.id === spouseId) || null
 }
+
+/**
+ * Compute sibling links for force-directed network visualization
+ * Siblings are people who share at least one parent
+ * Returns bidirectional links for network graph
+ * @param {Array} people - Array of person objects
+ * @param {Array} relationships - Array of relationship objects
+ * @returns {Array} - Array of sibling link objects {source, target, type}
+ */
+export function computeSiblingLinks(people, relationships) {
+  if (!people || people.length === 0 || !relationships || relationships.length === 0) {
+    return []
+  }
+
+  const siblingLinks = []
+  const processedPairs = new Set()
+
+  // Iterate through all people to find siblings
+  for (const person of people) {
+    const parents = findParents(person.id, relationships, people)
+
+    // Find all other people who share at least one parent with this person
+    for (const otherPerson of people) {
+      if (person.id === otherPerson.id) continue
+
+      // Skip if we already processed this pair
+      const pairKey1 = `${person.id}-${otherPerson.id}`
+      const pairKey2 = `${otherPerson.id}-${person.id}`
+      if (processedPairs.has(pairKey1) || processedPairs.has(pairKey2)) continue
+
+      const otherParents = findParents(otherPerson.id, relationships, people)
+
+      // Check if they share at least one parent
+      const sharesMother = parents.motherId && parents.motherId === otherParents.motherId
+      const sharesFather = parents.fatherId && parents.fatherId === otherParents.fatherId
+
+      if (sharesMother || sharesFather) {
+        // Add bidirectional links
+        siblingLinks.push({
+          source: person.id,
+          target: otherPerson.id,
+          type: 'sibling'
+        })
+        siblingLinks.push({
+          source: otherPerson.id,
+          target: person.id,
+          type: 'sibling'
+        })
+
+        // Mark this pair as processed
+        processedPairs.add(pairKey1)
+        processedPairs.add(pairKey2)
+      }
+    }
+  }
+
+  return siblingLinks
+}

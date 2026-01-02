@@ -400,6 +400,23 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - D3 optimization for smooth updates
   - Limited to 5 generations
 
+- **NetworkView.svelte** (`#/network`): Force-directed network graph (Story #99)
+  - Interactive physics-based layout showing all family members
+  - D3 force simulation with multiple forces (charge, link, center, collision)
+  - Displays all relationships simultaneously (parent-child, spouse, sibling)
+  - Drag nodes to reposition (pinned until double-click to release)
+  - Zoom/pan controls (0.1x to 10x scale)
+  - Hover effects with tooltips showing name, lifespan, and relationship count
+  - Connected node highlighting on hover
+  - Distinct visual styles for relationship types:
+    - Parent-child: Solid lines with arrows (mother=pink, father=blue)
+    - Spouse: Purple dashed lines
+    - Sibling: Gray dotted lines (computed dynamically)
+  - Reset view and reheat simulation controls
+  - Performance warning for datasets >500 people
+  - Responsive to window resize
+  - Empty state guidance for adding people/relationships
+
 ### Key UI Patterns
 - Clicking a tree node calls `modal.open(personId, 'edit')` to open **PersonModal**
 - "Add Person" link in ViewSwitcher (top right) calls `modal.openNew()` to add new person
@@ -431,6 +448,7 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - `findChildren(personId, ...)`: Get children
   - `assignGenerations(people, ...)`: Compute generation numbers
   - `formatLifespan(birthDate, deathDate)`: Format as "YYYY–YYYY" or "YYYY–present"
+  - `computeSiblingLinks(people, relationships)`: Generate bidirectional sibling links from shared parents (Story #99)
 
 - **`frontend/src/lib/d3Helpers.js`**: Reusable D3.js utilities
   - `createZoomBehavior(svg, g, scaleExtent)`: Standard zoom/pan behavior
@@ -442,6 +460,13 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - `updatePedigreeNodes(...)`: Optimized updates for pedigree view
   - `updateRadialNodes(...)`: Optimized updates for radial view
   - `updateRadialLinks(...)`: Optimized links for radial view
+  - **Force Network Functions (Story #99)**:
+    - `createForceSimulation(nodes, links, options)`: Configure D3 force simulation with charge, link, center, and collision forces
+    - `updateNetworkNodes(g, nodes, getColor, onClick)`: Render network nodes with enter/update/exit pattern
+    - `updateNetworkLinks(g, links)`: Render relationship links with type-specific styling
+    - `applyNodeDrag(simulation)`: Drag behavior for pinning/unpinning nodes
+    - `createNetworkTooltip()`: Tooltip with show/hide/move methods
+    - `highlightConnectedNodes(g, node, links, highlight)`: Highlight connected nodes and links on hover
 
 ### Data Flow
 
@@ -508,8 +533,10 @@ Hash-based routing in `App.svelte`:
 - `#/list`: Redirects to pedigree view (ListView removed)
 - `#/timeline`: Chronological timeline with lifespan bars
 - `#/radial`: Circular fan chart with concentric generations
+- `#/network`: Force-directed network graph (Story #99)
+- `#/admin`: Admin view for data inspection
 
-ViewSwitcher navigation appears on all views and shows: Pedigree, Timeline, and Radial tabs.
+ViewSwitcher navigation appears on all views and shows: Pedigree, Timeline, Radial, Network, and Admin tabs.
 
 ### API Client
 `src/lib/api.js` provides typed API methods for all backend endpoints (both client and server). The backend expects relationships to use:

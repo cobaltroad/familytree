@@ -688,3 +688,353 @@ export function updatePedigreeNodes(g, nodes, getColor, onClick, focusPersonId, 
 
   return mergedNodes
 }
+
+/**
+ * Create a D3 force simulation for force-directed network layout
+ * Story #99: Force-Directed Network View
+ *
+ * @param {Array} nodes - Array of node objects (people)
+ * @param {Array} links - Array of link objects (relationships)
+ * @param {Object} options - Configuration options
+ * @returns {d3.ForceSimulation} - Configured D3 force simulation
+ */
+export function createForceSimulation(nodes, links, options = {}) {
+  const {
+    width = 800,
+    height = 600,
+    chargeStrength = -300,
+    linkDistance = 100,
+    collisionRadius = 30,
+    alphaDecay = 0.02
+  } = options
+
+  // Create simulation with multiple forces
+  const simulation = d3.forceSimulation(nodes)
+    .force('charge', d3.forceManyBody().strength(chargeStrength))
+    .force('link', d3.forceLink(links).id(d => d.id).distance(linkDistance))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(collisionRadius))
+    .alphaDecay(alphaDecay)
+
+  return simulation
+}
+
+/**
+ * Update network nodes using D3's enter/update/exit pattern
+ * Creates circular nodes with text labels for force-directed network
+ *
+ * @param {d3.Selection} g - The main group element
+ * @param {Array} nodes - Array of node objects (people)
+ * @param {Function} getColor - Function to get node color
+ * @param {Function} onClick - Click handler
+ * @param {Object} options - Configuration options
+ * @returns {d3.Selection} - The updated node selection
+ */
+export function updateNetworkNodes(g, nodes, getColor, onClick, options = {}) {
+  const { transitionDuration = 300, nodeRadius = 15 } = options
+
+  // Bind data with key function
+  const nodeGroups = g.selectAll('.network-node')
+    .data(nodes, d => d.id)
+
+  // EXIT
+  maybeTransition(nodeGroups.exit(), transitionDuration)
+    .style('opacity', 0)
+    .remove()
+
+  // ENTER
+  const enterGroups = nodeGroups.enter()
+    .append('g')
+    .attr('class', 'network-node')
+    .style('opacity', testConfig.enabled ? 1 : 0)
+
+  // Create gradient defs for each node
+  enterGroups.each(function(d) {
+    const node = d3.select(this)
+    const color = getColor(d)
+    const gradientId = `gradient-${d.id}`
+
+    // Create gradient definition in defs
+    let defs = d3.select(this.ownerDocument).select('defs')
+    if (defs.empty()) {
+      defs = d3.select(this.ownerDocument).select('svg').append('defs')
+    }
+
+    defs.append('radialGradient')
+      .attr('id', gradientId)
+      .html(`
+        <stop offset="0%" stop-color="${color}" stop-opacity="1"/>
+        <stop offset="100%" stop-color="${d3.color(color).darker(0.3)}" stop-opacity="1"/>
+      `)
+  })
+
+  // Add circles to new nodes
+  enterGroups.append('circle')
+    .attr('r', nodeRadius)
+    .style('cursor', 'pointer')
+
+  // Add text to new nodes
+  enterGroups.append('text')
+    .attr('class', 'node-label')
+    .attr('dy', '0.31em')
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '10px')
+    .attr('pointer-events', 'none')
+
+  // MERGE and UPDATE
+  const mergedNodes = nodeGroups.merge(enterGroups)
+
+  // Update positions
+  maybeTransition(mergedNodes, transitionDuration)
+    .attr('transform', d => `translate(${d.x || 0},${d.y || 0})`)
+    .style('opacity', 1)
+
+  // Update circles
+  mergedNodes.select('circle')
+    .attr('fill', d => `url(#gradient-${d.id})`)
+    .attr('stroke', d => d.deathDate ? '#666' : '#333')
+    .attr('stroke-width', 2)
+    .attr('stroke-dasharray', d => d.deathDate ? '3,3' : '0')
+    .on('click', (event, d) => {
+      event.stopPropagation()
+      onClick(d)
+    })
+
+  // Update text labels
+  mergedNodes.select('.node-label')
+    .text(d => {
+      const firstName = d.firstName.length > 8 ? d.firstName.substring(0, 7) + '.' : d.firstName
+      const lastName = d.lastName.length > 8 ? d.lastName.charAt(0) + '.' : d.lastName
+      return `${firstName} ${lastName}`
+    })
+
+  return mergedNodes
+}
+
+/**
+ * Update network links using D3's enter/update/exit pattern
+ * Renders relationships with different styles based on type
+ *
+ * @param {d3.Selection} g - The main group element
+ * @param {Array} links - Array of link objects
+ * @param {Object} options - Configuration options
+ * @returns {d3.Selection} - The updated link selection
+ */
+export function updateNetworkLinks(g, links, options = {}) {
+  const { transitionDuration = 300 } = options
+
+  // Create arrow markers for parent-child relationships
+  let defs = g.select('defs')
+  if (defs.empty()) {
+    defs = d3.select(g.node().ownerDocument).select('svg').select('defs')
+    if (defs.empty()) {
+      defs = d3.select(g.node().ownerDocument).select('svg').append('defs')
+    }
+  }
+
+  // Create arrow marker for mother relationships
+  if (defs.select('#arrow-mother').empty()) {
+    defs.append('marker')
+      .attr('id', 'arrow-mother')
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 20)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-5L10,0L0,5')
+      .attr('fill', '#ec4899')
+  }
+
+  // Create arrow marker for father relationships
+  if (defs.select('#arrow-father').empty()) {
+    defs.append('marker')
+      .attr('id', 'arrow-father')
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 20)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-5L10,0L0,5')
+      .attr('fill', '#3b82f6')
+  }
+
+  // Bind data
+  const linkSelection = g.selectAll('.network-link')
+    .data(links, (d, i) => d.id || `${d.source.id || d.source}-${d.target.id || d.target}-${i}`)
+
+  // EXIT
+  maybeTransition(linkSelection.exit(), transitionDuration)
+    .style('opacity', 0)
+    .remove()
+
+  // ENTER
+  const enterLinks = linkSelection.enter()
+    .append('path')
+    .attr('class', 'network-link')
+    .attr('fill', 'none')
+    .style('opacity', testConfig.enabled ? 1 : 0)
+
+  // MERGE and UPDATE
+  const mergedLinks = linkSelection.merge(enterLinks)
+
+  // Update link styling based on type
+  mergedLinks
+    .attr('stroke', d => {
+      if (d.type === 'mother') return '#ec4899'
+      if (d.type === 'father') return '#3b82f6'
+      if (d.type === 'spouse') return '#9333ea'
+      if (d.type === 'sibling') return '#999'
+      return '#999'
+    })
+    .attr('stroke-width', 2)
+    .attr('stroke-dasharray', d => {
+      if (d.type === 'mother' || d.type === 'father') return '0'
+      if (d.type === 'spouse') return '5,5'
+      if (d.type === 'sibling') return '2,2'
+      return '0'
+    })
+    .attr('marker-end', d => {
+      if (d.type === 'mother') return 'url(#arrow-mother)'
+      if (d.type === 'father') return 'url(#arrow-father)'
+      return null
+    })
+
+  // Update positions
+  maybeTransition(mergedLinks, transitionDuration)
+    .attr('d', d => {
+      const sourceX = d.source.x || 0
+      const sourceY = d.source.y || 0
+      const targetX = d.target.x || 0
+      const targetY = d.target.y || 0
+      return `M${sourceX},${sourceY} L${targetX},${targetY}`
+    })
+    .style('opacity', 1)
+
+  return mergedLinks
+}
+
+/**
+ * Create drag behavior for network nodes
+ * Allows users to drag nodes and pin them in place
+ *
+ * @param {d3.ForceSimulation} simulation - The force simulation
+ * @returns {d3.DragBehavior} - D3 drag behavior
+ */
+export function applyNodeDrag(simulation) {
+  function dragstarted(event, d) {
+    if (!event.active) simulation.alphaTarget(0.3).restart()
+    d.fx = d.x
+    d.fy = d.y
+  }
+
+  function dragged(event, d) {
+    d.fx = event.x
+    d.fy = event.y
+  }
+
+  function dragended(event, d) {
+    if (!event.active) simulation.alphaTarget(0)
+    // Keep node pinned after drag
+    d.fx = event.x
+    d.fy = event.y
+  }
+
+  return d3.drag()
+    .on('start', dragstarted)
+    .on('drag', dragged)
+    .on('end', dragended)
+}
+
+/**
+ * Create tooltip for network nodes
+ * Returns a D3 selection with show/hide/move methods
+ *
+ * @returns {d3.Selection} - Tooltip selection with methods
+ */
+export function createNetworkTooltip() {
+  const tooltip = d3.select('body')
+    .append('div')
+    .attr('class', 'network-tooltip')
+    .style('position', 'absolute')
+    .style('opacity', 0)
+    .style('background', 'white')
+    .style('border', '1px solid #ccc')
+    .style('border-radius', '4px')
+    .style('padding', '8px')
+    .style('pointer-events', 'none')
+    .style('z-index', '1000')
+    .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
+
+  // Add show method
+  tooltip.show = function(html, event) {
+    this.html(html)
+      .style('opacity', 1)
+      .style('left', (event.pageX + 10) + 'px')
+      .style('top', (event.pageY - 10) + 'px')
+    return this
+  }
+
+  // Add hide method
+  tooltip.hide = function() {
+    this.style('opacity', 0)
+    return this
+  }
+
+  // Add move method
+  tooltip.move = function(event) {
+    this.style('left', (event.pageX + 10) + 'px')
+      .style('top', (event.pageY - 10) + 'px')
+    return this
+  }
+
+  return tooltip
+}
+
+/**
+ * Highlight connected nodes and links on hover
+ *
+ * @param {d3.Selection} g - The main group element
+ * @param {Object} node - The hovered node
+ * @param {Array} links - Array of all links
+ * @param {boolean} highlight - True to highlight, false to remove
+ */
+export function highlightConnectedNodes(g, node, links, highlight) {
+  if (highlight) {
+    // Find connected node IDs
+    const connectedIds = new Set()
+    connectedIds.add(node.id)
+
+    links.forEach(link => {
+      const sourceId = link.source.id || link.source
+      const targetId = link.target.id || link.target
+
+      if (sourceId === node.id) connectedIds.add(targetId)
+      if (targetId === node.id) connectedIds.add(sourceId)
+    })
+
+    // Highlight connected nodes
+    g.selectAll('.network-node circle')
+      .attr('stroke', d => connectedIds.has(d.id) ? '#4CAF50' : null)
+      .attr('stroke-width', d => connectedIds.has(d.id) ? 3 : 2)
+
+    // Highlight connected links
+    g.selectAll('.network-link')
+      .attr('stroke-width', d => {
+        const sourceId = d.source.id || d.source
+        const targetId = d.target.id || d.target
+        return (sourceId === node.id || targetId === node.id) ? 4 : 2
+      })
+  } else {
+    // Remove highlighting
+    g.selectAll('.network-node circle')
+      .attr('stroke', d => d.deathDate ? '#666' : '#333')
+      .attr('stroke-width', 2)
+
+    g.selectAll('.network-link')
+      .attr('stroke-width', 2)
+  }
+}

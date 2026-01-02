@@ -7,6 +7,7 @@
     { path: '/pedigree', label: 'Pedigree', icon: '📊' },
     { path: '/timeline', label: 'Timeline', icon: '📅' },
     { path: '/radial', label: 'Radial', icon: '⭕' },
+    { path: '/network', label: 'Network', icon: '🕸️' },
     { path: '/admin', label: 'Admin', icon: '🔧' }
   ]
 
