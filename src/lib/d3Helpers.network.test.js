@@ -1369,4 +1369,142 @@ describe('Story #101: Parent-Child Link Configuration', () => {
       expect(ticks).toBeGreaterThan(0)
     })
   })
+
+  /**
+   * Bug Fix: Handle BOTH Normalized and Denormalized Relationship Formats
+   *
+   * Context:
+   * - Database stores normalized format: type="parentOf" with parent_role="mother"/"father"
+   * - API returns denormalized format: type="mother" or type="father" (backward compatibility)
+   * - Network view must handle BOTH formats
+   *
+   * Bug:
+   * - createForceSimulation() only checks for type="spouse"
+   * - Doesn't check for parent-child relationships (neither format)
+   * - Results in all parent-child links using default distance (100px) and strength (1.0)
+   * - This makes network view look identical to pedigree view
+   *
+   * Expected behavior:
+   * - Parent-child links (both formats): 75px distance, 1.2x strength
+   * - Spouse links: 60px distance, 1.5x strength
+   * - Sibling links: 100px distance, 1.0x strength
+   */
+  describe('Bug Fix: Normalized Format Support (type="parentOf")', () => {
+    describe('Link Distance with Normalized Format', () => {
+      it('should configure parentOf links with mother role at 75px distance', () => {
+        const nodes = [
+          { id: 1, firstName: 'Parent', lastName: 'Doe' },
+          { id: 2, firstName: 'Child', lastName: 'Doe' }
+        ]
+
+        const links = [
+          { source: 1, target: 2, type: 'parentOf', parentRole: 'mother' }
+        ]
+
+        const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+        const linkForce = simulation.force('link')
+
+        const distanceFn = linkForce.distance()
+        const motherLink = links[0]
+        const distance = typeof distanceFn === 'function' ? distanceFn(motherLink) : distanceFn
+
+        expect(distance).toBe(75)
+      })
+
+      it('should configure parentOf links with father role at 75px distance', () => {
+        const nodes = [
+          { id: 1, firstName: 'Parent', lastName: 'Doe' },
+          { id: 2, firstName: 'Child', lastName: 'Doe' }
+        ]
+
+        const links = [
+          { source: 1, target: 2, type: 'parentOf', parentRole: 'father' }
+        ]
+
+        const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+        const linkForce = simulation.force('link')
+
+        const distanceFn = linkForce.distance()
+        const fatherLink = links[0]
+        const distance = typeof distanceFn === 'function' ? distanceFn(fatherLink) : distanceFn
+
+        expect(distance).toBe(75)
+      })
+    })
+
+    describe('Link Strength with Normalized Format', () => {
+      it('should configure parentOf links with mother role at 1.2x strength', () => {
+        const nodes = [
+          { id: 1, firstName: 'Parent', lastName: 'Doe' },
+          { id: 2, firstName: 'Child', lastName: 'Doe' }
+        ]
+
+        const links = [
+          { source: 1, target: 2, type: 'parentOf', parentRole: 'mother' }
+        ]
+
+        const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+        const linkForce = simulation.force('link')
+
+        const strengthFn = linkForce.strength()
+        const motherLink = links[0]
+        const strength = typeof strengthFn === 'function' ? strengthFn(motherLink) : strengthFn
+
+        expect(strength).toBe(1.2)
+      })
+
+      it('should configure parentOf links with father role at 1.2x strength', () => {
+        const nodes = [
+          { id: 1, firstName: 'Parent', lastName: 'Doe' },
+          { id: 2, firstName: 'Child', lastName: 'Doe' }
+        ]
+
+        const links = [
+          { source: 1, target: 2, type: 'parentOf', parentRole: 'father' }
+        ]
+
+        const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+        const linkForce = simulation.force('link')
+
+        const strengthFn = linkForce.strength()
+        const fatherLink = links[0]
+        const strength = typeof strengthFn === 'function' ? strengthFn(fatherLink) : strengthFn
+
+        expect(strength).toBe(1.2)
+      })
+    })
+
+    describe('Mixed Format Support', () => {
+      it('should handle mixed normalized and denormalized formats in same dataset', () => {
+        const nodes = [
+          { id: 1, firstName: 'Parent', lastName: 'Doe' },
+          { id: 2, firstName: 'Child1', lastName: 'Doe' },
+          { id: 3, firstName: 'Child2', lastName: 'Doe' }
+        ]
+
+        const links = [
+          { source: 1, target: 2, type: 'mother' }, // Denormalized
+          { source: 1, target: 3, type: 'parentOf', parentRole: 'mother' } // Normalized
+        ]
+
+        const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+        const linkForce = simulation.force('link')
+
+        const distanceFn = linkForce.distance()
+        const strengthFn = linkForce.strength()
+
+        // Both formats should get same distance and strength
+        const denormalizedDistance = typeof distanceFn === 'function' ? distanceFn(links[0]) : distanceFn
+        const normalizedDistance = typeof distanceFn === 'function' ? distanceFn(links[1]) : distanceFn
+
+        const denormalizedStrength = typeof strengthFn === 'function' ? strengthFn(links[0]) : strengthFn
+        const normalizedStrength = typeof strengthFn === 'function' ? strengthFn(links[1]) : strengthFn
+
+        expect(denormalizedDistance).toBe(75)
+        expect(normalizedDistance).toBe(75)
+        expect(denormalizedStrength).toBe(1.2)
+        expect(normalizedStrength).toBe(1.2)
+      })
+    })
+  })
 })

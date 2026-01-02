@@ -10,7 +10,7 @@
  * @param {Object} rel - Relationship object
  * @returns {boolean} - True if relationship is a parent-child relationship
  */
-function isParentChildRelationship(rel) {
+export function isParentChildRelationship(rel) {
   return rel.type === 'mother' || rel.type === 'father' || rel.type === 'parentOf'
 }
 

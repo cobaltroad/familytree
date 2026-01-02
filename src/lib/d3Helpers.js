@@ -4,6 +4,7 @@
  */
 
 import * as d3 from 'd3'
+import { isParentChildRelationship } from './treeHelpers.js'
 
 /**
  * Create standard zoom/pan behavior for SVG
@@ -711,20 +712,22 @@ export function createForceSimulation(nodes, links, options = {}) {
   } = options
 
   // Story #100 & #101: Configure link distance based on relationship type
+  // Bug fix: Handle BOTH normalized (type="parentOf") and denormalized (type="mother"/"father") formats
   const getLinkDistance = (link) => {
     if (!link || !link.type) return linkDistance  // Handle undefined/null links
-    if (link.type === 'spouse') return 60      // Story #100: Spouses closer together
-    if (link.type === 'mother' || link.type === 'father') return 75  // Story #101: Parent-child proximity
-    if (link.type === 'sibling') return 100    // Default for siblings
-    return linkDistance                        // Default for other types
+    if (link.type === 'spouse') return 60         // Story #100: Spouses closer together (60px)
+    if (isParentChildRelationship(link)) return 75 // Story #101: Parent-child proximity (75px, both formats)
+    if (link.type === 'sibling') return 100       // Default for siblings (100px)
+    return linkDistance                           // Default for other types
   }
 
   // Story #100 & #101: Configure link strength based on relationship type
+  // Bug fix: Handle BOTH normalized (type="parentOf") and denormalized (type="mother"/"father") formats
   const getLinkStrength = (link) => {
-    if (!link || !link.type) return 1.0        // Handle undefined/null links
-    if (link.type === 'spouse') return 1.5     // Story #100: Stronger pull for spouses
-    if (link.type === 'mother' || link.type === 'father') return 1.2  // Story #101: Stronger pull for parent-child
-    return 1.0                                 // Default strength
+    if (!link || !link.type) return 1.0           // Handle undefined/null links
+    if (link.type === 'spouse') return 1.5        // Story #100: Stronger pull for spouses (1.5x)
+    if (isParentChildRelationship(link)) return 1.2 // Story #101: Stronger pull for parent-child (1.2x, both formats)
+    return 1.0                                    // Default strength
   }
 
   // Create simulation with multiple forces

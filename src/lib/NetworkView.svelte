@@ -148,17 +148,19 @@
     // Prepare spouse pairs for custom force (Story #100)
     const spousePairs = prepareSpousePairs($relationships, nodes)
 
-    // Create force simulation with custom link distance/strength for spouse relationships
-    simulation = d3.forceSimulation(nodes)
-      .force('charge', d3.forceManyBody().strength(-300))
-      .force('link', d3.forceLink(links)
-        .id(d => d.id)
-        .distance(d => d.type === 'spouse' ? 60 : 100) // Story #100: AC3 - Shorter distance for spouses
-        .strength(d => d.type === 'spouse' ? 1.5 : 1.0)) // Story #100: AC3 - Stronger pull for spouses
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(30))
-      .force('spouse', createSpouseForce(spousePairs, 70)) // Story #100: AC2 - Custom spouse force
-      .alphaDecay(0.02)
+    // Create force simulation using centralized helper (Stories #100 & #101)
+    // Bug fix: Use createForceSimulation() which handles BOTH normalized and denormalized formats
+    simulation = createForceSimulation(nodes, links, {
+      width,
+      height,
+      chargeStrength: -300,
+      linkDistance: 100,
+      collisionRadius: 30,
+      alphaDecay: 0.02
+    })
+
+    // Add custom spouse force (Story #100: AC2)
+    simulation.force('spouse', createSpouseForce(spousePairs, 70))
 
     // Apply drag behavior to nodes
     const drag = applyNodeDrag(simulation)
