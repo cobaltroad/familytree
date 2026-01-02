@@ -692,6 +692,8 @@ export function updatePedigreeNodes(g, nodes, getColor, onClick, focusPersonId, 
 /**
  * Create a D3 force simulation for force-directed network layout
  * Story #99: Force-Directed Network View
+ * Story #100: Spouse Proximity Enhancement
+ * Story #101: Children Display and Grouping
  *
  * @param {Array} nodes - Array of node objects (people)
  * @param {Array} links - Array of link objects (relationships)
@@ -708,10 +710,30 @@ export function createForceSimulation(nodes, links, options = {}) {
     alphaDecay = 0.02
   } = options
 
+  // Story #100 & #101: Configure link distance based on relationship type
+  const getLinkDistance = (link) => {
+    if (!link || !link.type) return linkDistance  // Handle undefined/null links
+    if (link.type === 'spouse') return 60      // Story #100: Spouses closer together
+    if (link.type === 'mother' || link.type === 'father') return 75  // Story #101: Parent-child proximity
+    if (link.type === 'sibling') return 100    // Default for siblings
+    return linkDistance                        // Default for other types
+  }
+
+  // Story #100 & #101: Configure link strength based on relationship type
+  const getLinkStrength = (link) => {
+    if (!link || !link.type) return 1.0        // Handle undefined/null links
+    if (link.type === 'spouse') return 1.5     // Story #100: Stronger pull for spouses
+    if (link.type === 'mother' || link.type === 'father') return 1.2  // Story #101: Stronger pull for parent-child
+    return 1.0                                 // Default strength
+  }
+
   // Create simulation with multiple forces
   const simulation = d3.forceSimulation(nodes)
     .force('charge', d3.forceManyBody().strength(chargeStrength))
-    .force('link', d3.forceLink(links).id(d => d.id).distance(linkDistance))
+    .force('link', d3.forceLink(links)
+      .id(d => d.id)
+      .distance(getLinkDistance)
+      .strength(getLinkStrength))
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collision', d3.forceCollide().radius(collisionRadius))
     .alphaDecay(alphaDecay)

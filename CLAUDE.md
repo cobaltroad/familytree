@@ -400,7 +400,7 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - D3 optimization for smooth updates
   - Limited to 5 generations
 
-- **NetworkView.svelte** (`#/network`): Force-directed network graph (Story #99, #100)
+- **NetworkView.svelte** (`#/network`): Force-directed network graph (Story #99, #100, #101)
   - Interactive physics-based layout showing all family members
   - D3 force simulation with multiple forces (charge, link, center, collision, custom spouse force)
   - Displays all relationships simultaneously (parent-child, spouse, sibling)
@@ -410,14 +410,21 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
     - Enhanced hover highlighting: spouse nodes and links highlighted with purple border/brighter color
     - Handles multiple spouses per person, pinned nodes, and edge cases gracefully
     - Performance optimized for <5s settle time with 50 spouse pairs
+  - **Children Display and Grouping** (Story #101):
+    - Parent-child links configured with shorter distance (75px) to keep families closer
+    - Stronger link pull (1.2x strength) for parent-child relationships
+    - Children positioned within 120px of parents after simulation settles
+    - Siblings naturally cluster together near shared parents (within 110px)
+    - Collision force prevents overlap even with 10+ children per parent
+    - Performance validated: <5s settle time with 20 children
   - Drag nodes to reposition (pinned until double-click to release)
   - Zoom/pan controls (0.1x to 10x scale)
   - Hover effects with tooltips showing name, lifespan, and relationship count
   - Connected node highlighting on hover
   - Distinct visual styles for relationship types:
-    - Parent-child: Solid lines with arrows (mother=pink, father=blue)
-    - Spouse: Purple dashed lines (shorter distance, stronger pull than other relationships)
-    - Sibling: Gray dotted lines (computed dynamically)
+    - Parent-child: Solid lines with arrows (mother=pink, father=blue) - 75px distance, 1.2x strength
+    - Spouse: Purple dashed lines - 60px distance, 1.5x strength
+    - Sibling: Gray dotted lines (computed dynamically) - 100px distance, 1.0x strength
   - Reset view and reheat simulation controls
   - Performance warning for datasets >500 people
   - Responsive to window resize
@@ -466,8 +473,18 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - `updatePedigreeNodes(...)`: Optimized updates for pedigree view
   - `updateRadialNodes(...)`: Optimized updates for radial view
   - `updateRadialLinks(...)`: Optimized links for radial view
-  - **Force Network Functions (Story #99, #100)**:
-    - `createForceSimulation(nodes, links, options)`: Configure D3 force simulation with charge, link, center, and collision forces
+  - **Force Network Functions (Story #99, #100, #101)**:
+    - `createForceSimulation(nodes, links, options)`: Configure D3 force simulation with dynamic link parameters (Story #100, #101)
+      - Charge, link, center, and collision forces
+      - Dynamic link distance based on relationship type:
+        - Spouse: 60px (Story #100)
+        - Parent-child (mother/father): 75px (Story #101)
+        - Sibling: 100px (default)
+      - Dynamic link strength based on relationship type:
+        - Spouse: 1.5x (Story #100)
+        - Parent-child (mother/father): 1.2x (Story #101)
+        - Sibling: 1.0x (default)
+      - Handles undefined/null links gracefully
     - `createSpouseForce(spousePairs, targetDistance)`: Custom force that pulls spouse pairs together (Story #100)
       - Positions spouses 60-80px apart (configurable)
       - Respects pinned nodes (fx/fy attributes)

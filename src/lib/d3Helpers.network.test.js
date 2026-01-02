@@ -1002,3 +1002,371 @@ describe('createSpouseForce - Performance Tests', () => {
     expect(duration).toBeLessThan(10)
   })
 })
+
+/**
+ * Story #101: Children Display and Grouping
+ * Tests for parent-child link distance and strength configuration
+ */
+describe('Story #101: Parent-Child Link Configuration', () => {
+  describe('Link Distance Configuration', () => {
+    it('should configure parent-child links with shorter distance (75px)', () => {
+      const nodes = [
+        { id: 1, firstName: 'Parent', lastName: 'Doe' },
+        { id: 2, firstName: 'Child', lastName: 'Doe' }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'mother' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+      const linkForce = simulation.force('link')
+
+      // Get the distance function and test with mother link
+      const distanceFn = linkForce.distance()
+      const motherLink = links[0]
+      const distance = typeof distanceFn === 'function' ? distanceFn(motherLink) : distanceFn
+
+      expect(distance).toBe(75)
+    })
+
+    it('should configure father links with 75px distance', () => {
+      const nodes = [
+        { id: 1, firstName: 'Parent', lastName: 'Doe' },
+        { id: 2, firstName: 'Child', lastName: 'Doe' }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'father' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+      const linkForce = simulation.force('link')
+
+      const distanceFn = linkForce.distance()
+      const fatherLink = links[0]
+      const distance = typeof distanceFn === 'function' ? distanceFn(fatherLink) : distanceFn
+
+      expect(distance).toBe(75)
+    })
+
+    it('should maintain spouse link distance at 60px (Story #100)', () => {
+      const nodes = [
+        { id: 1, firstName: 'Spouse1', lastName: 'Doe' },
+        { id: 2, firstName: 'Spouse2', lastName: 'Doe' }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'spouse' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+      const linkForce = simulation.force('link')
+
+      const distanceFn = linkForce.distance()
+      const spouseLink = links[0]
+      const distance = typeof distanceFn === 'function' ? distanceFn(spouseLink) : distanceFn
+
+      expect(distance).toBe(60)
+    })
+
+    it('should use default distance (100px) for sibling links', () => {
+      const nodes = [
+        { id: 1, firstName: 'Sibling1', lastName: 'Doe' },
+        { id: 2, firstName: 'Sibling2', lastName: 'Doe' }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'sibling' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+      const linkForce = simulation.force('link')
+
+      const distanceFn = linkForce.distance()
+      const siblingLink = links[0]
+      const distance = typeof distanceFn === 'function' ? distanceFn(siblingLink) : distanceFn
+
+      expect(distance).toBe(100)
+    })
+  })
+
+  describe('Link Strength Configuration', () => {
+    it('should configure parent-child links with stronger pull (1.2x)', () => {
+      const nodes = [
+        { id: 1, firstName: 'Parent', lastName: 'Doe' },
+        { id: 2, firstName: 'Child', lastName: 'Doe' }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'mother' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+      const linkForce = simulation.force('link')
+
+      const strengthFn = linkForce.strength()
+      const motherLink = links[0]
+      const strength = typeof strengthFn === 'function' ? strengthFn(motherLink) : strengthFn
+
+      expect(strength).toBe(1.2)
+    })
+
+    it('should configure father links with 1.2x strength', () => {
+      const nodes = [
+        { id: 1, firstName: 'Parent', lastName: 'Doe' },
+        { id: 2, firstName: 'Child', lastName: 'Doe' }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'father' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+      const linkForce = simulation.force('link')
+
+      const strengthFn = linkForce.strength()
+      const fatherLink = links[0]
+      const strength = typeof strengthFn === 'function' ? strengthFn(fatherLink) : strengthFn
+
+      expect(strength).toBe(1.2)
+    })
+
+    it('should maintain spouse link strength at 1.5 (Story #100)', () => {
+      const nodes = [
+        { id: 1, firstName: 'Spouse1', lastName: 'Doe' },
+        { id: 2, firstName: 'Spouse2', lastName: 'Doe' }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'spouse' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+      const linkForce = simulation.force('link')
+
+      const strengthFn = linkForce.strength()
+      const spouseLink = links[0]
+      const strength = typeof strengthFn === 'function' ? strengthFn(spouseLink) : strengthFn
+
+      expect(strength).toBe(1.5)
+    })
+
+    it('should use default strength (1.0) for sibling links', () => {
+      const nodes = [
+        { id: 1, firstName: 'Sibling1', lastName: 'Doe' },
+        { id: 2, firstName: 'Sibling2', lastName: 'Doe' }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'sibling' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+      const linkForce = simulation.force('link')
+
+      const strengthFn = linkForce.strength()
+      const siblingLink = links[0]
+      const strength = typeof strengthFn === 'function' ? strengthFn(siblingLink) : strengthFn
+
+      expect(strength).toBe(1.0)
+    })
+  })
+
+  describe('Integration: Children Positioning', () => {
+    it('should position children near parent after simulation settles', () => {
+      // Create parent with 3 children
+      const nodes = [
+        { id: 1, firstName: 'Parent', lastName: 'Doe', x: 400, y: 300, vx: 0, vy: 0 },
+        { id: 2, firstName: 'Child1', lastName: 'Doe', x: 500, y: 400, vx: 0, vy: 0 },
+        { id: 3, firstName: 'Child2', lastName: 'Doe', x: 300, y: 400, vx: 0, vy: 0 },
+        { id: 4, firstName: 'Child3', lastName: 'Doe', x: 400, y: 500, vx: 0, vy: 0 }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'mother' },
+        { source: 1, target: 3, type: 'mother' },
+        { source: 1, target: 4, type: 'mother' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+
+      // Run simulation for 100 ticks to settle
+      for (let i = 0; i < 100; i++) {
+        simulation.tick()
+      }
+
+      // All children should be within 120px of parent
+      const parent = nodes[0]
+      const children = nodes.slice(1)
+
+      children.forEach(child => {
+        const dx = child.x - parent.x
+        const dy = child.y - parent.y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+
+        expect(distance).toBeLessThanOrEqual(120)
+      })
+    })
+
+    it('should position siblings near each other when they share parents', () => {
+      // Create 2 siblings with shared parent
+      const nodes = [
+        { id: 1, firstName: 'Parent', lastName: 'Doe', x: 400, y: 300, vx: 0, vy: 0 },
+        { id: 2, firstName: 'Sibling1', lastName: 'Doe', x: 500, y: 400, vx: 0, vy: 0 },
+        { id: 3, firstName: 'Sibling2', lastName: 'Doe', x: 300, y: 400, vx: 0, vy: 0 }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'mother' },
+        { source: 1, target: 3, type: 'mother' },
+        { source: 2, target: 3, type: 'sibling' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+
+      // Run simulation for 100 ticks to settle
+      for (let i = 0; i < 100; i++) {
+        simulation.tick()
+      }
+
+      // Siblings should be within 110px of each other (allowing for physics variance)
+      const sibling1 = nodes[1]
+      const sibling2 = nodes[2]
+
+      const dx = sibling1.x - sibling2.x
+      const dy = sibling1.y - sibling2.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      expect(distance).toBeLessThanOrEqual(110)
+    })
+
+    it('should position child between two parents if they are spouses', () => {
+      // Create child with mother and father who are spouses
+      const nodes = [
+        { id: 1, firstName: 'Mother', lastName: 'Doe', x: 300, y: 300, vx: 0, vy: 0 },
+        { id: 2, firstName: 'Father', lastName: 'Doe', x: 500, y: 300, vx: 0, vy: 0 },
+        { id: 3, firstName: 'Child', lastName: 'Doe', x: 400, y: 500, vx: 0, vy: 0 }
+      ]
+
+      const links = [
+        { source: 1, target: 2, type: 'spouse' },
+        { source: 1, target: 3, type: 'mother' },
+        { source: 2, target: 3, type: 'father' }
+      ]
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+
+      // Run simulation for 100 ticks to settle
+      for (let i = 0; i < 100; i++) {
+        simulation.tick()
+      }
+
+      // Child should be within 120px of both parents
+      const mother = nodes[0]
+      const father = nodes[1]
+      const child = nodes[2]
+
+      const distToMother = Math.sqrt((child.x - mother.x) ** 2 + (child.y - mother.y) ** 2)
+      const distToFather = Math.sqrt((child.x - father.x) ** 2 + (child.y - father.y) ** 2)
+
+      expect(distToMother).toBeLessThanOrEqual(120)
+      expect(distToFather).toBeLessThanOrEqual(120)
+    })
+
+    it('should handle parent with 10 children without overlap', () => {
+      // Create parent with 10 children
+      const nodes = [
+        { id: 1, firstName: 'Parent', lastName: 'Doe', x: 400, y: 300, vx: 0, vy: 0 }
+      ]
+
+      // Add 10 children at various positions
+      for (let i = 0; i < 10; i++) {
+        const angle = (i / 10) * Math.PI * 2
+        const radius = 150
+        nodes.push({
+          id: i + 2,
+          firstName: `Child${i + 1}`,
+          lastName: 'Doe',
+          x: 400 + Math.cos(angle) * radius,
+          y: 300 + Math.sin(angle) * radius,
+          vx: 0,
+          vy: 0
+        })
+      }
+
+      const links = []
+      for (let i = 0; i < 10; i++) {
+        links.push({ source: 1, target: i + 2, type: 'mother' })
+      }
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+
+      // Run simulation for 200 ticks to ensure settling
+      for (let i = 0; i < 200; i++) {
+        simulation.tick()
+      }
+
+      // Check that no two children overlap (should be at least collision radius apart)
+      // Allow small tolerance (1px) for floating point precision
+      const children = nodes.slice(1)
+      const collisionRadius = 30
+      const minDistance = collisionRadius * 2 - 1  // 59px minimum (allowing 1px tolerance)
+
+      for (let i = 0; i < children.length; i++) {
+        for (let j = i + 1; j < children.length; j++) {
+          const dx = children[i].x - children[j].x
+          const dy = children[i].y - children[j].y
+          const distance = Math.sqrt(dx * dx + dy * dy)
+
+          expect(distance).toBeGreaterThanOrEqual(minDistance)
+        }
+      }
+    })
+  })
+
+  describe('Performance: Large Families', () => {
+    it('should settle within 5 seconds with 20 children', () => {
+      // Create parent with 20 children
+      const nodes = [
+        { id: 1, firstName: 'Parent', lastName: 'Doe', x: 400, y: 300, vx: 0, vy: 0 }
+      ]
+
+      for (let i = 0; i < 20; i++) {
+        const angle = (i / 20) * Math.PI * 2
+        const radius = 200
+        nodes.push({
+          id: i + 2,
+          firstName: `Child${i + 1}`,
+          lastName: 'Doe',
+          x: 400 + Math.cos(angle) * radius,
+          y: 300 + Math.sin(angle) * radius,
+          vx: 0,
+          vy: 0
+        })
+      }
+
+      const links = []
+      for (let i = 0; i < 20; i++) {
+        links.push({ source: 1, target: i + 2, type: 'mother' })
+      }
+
+      const simulation = createForceSimulation(nodes, links, { width: 800, height: 600 })
+
+      // Measure settle time
+      const startTime = performance.now()
+      let ticks = 0
+
+      while (simulation.alpha() > 0.01 && ticks < 1000) {
+        simulation.tick()
+        ticks++
+      }
+
+      const duration = performance.now() - startTime
+
+      // Should settle in less than 5 seconds
+      expect(duration).toBeLessThan(5000)
+      expect(ticks).toBeGreaterThan(0)
+    })
+  })
+})
