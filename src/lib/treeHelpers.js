@@ -268,6 +268,10 @@ export function findSpouse(personId, relationships, people) {
  * Compute sibling links for force-directed network visualization
  * Siblings are people who share at least one parent
  * Returns bidirectional links for network graph
+ *
+ * Bug fix: Excludes sibling links when a parent-child relationship exists
+ * between the same two people (handles data integrity issues)
+ *
  * @param {Array} people - Array of person objects
  * @param {Array} relationships - Array of relationship objects
  * @returns {Array} - Array of sibling link objects {source, target, type}
@@ -279,6 +283,15 @@ export function computeSiblingLinks(people, relationships) {
 
   const siblingLinks = []
   const processedPairs = new Set()
+
+  // Build a Set of parent-child relationship pairs for O(1) lookup
+  // Format: "parentId-childId"
+  const parentChildPairs = new Set()
+  relationships.forEach(rel => {
+    if (isParentChildRelationship(rel)) {
+      parentChildPairs.add(`${rel.person1Id}-${rel.person2Id}`)
+    }
+  })
 
   // Iterate through all people to find siblings
   for (const person of people) {
@@ -300,6 +313,16 @@ export function computeSiblingLinks(people, relationships) {
       const sharesFather = parents.fatherId && parents.fatherId === otherParents.fatherId
 
       if (sharesMother || sharesFather) {
+        // Bug fix: Don't create sibling link if they already have a parent-child relationship
+        // This handles data integrity issues where someone might be both parent and sibling
+        // Check both directions (person1->person2 and person2->person1)
+        if (parentChildPairs.has(pairKey1) || parentChildPairs.has(pairKey2)) {
+          // Mark as processed so we don't check again
+          processedPairs.add(pairKey1)
+          processedPairs.add(pairKey2)
+          continue
+        }
+
         // Add bidirectional links
         siblingLinks.push({
           source: person.id,
