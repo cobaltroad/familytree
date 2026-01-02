@@ -669,6 +669,166 @@ describe('derivedStores', () => {
         expect(rels.siblings).toHaveLength(1)
         expect(rels.siblings).toContainEqual({ id: 5, firstName: 'Child2', lastName: 'Kid' })
       })
+
+      it('should NOT include parent as sibling (Bug Fix: Rudy/Aquilino case)', () => {
+        // GIVEN a multi-generation family tree (Rudy and his father Aquilino)
+        // This reproduces the exact bug case from the backup database
+        createTestFixture({
+          people: [
+            { id: 285, firstName: 'Aquilino', lastName: 'Dollete' },
+            { id: 281, firstName: 'Rudy', lastName: 'Dollete' },
+            { id: 286, firstName: 'Dominga', lastName: 'Giron' },
+            { id: 288, firstName: 'Bernardo', lastName: 'Dollete' }
+          ],
+          relationships: [
+            // Aquilino (285) is father of Rudy (281)
+            { id: 18, person1Id: 285, person2Id: 281, type: 'parentOf', parentRole: 'father' },
+            // Dominga (286) is mother of Rudy (281)
+            { id: 19, person1Id: 286, person2Id: 281, type: 'parentOf', parentRole: 'mother' },
+            // Bernardo (288) is father of Aquilino (285) - Rudy's grandfather
+            { id: 21, person1Id: 288, person2Id: 285, type: 'parentOf', parentRole: 'father' }
+          ]
+        })
+
+        // WHEN I get relationships for Rudy
+        const personRels = createPersonRelationships(281)
+        const rels = get(personRels)
+
+        // THEN Aquilino should be the father, NOT a sibling
+        expect(rels.father).toEqual({ id: 285, firstName: 'Aquilino', lastName: 'Dollete' })
+        expect(rels.mother).toEqual({ id: 286, firstName: 'Dominga', lastName: 'Giron' })
+
+        // CRITICAL: Aquilino must NOT appear in siblings
+        expect(rels.siblings).not.toContainEqual({ id: 285, firstName: 'Aquilino', lastName: 'Dollete' })
+
+        // Rudy should have no siblings in this case
+        expect(rels.siblings).toHaveLength(0)
+      })
+
+      it('should NOT include grandparent as sibling', () => {
+        // GIVEN a three-generation family tree
+        createTestFixture({
+          people: [
+            { id: 1, firstName: 'Grandparent', lastName: 'Elder' },
+            { id: 2, firstName: 'Parent', lastName: 'Middle' },
+            { id: 3, firstName: 'Child', lastName: 'Young' }
+          ],
+          relationships: [
+            // Grandparent (1) -> Parent (2)
+            { id: 1, person1Id: 1, person2Id: 2, type: 'parentOf', parentRole: 'mother' },
+            // Parent (2) -> Child (3)
+            { id: 2, person1Id: 2, person2Id: 3, type: 'parentOf', parentRole: 'mother' }
+          ]
+        })
+
+        // WHEN I get relationships for the child
+        const personRels = createPersonRelationships(3)
+        const rels = get(personRels)
+
+        // THEN parent should be parent, and grandparent should NOT be a sibling
+        expect(rels.mother).toEqual({ id: 2, firstName: 'Parent', lastName: 'Middle' })
+        expect(rels.siblings).not.toContainEqual({ id: 1, firstName: 'Grandparent', lastName: 'Elder' })
+        expect(rels.siblings).toHaveLength(0)
+      })
+
+      it('should NOT include children as siblings', () => {
+        // GIVEN a parent with a child
+        createTestFixture({
+          people: [
+            { id: 1, firstName: 'Grandparent', lastName: 'Elder' },
+            { id: 2, firstName: 'Parent', lastName: 'Middle' },
+            { id: 3, firstName: 'Child', lastName: 'Young' }
+          ],
+          relationships: [
+            // Grandparent (1) -> Parent (2)
+            { id: 1, person1Id: 1, person2Id: 2, type: 'parentOf', parentRole: 'mother' },
+            // Parent (2) -> Child (3)
+            { id: 2, person1Id: 2, person2Id: 3, type: 'parentOf', parentRole: 'mother' }
+          ]
+        })
+
+        // WHEN I get relationships for the parent
+        const personRels = createPersonRelationships(2)
+        const rels = get(personRels)
+
+        // THEN child should be in children, NOT in siblings
+        expect(rels.children).toContainEqual({ id: 3, firstName: 'Child', lastName: 'Young' })
+        expect(rels.siblings).not.toContainEqual({ id: 3, firstName: 'Child', lastName: 'Young' })
+      })
+
+      it('should handle complex multi-generation family correctly', () => {
+        // GIVEN a complex multi-generation family (full Dollete family from backup)
+        createTestFixture({
+          people: [
+            { id: 288, firstName: 'Bernardo', lastName: 'Dollete' },
+            { id: 287, firstName: 'Segunda', lastName: 'Torres' },
+            { id: 285, firstName: 'Aquilino', lastName: 'Dollete' },
+            { id: 289, firstName: 'Tirso', lastName: 'Dollete' },
+            { id: 286, firstName: 'Dominga', lastName: 'Giron' },
+            { id: 281, firstName: 'Rudy', lastName: 'Dollete' },
+            { id: 280, firstName: 'Winona', lastName: 'Cabaltica' },
+            { id: 277, firstName: 'Ron', lastName: 'Dollete' },
+            { id: 284, firstName: 'Ray', lastName: 'Dollete' }
+          ],
+          relationships: [
+            // Bernardo + Segunda are parents of Aquilino
+            { id: 21, person1Id: 288, person2Id: 285, type: 'parentOf', parentRole: 'father' },
+            { id: 20, person1Id: 287, person2Id: 285, type: 'parentOf', parentRole: 'mother' },
+            // Bernardo + Segunda are parents of Tirso (Aquilino's sibling)
+            { id: 23, person1Id: 288, person2Id: 289, type: 'parentOf', parentRole: 'father' },
+            { id: 25, person1Id: 287, person2Id: 289, type: 'parentOf', parentRole: 'mother' },
+            // Aquilino + Dominga are parents of Rudy
+            { id: 18, person1Id: 285, person2Id: 281, type: 'parentOf', parentRole: 'father' },
+            { id: 19, person1Id: 286, person2Id: 281, type: 'parentOf', parentRole: 'mother' },
+            // Winona + Rudy are parents of Ron and Ray
+            { id: 10, person1Id: 280, person2Id: 277, type: 'parentOf', parentRole: 'mother' },
+            { id: 11, person1Id: 281, person2Id: 277, type: 'parentOf', parentRole: 'father' },
+            { id: 15, person1Id: 280, person2Id: 284, type: 'parentOf', parentRole: 'mother' },
+            { id: 16, person1Id: 281, person2Id: 284, type: 'parentOf', parentRole: 'father' }
+          ]
+        })
+
+        // WHEN I get relationships for Rudy (281)
+        const rudyRels = createPersonRelationships(281)
+        const rudyData = get(rudyRels)
+
+        // THEN Rudy should have correct relationships:
+        // Parents: Aquilino (285) and Dominga (286)
+        expect(rudyData.father).toEqual({ id: 285, firstName: 'Aquilino', lastName: 'Dollete' })
+        expect(rudyData.mother).toEqual({ id: 286, firstName: 'Dominga', lastName: 'Giron' })
+
+        // Children: Ron (277) and Ray (284)
+        expect(rudyData.children).toHaveLength(2)
+        expect(rudyData.children).toContainEqual({ id: 277, firstName: 'Ron', lastName: 'Dollete' })
+        expect(rudyData.children).toContainEqual({ id: 284, firstName: 'Ray', lastName: 'Dollete' })
+
+        // Siblings: None (Rudy is an only child)
+        expect(rudyData.siblings).toHaveLength(0)
+
+        // CRITICAL: Parents should NOT be in siblings
+        expect(rudyData.siblings).not.toContainEqual({ id: 285, firstName: 'Aquilino', lastName: 'Dollete' })
+        expect(rudyData.siblings).not.toContainEqual({ id: 286, firstName: 'Dominga', lastName: 'Giron' })
+
+        // CRITICAL: Children should NOT be in siblings
+        expect(rudyData.siblings).not.toContainEqual({ id: 277, firstName: 'Ron', lastName: 'Dollete' })
+        expect(rudyData.siblings).not.toContainEqual({ id: 284, firstName: 'Ray', lastName: 'Dollete' })
+
+        // CRITICAL: Grandparents should NOT be in siblings
+        expect(rudyData.siblings).not.toContainEqual({ id: 288, firstName: 'Bernardo', lastName: 'Dollete' })
+        expect(rudyData.siblings).not.toContainEqual({ id: 287, firstName: 'Segunda', lastName: 'Torres' })
+
+        // WHEN I get relationships for Aquilino (285)
+        const aquilinoRels = createPersonRelationships(285)
+        const aquilinoData = get(aquilinoRels)
+
+        // THEN Aquilino should have:
+        // Siblings: Tirso (289)
+        expect(aquilinoData.siblings).toHaveLength(1)
+        expect(aquilinoData.siblings).toContainEqual({ id: 289, firstName: 'Tirso', lastName: 'Dollete' })
+
+        // CRITICAL: His child Rudy should NOT be a sibling
+        expect(aquilinoData.siblings).not.toContainEqual({ id: 281, firstName: 'Rudy', lastName: 'Dollete' })
+      })
     })
   })
 

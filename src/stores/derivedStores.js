@@ -177,6 +177,27 @@ export function createPersonRelationships(personId) {
       })
 
       // Find siblings (people who share at least one parent)
+      //
+      // Definition: A sibling is someone who shares at least one parent with personId
+      //
+      // CRITICAL BUG FIX: We must ONLY look at relationships where the parent is in the
+      // person1Id position (parent role), NOT where they are in person2Id position (child role).
+      //
+      // Why this matters:
+      // - relationshipsByPerson returns ALL relationships involving a person (bidirectional index)
+      // - If we naively look for any rel where person2Id !== personId, we would incorrectly include:
+      //   1. The parent's own parents (grandparents) as siblings
+      //   2. The parent's own children (the person's siblings) - this would be correct but duplicated
+      //
+      // Example bug case (Rudy/Aquilino from backup data):
+      // - Rudy (281) has father Aquilino (285)
+      // - Aquilino (285) has father Bernardo (288)
+      // - When finding Rudy's siblings, we get fatherRels (all relationships involving Aquilino)
+      // - fatherRels includes: rel(285→281, Aquilino→Rudy) AND rel(288→285, Bernardo→Aquilino)
+      // - Without the fix, we'd see rel(288→285) where person2Id=285 (Aquilino) !== 281 (Rudy)
+      //   and incorrectly add Aquilino as Rudy's sibling!
+      //
+      // The fix: Only consider relationships where parent is person1Id (parent role)
       const siblings = []
       const siblingIds = new Set()
 
@@ -184,19 +205,24 @@ export function createPersonRelationships(personId) {
       const fatherId = father?.id
 
       if (motherId || fatherId) {
-        // Get all relationships involving the parents
+        // Get all relationships involving the parents (bidirectional index)
         const motherRels = motherId ? ($relationshipsByPerson.get(motherId) || []) : []
         const fatherRels = fatherId ? ($relationshipsByPerson.get(fatherId) || []) : []
 
         // Combine parent relationships
         const parentRels = [...motherRels, ...fatherRels]
 
-        // Find all children of these parents
+        // Find all children of these parents (these are the person's siblings)
         // Note: API returns denormalized format with type="mother" or type="father"
         parentRels.forEach(rel => {
           const isParentRelationship = rel.type === 'mother' || rel.type === 'father' || rel.type === 'parentOf'
-          if (isParentRelationship && rel.person2Id !== personId) {
-            // This is a sibling (another child of the parent)
+
+          // CRITICAL: Ensure the parent is in the person1Id position (parent role)
+          // This prevents grandparents from being incorrectly identified as siblings
+          const isParentInParentRole = rel.person1Id === motherId || rel.person1Id === fatherId
+
+          if (isParentRelationship && isParentInParentRole && rel.person2Id !== personId) {
+            // This is a sibling (another child of the same parent)
             if (!siblingIds.has(rel.person2Id)) {
               siblingIds.add(rel.person2Id)
               const sibling = $peopleById.get(rel.person2Id)
