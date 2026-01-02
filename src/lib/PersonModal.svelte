@@ -72,6 +72,9 @@
   // Get actual relationship objects for the person
   $: personRelationshipObjects = person ? $relationshipsByPerson.get(person.id) || [] : []
 
+  // Get first spouse (for QuickAddChild spouse parameter)
+  $: firstSpouse = personRelationships ? $personRelationships.spouses[0] || null : null
+
   // Helper to find relationship object for a specific person and type
   function findRelationshipObject(relatedPersonId, type, parentRole = null) {
     if (!personRelationshipObjects) return null
@@ -163,19 +166,29 @@
 
   // Quick Add Child handler (used by CollapsibleActionPanel slots)
   async function handleQuickAddChildSubmit(event) {
-    const { childData, parentId, parentRole } = event.detail
+    const { childData, parentId, parentRole, spouse, includeSpouse } = event.detail
 
     try {
-      // Use atomic child creation with relationship
-      const result = await addChildWithRelationship(api, childData, parentId, parentRole)
+      // Use atomic child creation with relationship (supports spouse as second parent)
+      const result = await addChildWithRelationship(api, childData, parentId, parentRole, spouse, includeSpouse)
 
       if (result.success) {
-        // Update stores with new child and relationship
+        // Update stores with new child and relationship(s)
         people.update(currentPeople => [...currentPeople, result.person])
-        relationships.update(currentRelationships => [...currentRelationships, result.relationship])
+
+        // Handle both single and multiple relationships
+        if (result.relationships && result.relationships.length > 0) {
+          relationships.update(currentRelationships => [...currentRelationships, ...result.relationships])
+        } else if (result.relationship) {
+          // Backwards compatibility
+          relationships.update(currentRelationships => [...currentRelationships, result.relationship])
+        }
 
         // Show success notification
-        successNotification(`Child added successfully`)
+        const successMessage = includeSpouse && spouse
+          ? `Child added successfully with both parents`
+          : `Child added successfully`
+        successNotification(successMessage)
 
         // Collapse the panel (but keep it visible for adding more children)
         collapsePanels(childPanelDesktop, childPanelMobile)
@@ -544,6 +557,7 @@
                 <div slot="create">
                   <QuickAddChild
                     parent={person}
+                    spouse={firstSpouse}
                     on:submit={handleQuickAddChildSubmit}
                   />
                 </div>
@@ -744,6 +758,7 @@
               <div slot="create">
                 <QuickAddChild
                   parent={person}
+                  spouse={firstSpouse}
                   on:submit={handleQuickAddChildSubmit}
                 />
               </div>

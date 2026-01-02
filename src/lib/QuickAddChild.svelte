@@ -4,6 +4,7 @@
   import { error as errorNotification } from '../stores/notificationStore.js'
 
   export let parent = null
+  export let spouse = null // Spouse of the parent (if exists)
   export let onCancel = null
 
   const dispatch = createEventDispatcher()
@@ -11,6 +12,19 @@
   // Determine parent role automatically based on gender
   let autoParentRole = determineParentRole(parent?.gender)
   let selectedParentRole = autoParentRole || '' // Empty if user needs to select
+
+  // Spouse as other parent checkbox state
+  let includeSpouseAsParent = false
+  $: hasSpouse = spouse && spouse.id
+  $: spouseParentRole = spouse ? determineParentRole(spouse.gender) : null
+  $: canIncludeSpouse = hasSpouse && spouseParentRole !== null
+
+  // Initialize includeSpouseAsParent to true if spouse is available and has determinable parent role
+  $: if (canIncludeSpouse && includeSpouseAsParent === false && !hasUserToggledSpouse) {
+    includeSpouseAsParent = true
+  }
+
+  let hasUserToggledSpouse = false
 
   // Pre-fill form data with parent's last name
   let formData = prepareChildFormData(parent)
@@ -45,8 +59,14 @@
     dispatch('submit', {
       childData,
       parentId: parent.id,
-      parentRole: selectedParentRole
+      parentRole: selectedParentRole,
+      spouse: includeSpouseAsParent && canIncludeSpouse ? spouse : null,
+      includeSpouse: includeSpouseAsParent && canIncludeSpouse
     })
+  }
+
+  function handleSpouseCheckboxChange() {
+    hasUserToggledSpouse = true
   }
 
   function handleCancel() {
@@ -93,7 +113,27 @@
       </div>
     {:else}
       <div class="auto-role-notice" data-testid="auto-role-notice">
-        This child will be added as <strong>{autoParentRole === 'mother' ? 'Mother' : 'Father'}</strong>
+        This child will be added with <strong>{parent?.firstName} {parent?.lastName}</strong> as the <strong>{autoParentRole === 'mother' ? 'mother' : 'father'}</strong>
+      </div>
+    {/if}
+
+    <!-- Spouse as other parent checkbox -->
+    {#if canIncludeSpouse}
+      <div class="form-group spouse-checkbox-group" data-testid="spouse-checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            bind:checked={includeSpouseAsParent}
+            on:change={handleSpouseCheckboxChange}
+            data-testid="include-spouse-checkbox"
+          />
+          <span>
+            Include <strong>{spouse.firstName} {spouse.lastName}</strong> as {spouseParentRole}
+          </span>
+        </label>
+        <div class="spouse-hint">
+          {spouse.firstName} will be automatically added as the {spouseParentRole} of this child
+        </div>
       </div>
     {/if}
 
@@ -227,6 +267,36 @@
     border-left: 4px solid #2196f3;
     margin-bottom: 1rem;
     font-size: 0.9rem;
+  }
+
+  .spouse-checkbox-group {
+    padding: 0.75rem;
+    background-color: #f3e5f5;
+    border-left: 4px solid #9c27b0;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+  }
+
+  .spouse-hint {
+    margin-left: 1.75rem;
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
   }
 
   .form-group {

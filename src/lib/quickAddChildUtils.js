@@ -57,30 +57,57 @@ export function createParentChildRelationship(parentId, childId, parentRole) {
  * @param {Object} childData - The child person data
  * @param {number} parentId - The ID of the parent
  * @param {string} parentRole - 'mother' or 'father'
- * @returns {Promise<Object>} - Result object with success status, person, relationship, and error
+ * @param {Object} spouse - Optional spouse object to add as second parent
+ * @param {boolean} includeSpouse - Whether to include the spouse as the other parent
+ * @returns {Promise<Object>} - Result object with success status, person, relationships, and error
  */
-export async function addChildWithRelationship(api, childData, parentId, parentRole) {
+export async function addChildWithRelationship(api, childData, parentId, parentRole, spouse = null, includeSpouse = false) {
   let createdChild = null
+  let firstRelationship = null
+  const relationships = []
 
   try {
     // Step 1: Create the child person
     createdChild = await api.createPerson(childData)
 
-    // Step 2: Create the parent-child relationship
-    const relationship = await api.createRelationship({
+    // Step 2: Create the primary parent-child relationship
+    firstRelationship = await api.createRelationship({
       person1Id: parentId,
       person2Id: createdChild.id,
       type: parentRole,
       parentRole: parentRole
     })
+    relationships.push(firstRelationship)
+
+    // Step 3: Create the spouse parent-child relationship if spouse is included
+    if (includeSpouse && spouse && spouse.id) {
+      const spouseParentRole = determineParentRole(spouse.gender)
+
+      // Only create second relationship if we can determine spouse's parent role
+      if (spouseParentRole) {
+        try {
+          const secondRelationship = await api.createRelationship({
+            person1Id: spouse.id,
+            person2Id: createdChild.id,
+            type: spouseParentRole,
+            parentRole: spouseParentRole
+          })
+          relationships.push(secondRelationship)
+        } catch (secondError) {
+          // If second relationship creation fails, rollback everything
+          throw secondError
+        }
+      }
+    }
 
     return {
       person: createdChild,
-      relationship: relationship,
+      relationship: firstRelationship, // For backwards compatibility
+      relationships: relationships,
       success: true
     }
   } catch (error) {
-    // If relationship creation fails, we should rollback person creation
+    // Rollback all created resources
     if (createdChild && createdChild.id) {
       try {
         await api.deletePerson(createdChild.id)
@@ -89,9 +116,19 @@ export async function addChildWithRelationship(api, childData, parentId, parentR
       }
     }
 
+    // Rollback any created relationships
+    if (firstRelationship && firstRelationship.id) {
+      try {
+        await api.deleteRelationship(firstRelationship.id)
+      } catch (rollbackError) {
+        console.error('Failed to rollback first relationship:', rollbackError)
+      }
+    }
+
     return {
       person: null,
       relationship: null,
+      relationships: [],
       success: false,
       error: error.message
     }

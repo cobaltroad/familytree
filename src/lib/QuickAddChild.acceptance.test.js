@@ -16,7 +16,8 @@ describe('Quick Add Child - Acceptance Criteria', () => {
     mockApi = {
       createPerson: vi.fn(),
       createRelationship: vi.fn(),
-      deletePerson: vi.fn()
+      deletePerson: vi.fn(),
+      deleteRelationship: vi.fn()
     }
   })
 
@@ -262,6 +263,196 @@ describe('Quick Add Child - Acceptance Criteria', () => {
       // AND user should be able to edit it to something else
       const modifiedData = { ...formData, lastName: 'Smith' }
       expect(modifiedData.lastName).toBe('Smith') // Can be changed
+    })
+  })
+
+  describe('Scenario 5: Spouse as Other Parent', () => {
+    beforeEach(() => {
+      people.set([
+        { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male' },
+        { id: 2, firstName: 'Jane', lastName: 'Doe', gender: 'female' }
+      ])
+      relationships.set([
+        { id: 100, person1Id: 1, person2Id: 2, type: 'spouse' }
+      ])
+    })
+
+    it('should create both parent relationships when parent has spouse and checkbox is checked', async () => {
+      // GIVEN a parent with a spouse
+      const parent = { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male' }
+      const spouse = { id: 2, firstName: 'Jane', lastName: 'Doe', gender: 'female' }
+      const childData = { firstName: 'Alice', lastName: 'Doe', gender: 'female' }
+      const parentRole = 'father'
+      const includeSpouse = true
+
+      const createdChild = { id: 10, ...childData }
+      const fatherRelationship = { id: 101, person1Id: 1, person2Id: 10, type: 'father', parentRole: 'father' }
+      const motherRelationship = { id: 102, person1Id: 2, person2Id: 10, type: 'mother', parentRole: 'mother' }
+
+      mockApi.createPerson.mockResolvedValue(createdChild)
+      mockApi.createRelationship
+        .mockResolvedValueOnce(fatherRelationship)
+        .mockResolvedValueOnce(motherRelationship)
+
+      // WHEN I add a child with "Include spouse as other parent" checked
+      const result = await addChildWithRelationship(mockApi, childData, parent.id, parentRole, spouse, includeSpouse)
+
+      // THEN both parent relationships should be created
+      expect(result.success).toBe(true)
+      expect(mockApi.createPerson).toHaveBeenCalledWith(childData)
+      expect(mockApi.createRelationship).toHaveBeenCalledTimes(2)
+      expect(mockApi.createRelationship).toHaveBeenNthCalledWith(1, {
+        person1Id: 1,
+        person2Id: 10,
+        type: 'father',
+        parentRole: 'father'
+      })
+      expect(mockApi.createRelationship).toHaveBeenNthCalledWith(2, {
+        person1Id: 2,
+        person2Id: 10,
+        type: 'mother',
+        parentRole: 'mother'
+      })
+      expect(result.relationships.length).toBe(2)
+    })
+
+    it('should create only primary parent relationship when checkbox is unchecked', async () => {
+      // GIVEN a parent with a spouse
+      const parent = { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male' }
+      const spouse = { id: 2, firstName: 'Jane', lastName: 'Doe', gender: 'female' }
+      const childData = { firstName: 'Bob', lastName: 'Doe', gender: 'male' }
+      const parentRole = 'father'
+      const includeSpouse = false
+
+      const createdChild = { id: 11, ...childData }
+      const fatherRelationship = { id: 103, person1Id: 1, person2Id: 11, type: 'father', parentRole: 'father' }
+
+      mockApi.createPerson.mockResolvedValue(createdChild)
+      mockApi.createRelationship.mockResolvedValue(fatherRelationship)
+
+      // WHEN I add a child with "Include spouse as other parent" unchecked
+      const result = await addChildWithRelationship(mockApi, childData, parent.id, parentRole, spouse, includeSpouse)
+
+      // THEN only the primary parent relationship should be created
+      expect(result.success).toBe(true)
+      expect(mockApi.createPerson).toHaveBeenCalledWith(childData)
+      expect(mockApi.createRelationship).toHaveBeenCalledTimes(1)
+      expect(mockApi.createRelationship).toHaveBeenCalledWith({
+        person1Id: 1,
+        person2Id: 11,
+        type: 'father',
+        parentRole: 'father'
+      })
+    })
+
+    it('should determine spouse parent role as mother when spouse is female', async () => {
+      // GIVEN a male parent with a female spouse
+      const parent = { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male' }
+      const spouse = { id: 2, firstName: 'Jane', lastName: 'Doe', gender: 'female' }
+      const childData = { firstName: 'Charlie', lastName: 'Doe', gender: 'male' }
+      const parentRole = 'father'
+      const includeSpouse = true
+
+      const createdChild = { id: 12, ...childData }
+      const fatherRelationship = { id: 104, person1Id: 1, person2Id: 12, type: 'father', parentRole: 'father' }
+      const motherRelationship = { id: 105, person1Id: 2, person2Id: 12, type: 'mother', parentRole: 'mother' }
+
+      mockApi.createPerson.mockResolvedValue(createdChild)
+      mockApi.createRelationship
+        .mockResolvedValueOnce(fatherRelationship)
+        .mockResolvedValueOnce(motherRelationship)
+
+      // WHEN I add a child with spouse included
+      const result = await addChildWithRelationship(mockApi, childData, parent.id, parentRole, spouse, includeSpouse)
+
+      // THEN spouse should be added as mother (based on gender)
+      expect(result.success).toBe(true)
+      expect(mockApi.createRelationship).toHaveBeenNthCalledWith(2, {
+        person1Id: 2,
+        person2Id: 12,
+        type: 'mother',
+        parentRole: 'mother'
+      })
+    })
+
+    it('should determine spouse parent role as father when spouse is male', async () => {
+      // GIVEN a female parent with a male spouse
+      const parent = { id: 2, firstName: 'Jane', lastName: 'Doe', gender: 'female' }
+      const spouse = { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male' }
+      const childData = { firstName: 'Diana', lastName: 'Doe', gender: 'female' }
+      const parentRole = 'mother'
+      const includeSpouse = true
+
+      const createdChild = { id: 13, ...childData }
+      const motherRelationship = { id: 106, person1Id: 2, person2Id: 13, type: 'mother', parentRole: 'mother' }
+      const fatherRelationship = { id: 107, person1Id: 1, person2Id: 13, type: 'father', parentRole: 'father' }
+
+      mockApi.createPerson.mockResolvedValue(createdChild)
+      mockApi.createRelationship
+        .mockResolvedValueOnce(motherRelationship)
+        .mockResolvedValueOnce(fatherRelationship)
+
+      // WHEN I add a child with spouse included
+      const result = await addChildWithRelationship(mockApi, childData, parent.id, parentRole, spouse, includeSpouse)
+
+      // THEN spouse should be added as father (based on gender)
+      expect(result.success).toBe(true)
+      expect(mockApi.createRelationship).toHaveBeenNthCalledWith(2, {
+        person1Id: 1,
+        person2Id: 13,
+        type: 'father',
+        parentRole: 'father'
+      })
+    })
+
+    it('should rollback child and first relationship if second parent relationship creation fails', async () => {
+      // GIVEN a parent with a spouse
+      const parent = { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male' }
+      const spouse = { id: 2, firstName: 'Jane', lastName: 'Doe', gender: 'female' }
+      const childData = { firstName: 'Eve', lastName: 'Doe', gender: 'female' }
+      const parentRole = 'father'
+      const includeSpouse = true
+
+      const createdChild = { id: 14, ...childData }
+      const fatherRelationship = { id: 108, person1Id: 1, person2Id: 14, type: 'father', parentRole: 'father' }
+
+      mockApi.createPerson.mockResolvedValue(createdChild)
+      mockApi.createRelationship
+        .mockResolvedValueOnce(fatherRelationship)
+        .mockRejectedValueOnce(new Error('Second relationship creation failed'))
+      mockApi.deletePerson.mockResolvedValue()
+      mockApi.deleteRelationship.mockResolvedValue()
+
+      // WHEN second relationship creation fails
+      const result = await addChildWithRelationship(mockApi, childData, parent.id, parentRole, spouse, includeSpouse)
+
+      // THEN the child and first relationship should be rolled back
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Second relationship creation failed')
+      expect(mockApi.deletePerson).toHaveBeenCalledWith(14)
+      expect(mockApi.deleteRelationship).toHaveBeenCalledWith(108)
+    })
+
+    it('should handle spouse with unspecified or other gender gracefully', async () => {
+      // GIVEN a parent with a spouse who has unspecified gender
+      const parent = { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male' }
+      const spouse = { id: 3, firstName: 'Alex', lastName: 'Doe', gender: 'other' }
+      const childData = { firstName: 'Frank', lastName: 'Doe', gender: 'male' }
+      const parentRole = 'father'
+      const includeSpouse = true
+
+      const createdChild = { id: 15, ...childData }
+      const fatherRelationship = { id: 109, person1Id: 1, person2Id: 15, type: 'father', parentRole: 'father' }
+
+      mockApi.createPerson.mockResolvedValue(createdChild)
+      mockApi.createRelationship.mockResolvedValue(fatherRelationship)
+
+      // WHEN I try to add a child with spouse included
+      const result = await addChildWithRelationship(mockApi, childData, parent.id, parentRole, spouse, includeSpouse)
+
+      // THEN only the primary parent relationship should be created (spouse parent role cannot be determined)
+      expect(result.success).toBe(true)
+      expect(mockApi.createRelationship).toHaveBeenCalledTimes(1)
     })
   })
 })

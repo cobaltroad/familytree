@@ -231,6 +231,7 @@ describe('quickAddChildUtils - Quick Add Child Functionality', () => {
       expect(result).toEqual({
         person: createdChild,
         relationship: createdRelationship,
+        relationships: [createdRelationship],
         success: true
       })
     })
@@ -257,6 +258,7 @@ describe('quickAddChildUtils - Quick Add Child Functionality', () => {
       expect(result).toEqual({
         person: null,
         relationship: null,
+        relationships: [],
         success: false,
         error: 'Relationship creation failed'
       })
@@ -280,6 +282,7 @@ describe('quickAddChildUtils - Quick Add Child Functionality', () => {
       expect(result).toEqual({
         person: null,
         relationship: null,
+        relationships: [],
         success: false,
         error: 'Person creation failed'
       })
