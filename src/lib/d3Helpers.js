@@ -746,6 +746,7 @@ export function updateNetworkNodes(g, nodes, getColor, onClick, options = {}) {
   const enterGroups = nodeGroups.enter()
     .append('g')
     .attr('class', 'network-node')
+    .attr('data-id', d => d.id) // Story #100: AC4 - Add data-id for spouse highlighting
     .style('opacity', testConfig.enabled ? 1 : 0)
 
   // Create gradient defs for each node
@@ -1036,5 +1037,57 @@ export function highlightConnectedNodes(g, node, links, highlight) {
 
     g.selectAll('.network-link')
       .attr('stroke-width', 2)
+  }
+}
+
+/**
+ * Create a custom force that pulls spouse pairs together
+ * Story #100: Spouse Proximity Enhancement
+ *
+ * This force positions spouse pairs close together (side-by-side) in the network view.
+ * It applies stronger force when spouses are far apart and weaker force when they are
+ * within the target distance range.
+ *
+ * @param {Array} spousePairs - Array of {source, target} spouse pair objects
+ * @param {number} targetDistance - Target distance between spouses in pixels (default 70)
+ * @returns {Function} - D3 force function that accepts alpha parameter
+ */
+export function createSpouseForce(spousePairs, targetDistance = 70) {
+  return function(alpha) {
+    spousePairs.forEach(pair => {
+      const { source, target } = pair
+
+      // Skip if either node is missing
+      if (!source || !target) return
+
+      // Skip if either node is pinned (has fx/fy set by user)
+      if (source.fx !== undefined || target.fx !== undefined) return
+
+      // Calculate current distance between spouses
+      const dx = target.x - source.x
+      const dy = target.y - source.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      // Skip if nodes are at the same position (avoid division by zero)
+      if (distance === 0) return
+
+      // Calculate force strength based on distance from target
+      // Stronger force when far from target, weaker when close
+      const offset = (distance - targetDistance) / distance
+      const strength = alpha * 0.5 // Scale by alpha for smooth settling
+
+      // Calculate velocity changes for each node
+      const forceX = dx * offset * strength
+      const forceY = dy * offset * strength
+
+      // Apply force to move nodes toward each other
+      // Source moves toward target
+      source.vx += forceX
+      source.vy += forceY
+
+      // Target moves toward source
+      target.vx -= forceX
+      target.vy -= forceY
+    })
   }
 }

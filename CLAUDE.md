@@ -400,17 +400,23 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - D3 optimization for smooth updates
   - Limited to 5 generations
 
-- **NetworkView.svelte** (`#/network`): Force-directed network graph (Story #99)
+- **NetworkView.svelte** (`#/network`): Force-directed network graph (Story #99, #100)
   - Interactive physics-based layout showing all family members
-  - D3 force simulation with multiple forces (charge, link, center, collision)
+  - D3 force simulation with multiple forces (charge, link, center, collision, custom spouse force)
   - Displays all relationships simultaneously (parent-child, spouse, sibling)
+  - **Spouse Proximity Enhancement** (Story #100):
+    - Custom spouse force positions married/partnered couples close together (60-80px apart)
+    - Adjusted link parameters for spouse relationships (60px distance, 1.5x strength)
+    - Enhanced hover highlighting: spouse nodes and links highlighted with purple border/brighter color
+    - Handles multiple spouses per person, pinned nodes, and edge cases gracefully
+    - Performance optimized for <5s settle time with 50 spouse pairs
   - Drag nodes to reposition (pinned until double-click to release)
   - Zoom/pan controls (0.1x to 10x scale)
   - Hover effects with tooltips showing name, lifespan, and relationship count
   - Connected node highlighting on hover
   - Distinct visual styles for relationship types:
     - Parent-child: Solid lines with arrows (mother=pink, father=blue)
-    - Spouse: Purple dashed lines
+    - Spouse: Purple dashed lines (shorter distance, stronger pull than other relationships)
     - Sibling: Gray dotted lines (computed dynamically)
   - Reset view and reheat simulation controls
   - Performance warning for datasets >500 people
@@ -460,8 +466,14 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - `updatePedigreeNodes(...)`: Optimized updates for pedigree view
   - `updateRadialNodes(...)`: Optimized updates for radial view
   - `updateRadialLinks(...)`: Optimized links for radial view
-  - **Force Network Functions (Story #99)**:
+  - **Force Network Functions (Story #99, #100)**:
     - `createForceSimulation(nodes, links, options)`: Configure D3 force simulation with charge, link, center, and collision forces
+    - `createSpouseForce(spousePairs, targetDistance)`: Custom force that pulls spouse pairs together (Story #100)
+      - Positions spouses 60-80px apart (configurable)
+      - Respects pinned nodes (fx/fy attributes)
+      - Handles multiple spouses per person
+      - Scales force strength based on alpha parameter for smooth settling
+      - Gracefully handles edge cases (missing nodes, distance=0, invalid pairs)
     - `updateNetworkNodes(g, nodes, getColor, onClick)`: Render network nodes with enter/update/exit pattern
     - `updateNetworkLinks(g, links)`: Render relationship links with type-specific styling
     - `applyNodeDrag(simulation)`: Drag behavior for pinning/unpinning nodes

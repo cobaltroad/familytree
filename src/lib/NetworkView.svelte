@@ -10,7 +10,8 @@
     applyNodeDrag,
     createNetworkTooltip,
     highlightConnectedNodes,
-    createZoomBehavior
+    createZoomBehavior,
+    createSpouseForce
   } from './d3Helpers.js'
   import { modal } from '../stores/modalStore.js'
   import { people, relationships } from '../stores/familyStore.js'
@@ -99,6 +100,38 @@
     return links
   }
 
+  /**
+   * Prepare spouse pairs for custom spouse force
+   * Story #100: Spouse Proximity Enhancement
+   */
+  function prepareSpousePairs(rels, nodeList) {
+    if (!rels || !nodeList || nodeList.length === 0) return []
+
+    const spousePairs = []
+    const nodeMap = new Map(nodeList.map(n => [n.id, n]))
+
+    rels.forEach(rel => {
+      if (rel.type === 'spouse') {
+        const source = nodeMap.get(rel.person1Id)
+        const target = nodeMap.get(rel.person2Id)
+
+        if (source && target) {
+          spousePairs.push({ source, target })
+        } else {
+          // Log warning for missing nodes (data integrity issue)
+          console.warn(`Spouse relationship ${rel.id} has missing node(s):`, {
+            person1Id: rel.person1Id,
+            person2Id: rel.person2Id,
+            sourceFound: !!source,
+            targetFound: !!target
+          })
+        }
+      }
+    })
+
+    return spousePairs
+  }
+
   function updateNetwork() {
     if (!g || nodes.length === 0) return
 
@@ -112,14 +145,20 @@
       simulation.stop()
     }
 
-    // Create force simulation
-    simulation = createForceSimulation(nodes, links, {
-      width,
-      height,
-      chargeStrength: -300,
-      linkDistance: 100,
-      collisionRadius: 30
-    })
+    // Prepare spouse pairs for custom force (Story #100)
+    const spousePairs = prepareSpousePairs($relationships, nodes)
+
+    // Create force simulation with custom link distance/strength for spouse relationships
+    simulation = d3.forceSimulation(nodes)
+      .force('charge', d3.forceManyBody().strength(-300))
+      .force('link', d3.forceLink(links)
+        .id(d => d.id)
+        .distance(d => d.type === 'spouse' ? 60 : 100) // Story #100: AC3 - Shorter distance for spouses
+        .strength(d => d.type === 'spouse' ? 1.5 : 1.0)) // Story #100: AC3 - Stronger pull for spouses
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(30))
+      .force('spouse', createSpouseForce(spousePairs, 70)) // Story #100: AC2 - Custom spouse force
+      .alphaDecay(0.02)
 
     // Apply drag behavior to nodes
     const drag = applyNodeDrag(simulation)
@@ -154,7 +193,31 @@
             event
           )
 
+          // Story #100: AC4 - Enhanced highlighting for spouse nodes
           highlightConnectedNodes(g, d, links, true)
+
+          // Highlight spouse nodes and links with special styling
+          const spouseLinks = links.filter(link =>
+            link.type === 'spouse' &&
+            ((link.source.id || link.source) === d.id || (link.target.id || link.target) === d.id)
+          )
+
+          spouseLinks.forEach(link => {
+            const spouseId = (link.source.id || link.source) === d.id
+              ? (link.target.id || link.target)
+              : (link.source.id || link.source)
+
+            // Highlight spouse node with purple border
+            g.select(`.network-node[data-id="${spouseId}"] circle`)
+              .attr('stroke', '#9333ea')
+              .attr('stroke-width', 4)
+
+            // Thicken and brighten spouse link
+            g.selectAll('.network-link')
+              .filter(l => l === link)
+              .attr('stroke', '#a855f7') // Brighter purple
+              .attr('stroke-width', 4)
+          })
         })
         .on('mousemove', (event) => {
           tooltip.move(event)
@@ -162,6 +225,12 @@
         .on('mouseout', (event, d) => {
           tooltip.hide()
           highlightConnectedNodes(g, d, links, false)
+
+          // Story #100: AC4 - Reset spouse link styling
+          g.selectAll('.network-link')
+            .filter(l => l.type === 'spouse')
+            .attr('stroke', '#9333ea')
+            .attr('stroke-width', 2)
         })
         .on('dblclick', (event, d) => {
           // Double-click to unpin node
