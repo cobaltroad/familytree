@@ -614,6 +614,256 @@ When reviewing file structure changes:
 - [ ] Will the structure be obvious to new developers?
 - [ ] Does the dev server start without file naming errors?
 
+## D3.js Force Simulation and Svelte Integration
+
+### Story #99: Force-Directed Network View (January 2026)
+
+**Implementation:**
+Created a comprehensive force-directed network visualization to display all family relationships in an interactive graph layout using D3.js force simulation.
+
+**Key Components:**
+- `NetworkView.svelte`: Interactive Svelte component with force simulation
+- `d3Helpers.js`: Reusable D3 force simulation helpers
+  - `createForceSimulation()`: Configures charge, link, center, and collision forces
+  - `updateNetworkNodes()`: Enter/update/exit pattern for node rendering
+  - `updateNetworkLinks()`: Path rendering for parent-child, spouse, and sibling links
+  - `applyNodeDrag()`: Drag behavior to pin nodes at fixed positions
+  - `createNetworkTooltip()`: Hover tooltips with person information
+  - `highlightConnectedNodes()`: Visual highlighting of related nodes
+- `treeHelpers.js`: Added `computeSiblingLinks()` for sibling relationship computation
+
+**Test Coverage:**
+- 33 comprehensive tests for D3 force simulation helpers
+- TDD methodology: RED (failing tests) → GREEN (implementation) → REFACTOR (optimization)
+- Tests cover force configuration, node/link rendering, drag behavior, tooltips, and highlighting
+
+### Key Lessons
+
+1. **D3.js and Svelte Integration Patterns**
+   - **Reactive Updates**: Use Svelte's `$:` reactive statements to trigger D3 updates when store data changes
+   - **SVG References**: Store SVG element references using `bind:this={svgElement}` for D3 selection
+   - **Force Simulation Lifecycle**: Create simulation in `onMount()`, update on data changes, stop on `onDestroy()`
+   - **Test Mode**: Add `testConfig.enabled` flag to disable transitions and animations in JSDOM tests
+   - **Performance**: Use enter/update/exit pattern to only update changed nodes/links, not entire graph
+
+2. **Force Simulation Configuration Best Practices**
+   - **Charge Force**: Negative strength (-300 to -600) creates repulsion between nodes
+   - **Link Force**: Distance (80-150px) controls spacing between connected nodes
+   - **Center Force**: Centers graph at viewport midpoint (width/2, height/2)
+   - **Collision Force**: Prevents node overlap with radius matching visual node size
+   - **Alpha Decay**: Controls simulation cooling rate (0.0228 default, lower = longer simulation)
+   - **Allow Customization**: Accept force strengths via options parameter for flexibility
+
+3. **Testing D3 Visualizations in JSDOM**
+   - **JSDOM Limitations**: No CSS transitions, no actual rendering, no getBBox()
+   - **Test Config Pattern**: Use feature flags to disable transitions during tests
+     ```javascript
+     export const testConfig = { enabled: false }
+
+     // In production code
+     const transition = testConfig.enabled ? selection : selection.transition().duration(300)
+
+     // In tests
+     beforeEach(() => { testConfig.enabled = true })
+     afterEach(() => { testConfig.enabled = false })
+     ```
+   - **Focus on Data Binding**: Test that correct data is bound to DOM elements, not visual rendering
+   - **Verify Structure**: Check for presence of expected elements (circles, paths, text)
+   - **Mock Interactions**: Use `dispatch('click')` to simulate user events
+   - **Isolation**: Create/remove SVG elements in beforeEach/afterEach to prevent test pollution
+
+4. **Sibling Relationship Computation**
+   - **Dynamic Computation**: Compute sibling links on frontend from parent-child relationships
+   - **Bidirectional Links**: Create both A→B and B→A for force simulation symmetry
+   - **Half-Siblings**: People who share at least one parent are siblings (handled automatically)
+   - **Efficiency**: Use parent lookup maps for O(1) performance instead of nested loops
+   - **Network Visualization**: Include sibling links as gray dotted lines for completeness
+
+5. **Link Visual Styling Strategy**
+   - **Parent-Child**: Solid black lines with arrows (directional, shows lineage flow)
+   - **Spouse**: Purple dashed lines without arrows (bidirectional, romantic connection)
+   - **Sibling**: Gray dotted lines without arrows (bidirectional, peer relationship)
+   - **Markers**: Define SVG marker elements for arrowheads, reference via `url(#arrow)`
+   - **Consistency**: Use same visual language across all tree views (Timeline, Radial, Network)
+
+6. **Interactive Features Implementation**
+   - **Click to Edit**: Attach click handlers to nodes that call `modal.open(personId, 'edit')`
+   - **Drag to Pin**: Use D3 drag behavior with `fx`/`fy` fixed coordinates to lock node positions
+   - **Hover Tooltips**: Show person name, birth/death dates on mouseover with absolute positioning
+   - **Connected Highlighting**: On hover, highlight node + direct connections with green stroke
+   - **Zoom/Pan**: Reuse `createZoomBehavior()` helper from other tree views for consistency
+
+### Best Practices for D3 + Svelte
+
+**✅ DO:**
+- Write tests BEFORE implementation (TDD methodology)
+- Use enter/update/exit pattern for incremental updates (never destroy/recreate entire graph)
+- Add test mode flags to disable transitions for JSDOM compatibility
+- Store D3 selections in component variables to avoid repeated selections
+- Bind SVG elements with `bind:this` for direct D3 manipulation
+- Stop force simulations in `onDestroy()` to prevent memory leaks
+- Use reactive statements (`$:`) to trigger D3 updates when Svelte stores change
+- Create reusable D3 helper functions in `d3Helpers.js` for cross-view consistency
+- Test data structure and bindings, not visual rendering output
+
+**❌ DON'T:**
+- Mix Svelte reactive bindings and D3 DOM manipulation on same elements (conflicts)
+- Recreate force simulations on every data change (expensive, causes flicker)
+- Forget to remove event listeners and stop simulations (memory leaks)
+- Test CSS transitions or animations in JSDOM (not supported)
+- Use `getBBox()` or layout calculations in JSDOM tests (returns zeros)
+- Assume transitions work in tests (use test config to disable)
+- Duplicate D3 code across components (extract to helpers)
+
+### Code Review Checklist for D3 Visualizations
+
+When reviewing D3 + Svelte code:
+- [ ] Does it follow enter/update/exit pattern for incremental updates?
+- [ ] Are force simulations stopped in `onDestroy()`?
+- [ ] Are tests using test mode to disable transitions?
+- [ ] Are D3 selections stored in variables (not repeated)?
+- [ ] Does it use shared helpers from `d3Helpers.js`?
+- [ ] Are SVG elements bound with `bind:this` for D3 access?
+- [ ] Is visual styling consistent across all tree views?
+- [ ] Are click handlers connected to modal store?
+- [ ] Is performance optimized (only update changed elements)?
+
+## Relationship Validation Logic
+
+### Bug Fix: Add A Spouse Duplicate Relationship Error (January 2026)
+
+**Symptoms:**
+- QuickAddSpouse feature would successfully create first spouse relationship
+- When creating the second (bidirectional) relationship, error: "A relationship already exists between these people"
+- Only one direction of spouse relationship was created instead of both
+- Feature was broken and unusable
+
+**Root Cause:**
+The `relationshipExists()` function in `/api/relationships` was checking BOTH directions for spouse relationships:
+
+```javascript
+// PROBLEMATIC CODE
+function relationshipExists(relationships, person1Id, person2Id, type) {
+  return relationships.some(rel =>
+    (rel.person1Id === person1Id && rel.person2Id === person2Id && rel.type === type) ||
+    (rel.person1Id === person2Id && rel.person2Id === person1Id && rel.type === type) // ❌ Bidirectional check
+  )
+}
+```
+
+QuickAddSpouse creates TWO relationships to establish bidirectional connection:
+1. Creates spouse relationship: person1 → person2 (succeeds)
+2. Attempts to create reverse: person2 → person1 (fails because of bidirectional check)
+
+The function detected the first relationship when checking the second, incorrectly treating the reverse direction as a duplicate.
+
+**Files Affected:**
+- `src/routes/api/relationships/+server.js` - Relationship creation validation
+
+**Solution:**
+
+Changed `relationshipExists()` to only check for EXACT duplicates (same person1Id and person2Id):
+
+```javascript
+// FIXED CODE
+function relationshipExists(relationships, person1Id, person2Id, type) {
+  return relationships.some(rel =>
+    rel.person1Id === person1Id &&
+    rel.person2Id === person2Id &&
+    rel.type === type // Only check exact match
+  )
+}
+```
+
+This allows bidirectional spouse relationships (A→B and B→A) while still preventing exact duplicates (duplicate A→B).
+
+### Key Lessons
+
+1. **Understand Bidirectional Relationship Semantics**
+   - **Spouse relationships**: Require TWO database records for bidirectionality (A→B and B→A)
+   - **Parent-child relationships**: Single record with direction (parent→child, never reversed)
+   - **Sibling relationships**: Computed dynamically on frontend, not stored in database
+   - **Validation logic must match relationship semantics** (spouse = allow bidirectional, parent = disallow)
+
+2. **Exact Duplicates vs. Reverse Relationships**
+   - **Exact Duplicate**: Same person1Id, person2Id, AND type (should be prevented)
+     - Example: Two records of "John → Mary, spouse" (TRUE duplicate)
+   - **Reverse Relationship**: Swapped person1Id and person2Id, same type (bidirectional, allowed for spouses)
+     - Example: "John → Mary, spouse" AND "Mary → John, spouse" (NOT duplicates, intentional)
+   - Validation must distinguish between these cases
+
+3. **Testing Relationship Validation**
+   - **Test Exact Duplicates**: Verify same-direction duplicates are rejected (person1→person2 twice)
+   - **Test Bidirectional**: Verify reverse direction is allowed for spouse relationships
+   - **Test Edge Cases**: Single spouse (no reverse), multiple spouses (polygamy support)
+   - **Integration Tests**: Test full QuickAddSpouse workflow, not just API endpoint
+   - **Bug Reproduction Tests**: Create failing test that reproduces user-reported bug BEFORE fixing
+
+4. **TDD for Bug Fixes**
+   - **RED Phase**: Write test that reproduces the bug (QuickAddSpouse creating duplicate error)
+   - **GREEN Phase**: Fix the bug (change validation logic)
+   - **REFACTOR Phase**: Update existing tests to reflect correct behavior
+   - **Document Root Cause**: Add detailed commit message explaining why bug occurred
+   - Bug fix should include comprehensive test that would have caught the bug originally
+
+5. **Validation Function Design**
+   - **Single Responsibility**: `relationshipExists()` should only check for exact duplicates
+   - **Explicit Intent**: Function name should match what it checks (not ambiguous)
+   - **Context Awareness**: Validation may differ by relationship type (spouse vs parent)
+   - **Clear Documentation**: Comment explaining what constitutes a "duplicate" for each type
+
+### Testing Approach (TDD Methodology)
+
+**RED Phase - Bug Reproduction:**
+- Created `spouse-duplicate-bug.test.js` with 13 tests
+- Test demonstrated exact bug: second spouse relationship rejected
+- Failed test: "should allow bidirectional spouse relationships"
+
+**GREEN Phase - Fix Implementation:**
+- Modified `relationshipExists()` to only check exact duplicates
+- All QuickAddSpouse tests passed (12 tests)
+- Bug reproduction test passed
+
+**REFACTOR Phase - Test Updates:**
+- Updated existing test: "should prevent duplicate relationships" to use same person1Id/person2Id
+- All relationship API tests passed (46 tests)
+- Total: 1,840+ tests passing
+
+**Test Coverage:**
+- 168 lines of comprehensive spouse relationship tests
+- Edge cases: bidirectional, exact duplicates, multiple spouses, single spouse
+- Integration-level test simulating full QuickAddSpouse workflow
+
+### Best Practices for Relationship Validation
+
+**✅ DO:**
+- Understand bidirectionality requirements for each relationship type
+- Write failing test that reproduces bug before fixing (RED phase)
+- Distinguish exact duplicates from reverse relationships
+- Test both API endpoint and full user workflow (integration tests)
+- Document root cause in commit message for future reference
+- Add comments explaining validation logic and edge cases
+- Consider polygamy support (multiple spouse relationships allowed)
+
+**❌ DON'T:**
+- Assume all relationship types have same validation rules
+- Prevent bidirectional relationships for spouse type
+- Fix bugs without adding tests that would have caught the bug
+- Use ambiguous function names that hide validation intent
+- Forget to update existing tests when behavior changes
+- Leave commented-out code from debugging process
+
+### Code Review Checklist for Relationship Validation
+
+When reviewing relationship validation code:
+- [ ] Does validation distinguish exact duplicates from reverse relationships?
+- [ ] Are bidirectional spouse relationships allowed?
+- [ ] Does test coverage include both directions of relationship creation?
+- [ ] Are edge cases tested (multiple spouses, single spouse, etc.)?
+- [ ] Is validation logic documented with comments?
+- [ ] Would tests catch bugs like the QuickAddSpouse duplicate error?
+- [ ] Are function names clear about what they validate?
+
 ## Version History
 
 - **December 2025**: Initial lessons learned from parent display bug fix
@@ -641,6 +891,20 @@ When reviewing file structure changes:
   - Solution: Moved test files to `src/lib/tests/`, documented file organization
   - Critical fix: Application was completely broken
   - Documentation: `TESTING_GUIDELINES.md`
+
+- **January 2026**: D3.js Force Simulation and Network View
+  - Feature: Force-directed network visualization with D3.js force simulation (Story #99)
+  - Implementation: 33 comprehensive tests, reusable D3 helpers, sibling link computation
+  - Tests added: 33 D3 force simulation tests, 4 sibling computation tests
+  - Total test suite: 1,840+ tests passing
+  - Commit: 0e72ca9 feat: implement force-directed network view (closes #99)
+
+- **January 2026**: Relationship validation bug fix
+  - Root cause: relationshipExists() incorrectly prevented bidirectional spouse relationships
+  - Solution: Changed validation to only check exact duplicates, allow reverse relationships
+  - Tests added: 168 lines of spouse relationship validation tests
+  - Total test suite: 1,840+ tests passing
+  - Commit: db2df16 fix: allow bidirectional spouse relationships in QuickAddSpouse
 
 ---
 
