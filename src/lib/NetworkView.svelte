@@ -28,6 +28,17 @@
   // Story #82: Get user's defaultPersonId from session
   $: defaultPersonId = $page?.data?.session?.user?.defaultPersonId
 
+  // Debug: Log data updates
+  $: {
+    if ($people || $relationships) {
+      const timestamp = new Date().toISOString()
+      console.log(`[NetworkView] Data updated at ${timestamp}`, {
+        peopleCount: $people.length,
+        relationshipsCount: $relationships.length
+      })
+    }
+  }
+
   // Prepare nodes and links for force simulation
   $: nodes = $people.map(p => ({
     ...p,
@@ -35,11 +46,32 @@
     y: p.y || height / 2 + (Math.random() - 0.5) * 200
   }))
 
+  // Debug: Log node preparation
+  $: {
+    console.log('[NetworkView] Preparing nodes', {
+      count: nodes.length
+    })
+    if (nodes.length > 0) {
+      console.log('[NetworkView] Node positions initialized', nodes.map(n => ({
+        id: n.id,
+        firstName: n.firstName,
+        lastName: n.lastName,
+        x: n.x,
+        y: n.y
+      })))
+    }
+  }
+
   // Prepare links from relationships
   $: links = prepareLinks($relationships, nodes)
 
   // Initialize D3 when svgElement becomes available
   $: if (svgElement && !initialized) {
+    console.log('[NetworkView] SVG element initialized', {
+      width,
+      height
+    })
+
     svg = d3.select(svgElement)
       .attr('width', width)
       .attr('height', height)
@@ -53,10 +85,17 @@
     // Create tooltip
     tooltip = createNetworkTooltip()
 
+    console.log('[NetworkView] D3 setup complete', {
+      hasG: !!g,
+      hasZoom: !!zoom,
+      hasTooltip: !!tooltip
+    })
+
     initialized = true
 
     // Initial render
     if (nodes.length > 0) {
+      console.log('[NetworkView] Triggering initial network update')
       updateNetwork()
     }
   }
@@ -67,9 +106,23 @@
   }
 
   function prepareLinks(rels, nodeList) {
-    if (!rels || !nodeList || nodeList.length === 0) return []
+    console.log('[NetworkView] Preparing links', {
+      relationshipsCount: rels?.length || 0,
+      nodeCount: nodeList?.length || 0
+    })
+
+    if (!rels || !nodeList || nodeList.length === 0) {
+      console.warn('[NetworkView] No relationships or nodes available for link preparation')
+      return []
+    }
 
     const links = []
+    const linksByType = {
+      mother: 0,
+      father: 0,
+      spouse: 0,
+      sibling: 0
+    }
 
     // Add parent-child relationships
     rels.forEach(rel => {
@@ -80,6 +133,7 @@
           type: rel.type,
           id: rel.id
         })
+        linksByType[rel.type]++
       } else if (rel.type === 'spouse') {
         // Add spouse relationships (bidirectional, but only add once)
         links.push({
@@ -88,6 +142,7 @@
           type: 'spouse',
           id: rel.id
         })
+        linksByType.spouse++
       }
     })
 
@@ -95,6 +150,12 @@
     const siblingLinks = computeSiblingLinks($people, rels)
     siblingLinks.forEach(link => {
       links.push(link)
+      linksByType.sibling++
+    })
+
+    console.log('[NetworkView] Links prepared', {
+      total: links.length,
+      byType: linksByType
     })
 
     return links
@@ -119,7 +180,7 @@
           spousePairs.push({ source, target })
         } else {
           // Log warning for missing nodes (data integrity issue)
-          console.warn(`Spouse relationship ${rel.id} has missing node(s):`, {
+          console.warn(`[NetworkView] Spouse relationship ${rel.id} has missing node(s):`, {
             person1Id: rel.person1Id,
             person2Id: rel.person2Id,
             sourceFound: !!source,
@@ -129,35 +190,62 @@
       }
     })
 
+    console.log('[NetworkView] Spouse pairs prepared', {
+      count: spousePairs.length
+    })
+
     return spousePairs
   }
 
   function updateNetwork() {
-    if (!g || nodes.length === 0) return
+    console.log('[NetworkView] updateNetwork() called', {
+      hasG: !!g,
+      nodeCount: nodes.length,
+      linkCount: links.length
+    })
+
+    if (!g || nodes.length === 0) {
+      console.warn('[NetworkView] Cannot update network - missing g element or no nodes')
+      return
+    }
 
     // Performance warning for large datasets
     if (nodes.length > 500) {
+      console.warn('[NetworkView] Performance warning', {
+        peopleCount: nodes.length
+      })
       notifications.info('Large family tree detected. Performance may be affected. Consider filtering the view.')
     }
 
     // Stop existing simulation if any
     if (simulation) {
+      console.log('[NetworkView] Stopping existing simulation')
       simulation.stop()
     }
 
     // Prepare spouse pairs for custom force (Story #100)
     const spousePairs = prepareSpousePairs($relationships, nodes)
 
-    // Create force simulation using centralized helper (Stories #100 & #101)
-    // Bug fix: Use createForceSimulation() which handles BOTH normalized and denormalized formats
-    simulation = createForceSimulation(nodes, links, {
+    console.log('[NetworkView] Creating force simulation', {
+      nodeCount: nodes.length,
+      linkCount: links.length,
+      spousePairCount: spousePairs.length
+    })
+
+    const forceConfig = {
       width,
       height,
       chargeStrength: -300,
       linkDistance: 100,
       collisionRadius: 30,
       alphaDecay: 0.02
-    })
+    }
+
+    console.log('[NetworkView] Force configuration', forceConfig)
+
+    // Create force simulation using centralized helper (Stories #100 & #101)
+    // Bug fix: Use createForceSimulation() which handles BOTH normalized and denormalized formats
+    simulation = createForceSimulation(nodes, links, forceConfig)
 
     // Add custom spouse force (Story #100: AC2)
     simulation.force('spouse', createSpouseForce(spousePairs, 70))
@@ -165,8 +253,24 @@
     // Apply drag behavior to nodes
     const drag = applyNodeDrag(simulation)
 
+    console.log('[NetworkView] Simulation started')
+
+    // Throttle tick logging to avoid console spam
+    let tickCount = 0
+    const logEveryNTicks = 30
+
     // Update on each tick
     simulation.on('tick', () => {
+      tickCount++
+
+      // Log every Nth tick
+      if (tickCount % logEveryNTicks === 0) {
+        console.log('[NetworkView] Simulation tick', {
+          tickNumber: tickCount,
+          alpha: simulation.alpha().toFixed(4)
+        })
+      }
+
       updateNetworkLinks(g, links)
       const nodeSelection = updateNetworkNodes(
         g,
@@ -242,8 +346,23 @@
         })
     })
 
+    // Add simulation end listener
+    simulation.on('end', () => {
+      console.log('[NetworkView] Simulation ended', {
+        alpha: simulation.alpha(),
+        tickCount
+      })
+    })
+
     // Render links first (so they appear behind nodes)
+    console.log('[NetworkView] Rendering links', {
+      count: links.length
+    })
     updateNetworkLinks(g, links)
+
+    console.log('[NetworkView] Rendering nodes', {
+      count: nodes.length
+    })
   }
 
   // Cleanup on component destroy
@@ -272,16 +391,29 @@
   }
 
   onMount(() => {
+    const timestamp = new Date().toISOString()
+    console.log(`[NetworkView] Component mounted at ${timestamp}`)
+    console.log('[NetworkView] Initial data state', {
+      peopleCount: $people.length,
+      relationshipsCount: $relationships.length,
+      defaultPersonId
+    })
+
     window.addEventListener('resize', handleResize)
     handleResize()
   })
 
   onDestroy(() => {
+    console.log('[NetworkView] Component unmounting')
     window.removeEventListener('resize', handleResize)
   })
 
   function resetView() {
-    if (!svg || !g) return
+    console.log('[NetworkView] Reset view triggered')
+    if (!svg || !g) {
+      console.warn('[NetworkView] Cannot reset view - missing svg or g')
+      return
+    }
 
     // Reset zoom/pan to default
     svg.transition()
@@ -290,19 +422,29 @@
   }
 
   function reheatSimulation() {
+    console.log('[NetworkView] Reheat simulation triggered')
     if (simulation) {
       simulation.alpha(1).restart()
+      console.log('[NetworkView] Simulation reheated with alpha=1')
+    } else {
+      console.warn('[NetworkView] Cannot reheat - no simulation exists')
     }
   }
 </script>
 
 <div class="network-view">
   {#if $people.length === 0}
+    {#if typeof console !== 'undefined'}
+      {console.warn('[NetworkView] Empty state: No people to display')}
+    {/if}
     <div class="empty-state">
       <p>No family members to display. Add people to see your network.</p>
       <button on:click={() => modal.openNew()}>Add Person</button>
     </div>
   {:else if $relationships.length === 0}
+    {#if typeof console !== 'undefined'}
+      {console.warn('[NetworkView] No relationships found - showing isolated nodes')}
+    {/if}
     <div class="info-banner">
       Add relationships to connect your family network
     </div>
