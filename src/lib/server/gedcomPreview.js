@@ -65,7 +65,8 @@ export async function storePreviewData(uploadId, userId, parsedData, duplicates)
       families: parsedData.families || [],
       duplicates,
       summary,
-      resolutionDecisions: []
+      resolutionDecisions: [],
+      errors: parsedData.errors || [] // Story #97: Store parsing errors
     }
 
     // Create nested map structure if needed

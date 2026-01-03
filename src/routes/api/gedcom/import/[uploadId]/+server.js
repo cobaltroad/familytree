@@ -147,12 +147,38 @@ export async function POST({ request, params, locals }) {
   } catch (error) {
     console.error('Import error:', error)
 
+    // Story #97: Enhanced error handling with actionable messages
+    let errorCode = 'UNKNOWN_ERROR'
+    let statusCode = 500
+    let userMessage = 'Import failed: ' + error.message
+
+    // Detect constraint violations
+    if (error.message && error.message.includes('UNIQUE constraint')) {
+      errorCode = 'CONSTRAINT_VIOLATION'
+      statusCode = 409
+      userMessage = 'Database constraint violation: Duplicate record detected'
+    } else if (error.message && error.message.includes('FOREIGN KEY constraint')) {
+      errorCode = 'CONSTRAINT_VIOLATION'
+      statusCode = 409
+      userMessage = 'Database constraint violation: Invalid relationship reference'
+    } else if (error.message && error.message.includes('timeout')) {
+      errorCode = 'TIMEOUT_ERROR'
+      statusCode = 504
+      userMessage = 'Import timed out - please try again. Large imports may take several minutes.'
+    }
+
     return json(
       {
         success: false,
-        error: 'Import failed: ' + error.message
+        error: {
+          code: errorCode,
+          message: userMessage,
+          details: error.message,
+          canRetry: true,
+          errorLogUrl: `/api/gedcom/import/${uploadId}/errors.csv`
+        }
       },
-      { status: 500 }
+      { status: statusCode }
     )
   }
 }

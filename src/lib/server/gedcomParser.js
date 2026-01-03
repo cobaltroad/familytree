@@ -247,7 +247,8 @@ function extractIndividual(record, errors) {
     deathDate: null,
     deathPlace: null,
     childOfFamily: null,
-    spouseFamilies: []
+    spouseFamilies: [],
+    _dateErrors: [] // Story #97: Track date parsing errors
   }
 
   const children = record.children || []
@@ -282,6 +283,12 @@ function extractIndividual(record, errors) {
       if (dateResult.valid) {
         individual.birthDate = dateResult.normalized
       } else {
+        // Story #97: Track date errors for detailed error reporting
+        individual._dateErrors.push({
+          field: 'birthDate',
+          original: dateRecord.value,
+          error: dateResult.error || 'Invalid date format'
+        })
         errors.push({
           line: 0,
           message: `Invalid date format in BIRT tag: ${dateRecord.value}`,
@@ -306,6 +313,12 @@ function extractIndividual(record, errors) {
       if (dateResult.valid) {
         individual.deathDate = dateResult.normalized
       } else {
+        // Story #97: Track date errors for detailed error reporting
+        individual._dateErrors.push({
+          field: 'deathDate',
+          original: dateRecord.value,
+          error: dateResult.error || 'Invalid date format'
+        })
         errors.push({
           line: 0,
           message: `Invalid date format in DEAT tag: ${dateRecord.value}`,
@@ -472,4 +485,127 @@ export function validateRelationshipConsistency(parsed) {
   }
 
   return issues
+}
+
+/**
+ * Validates and detects orphaned references in GEDCOM data
+ * Story #97: Orphaned relationship handling
+ *
+ * Checks for references to non-existent individuals in family records
+ *
+ * @param {Object} parsed - Parsed GEDCOM data with individuals and families
+ * @returns {Object} Result with orphan status, warnings, and cleaned families
+ */
+export function validateOrphanedReferences(parsed) {
+  const warnings = []
+  const cleanedFamilies = []
+  let hasOrphans = false
+
+  if (!parsed.individuals || !parsed.families) {
+    return {
+      hasOrphans: false,
+      warnings: [],
+      cleanedFamilies: parsed.families || []
+    }
+  }
+
+  // Create a Set of valid individual IDs for fast lookup
+  const validIndividualIds = new Set(parsed.individuals.map(ind => ind.id))
+
+  // Process each family
+  for (const family of parsed.families) {
+    const cleanedFamily = { ...family }
+
+    // Check husband reference
+    if (family.husband && !validIndividualIds.has(family.husband)) {
+      hasOrphans = true
+      warnings.push({
+        severity: 'Warning',
+        code: 'VALIDATION_WARNING',
+        message: `Orphaned husband reference: Individual ${family.husband} not found`,
+        gedcomId: family.id,
+        field: 'husband',
+        suggestedFix: 'Remove invalid husband reference or add missing individual'
+      })
+      cleanedFamily.husband = null
+    }
+
+    // Check wife reference
+    if (family.wife && !validIndividualIds.has(family.wife)) {
+      hasOrphans = true
+      warnings.push({
+        severity: 'Warning',
+        code: 'VALIDATION_WARNING',
+        message: `Orphaned wife reference: Individual ${family.wife} not found`,
+        gedcomId: family.id,
+        field: 'wife',
+        suggestedFix: 'Remove invalid wife reference or add missing individual'
+      })
+      cleanedFamily.wife = null
+    }
+
+    // Check children references
+    const validChildren = []
+    const orphanedChildren = []
+
+    for (const childId of family.children || []) {
+      if (validIndividualIds.has(childId)) {
+        validChildren.push(childId)
+      } else {
+        orphanedChildren.push(childId)
+      }
+    }
+
+    if (orphanedChildren.length > 0) {
+      hasOrphans = true
+      warnings.push({
+        severity: 'Warning',
+        code: 'VALIDATION_WARNING',
+        message: `Orphaned child reference(s): ${orphanedChildren.join(', ')} not found in family ${family.id}`,
+        gedcomId: family.id,
+        field: 'children',
+        suggestedFix: 'Remove invalid child references or add missing individuals'
+      })
+    }
+
+    cleanedFamily.children = validChildren
+    cleanedFamilies.push(cleanedFamily)
+  }
+
+  return {
+    hasOrphans,
+    warnings,
+    cleanedFamilies
+  }
+}
+
+/**
+ * Collects parsing errors from individuals and families
+ * Story #97: Enhanced error collection
+ *
+ * @param {Array} individuals - Array of parsed individuals
+ * @param {Array} families - Array of parsed families
+ * @returns {Array} Array of error/warning objects
+ */
+export function collectParsingErrors(individuals, families) {
+  const errors = []
+
+  // Collect date parsing errors from individuals
+  for (const individual of individuals) {
+    if (individual._dateErrors && individual._dateErrors.length > 0) {
+      for (const dateError of individual._dateErrors) {
+        errors.push({
+          severity: 'Warning',
+          code: 'VALIDATION_WARNING',
+          message: `Could not parse date "${dateError.original}" - ${dateError.error}`,
+          gedcomId: individual.id,
+          individualName: `${individual.firstName || ''} ${individual.lastName || ''}`.trim() || null,
+          field: dateError.field,
+          suggestedFix: 'Use format YYYY-MM-DD or standard GEDCOM date format (DD MMM YYYY)'
+        })
+      }
+    }
+  }
+
+  return errors
 }
