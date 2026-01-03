@@ -8,6 +8,7 @@
   import ImportView from './lib/ImportView.svelte'
   import GedcomUpload from './lib/GedcomUpload.svelte'
   import GedcomParsingResults from './lib/GedcomParsingResults.svelte'
+  import GedcomPreview from './lib/GedcomPreview.svelte'
   import ViewSwitcher from './lib/ViewSwitcher.svelte'
   import PersonModal from './lib/PersonModal.svelte'
   import Notification from './lib/components/Notification.svelte'
@@ -19,8 +20,13 @@
   $: normalizedPath = (currentPath === '/' || currentPath === '/tree' || currentPath === '/list') ? '/pedigree' : currentPath
 
   // Extract uploadId from GEDCOM parsing route
-  $: uploadId = normalizedPath.startsWith('/gedcom/parsing/')
+  $: parsingUploadId = normalizedPath.startsWith('/gedcom/parsing/')
     ? normalizedPath.replace('/gedcom/parsing/', '')
+    : null
+
+  // Extract uploadId from GEDCOM preview route
+  $: previewUploadId = normalizedPath.startsWith('/gedcom/preview/')
+    ? normalizedPath.replace('/gedcom/preview/', '')
     : null
 
   // Handle route changes
@@ -75,7 +81,9 @@
   {:else if normalizedPath === '/gedcom/import'}
     <GedcomUpload isAuthenticated={true} />
   {:else if normalizedPath.startsWith('/gedcom/parsing/')}
-    <GedcomParsingResults {uploadId} />
+    <GedcomParsingResults uploadId={parsingUploadId} />
+  {:else if normalizedPath.startsWith('/gedcom/preview/')}
+    <GedcomPreview uploadId={previewUploadId} />
   {:else}
     <PedigreeView />
   {/if}

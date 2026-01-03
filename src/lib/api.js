@@ -244,5 +244,105 @@ export const api = {
     const response = await fetch(`${API_BASE}/gedcom/parse/${uploadId}/status`)
     if (!response.ok) throw await createApiError(response, 'Failed to get parse status')
     return response.json()
+  },
+
+  /**
+   * Gets paginated, sorted, and filtered individuals from GEDCOM preview data
+   * Story #104: GEDCOM Preview Interface with Individuals Table
+   *
+   * @param {string} uploadId - Upload identifier
+   * @param {Object} options - Query options
+   * @param {number} options.page - Page number (default: 1)
+   * @param {number} options.limit - Items per page (default: 50)
+   * @param {string} options.sortBy - Sort field (name, birthDate, deathDate)
+   * @param {string} options.sortOrder - Sort direction (asc, desc)
+   * @param {string} options.search - Filter by name (case-insensitive)
+   * @returns {Promise<Object>} Paginated individuals with statistics
+   * @throws {Error} If request fails
+   *
+   * @example
+   * const data = await api.getGedcomPreviewIndividuals('upload-123', {
+   *   page: 1,
+   *   limit: 50,
+   *   sortBy: 'name',
+   *   sortOrder: 'asc',
+   *   search: ''
+   * })
+   * // Returns: { individuals: [...], pagination: {...}, statistics: {...} }
+   */
+  async getGedcomPreviewIndividuals(uploadId, options = {}) {
+    const params = new URLSearchParams({
+      page: options.page || 1,
+      limit: options.limit || 50,
+      sortBy: options.sortBy || 'name',
+      sortOrder: options.sortOrder || 'asc',
+      search: options.search || ''
+    })
+
+    const response = await fetch(`${API_BASE}/gedcom/preview/${uploadId}/individuals?${params}`)
+    if (!response.ok) throw await createApiError(response, 'Failed to fetch preview individuals')
+    return response.json()
+  },
+
+  /**
+   * Gets detailed information about a specific person from GEDCOM preview data
+   * Story #104: GEDCOM Preview Interface with Individuals Table
+   *
+   * @param {string} uploadId - Upload identifier
+   * @param {string} gedcomId - GEDCOM identifier (e.g., @I1@)
+   * @returns {Promise<Object>} Person details with relationships
+   * @throws {Error} If request fails
+   *
+   * @example
+   * const person = await api.getGedcomPreviewPerson('upload-123', '@I1@')
+   * // Returns: { gedcomId, name, birthDate, deathDate, gender, photoUrl, status, relationships: {...} }
+   */
+  async getGedcomPreviewPerson(uploadId, gedcomId) {
+    const response = await fetch(`${API_BASE}/gedcom/preview/${uploadId}/person/${gedcomId}`)
+    if (!response.ok) throw await createApiError(response, 'Failed to fetch person details')
+    return response.json()
+  },
+
+  /**
+   * Gets duplicate individuals from GEDCOM preview data
+   * Story #106: GEDCOM Duplicate Resolution UI
+   *
+   * @param {string} uploadId - Upload identifier
+   * @returns {Promise<Object>} Duplicates array with comparison data
+   * @throws {Error} If request fails
+   *
+   * @example
+   * const data = await api.getGedcomPreviewDuplicates('upload-123')
+   * // Returns: { duplicates: [{ gedcomPerson: {...}, existingPerson: {...}, confidence: 95, matchingFields: {...} }] }
+   */
+  async getGedcomPreviewDuplicates(uploadId) {
+    const response = await fetch(`${API_BASE}/gedcom/preview/${uploadId}/duplicates`)
+    if (!response.ok) throw await createApiError(response, 'Failed to fetch duplicates')
+    return response.json()
+  },
+
+  /**
+   * Saves resolution decisions for duplicate individuals
+   * Story #106: GEDCOM Duplicate Resolution UI
+   *
+   * @param {string} uploadId - Upload identifier
+   * @param {Array} resolutions - Array of resolution decisions
+   * @returns {Promise<Object>} Result with success status
+   * @throws {Error} If request fails
+   *
+   * @example
+   * await api.saveGedcomDuplicateResolutions('upload-123', [
+   *   { gedcomId: '@I001@', resolution: 'merge' },
+   *   { gedcomId: '@I002@', resolution: 'import_as_new' }
+   * ])
+   */
+  async saveGedcomDuplicateResolutions(uploadId, resolutions) {
+    const response = await fetch(`${API_BASE}/gedcom/preview/${uploadId}/duplicates/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decisions: resolutions })
+    })
+    if (!response.ok) throw await createApiError(response, 'Failed to save resolution decisions')
+    return response.json()
   }
 }
