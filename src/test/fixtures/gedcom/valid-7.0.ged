@@ -1,0 +1,13 @@
+0 HEAD
+1 GEDC
+2 VERS 7.0
+1 SCHMA
+2 TAG _CUSTOM http://example.com/custom
+1 SOUR My Family Tree App
+0 @I1@ INDI
+1 NAME John /Smith/
+1 SEX M
+1 BIRT
+2 DATE 1950-01-15
+2 PLAC New York, NY
+0 TRLR
