@@ -33,6 +33,7 @@ src/lib/server/
 src/routes/api/gedcom/
 ├── upload/                  # File upload endpoint
 ├── parse/[uploadId]/        # Parse GEDCOM file
+│   └── status/             # Parsing status polling
 ├── preview/[uploadId]/      # Preview endpoints
 │   ├── individuals/         # List all individuals
 │   ├── tree/               # Tree structure data
@@ -40,44 +41,75 @@ src/routes/api/gedcom/
 │   └── duplicates/resolve/ # Duplicate resolution
 └── import/[uploadId]/      # Import data to database
     └── errors.csv/         # Download error log
+
+src/lib/
+├── GedcomUpload.svelte           # Upload page component
+├── GedcomParsingResults.svelte   # Parsing results display
+└── components/
+    ├── FileDropZone.svelte       # Drag-and-drop upload zone
+    ├── UploadProgress.svelte     # Upload progress bar
+    ├── ParseStatisticsCard.svelte # Statistics display card
+    ├── ParseErrorList.svelte     # Error list component
+    └── DuplicateSummary.svelte   # Duplicate preview component
 ```
 
 ### Data Flow
 
+**User Interface Flow:**
+
 ```
-┌─────────────┐
-│   Upload    │  POST /api/gedcom/upload
-│   GEDCOM    │  → Store in temp directory
-│    File     │  → Return uploadId
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│    Parse    │  POST /api/gedcom/parse/:uploadId
-│     &       │  → Detect version (5.5.1 or 7.0)
-│  Validate   │  → Parse individuals & families
-└──────┬──────┘  → Return summary
-       │
-       ▼
-┌─────────────┐
-│   Preview   │  GET /api/gedcom/preview/:uploadId/individuals
-│    Data     │  GET /api/gedcom/preview/:uploadId/tree
-│             │  GET /api/gedcom/preview/:uploadId/person/:gedcomId
-└──────┬──────┘  → User reviews data before import
-       │
-       ▼
-┌─────────────┐
-│   Import    │  POST /api/gedcom/import/:uploadId
-│  to Tree    │  → Transaction-safe database writes
-│             │  → Link to current user
-└──────┬──────┘  → Auto-cleanup on success
-       │
-       ▼
-┌─────────────┐
-│   Success   │  → Data visible in family tree
-│      or     │  OR
-│    Error    │  → Error log available for download
-└─────────────┘
+┌──────────────────────┐
+│  GedcomUpload.svelte │  #/gedcom/import
+│  - FileDropZone      │  → User selects/drops .ged file
+│  - UploadProgress    │  → Client-side validation (type, size)
+└──────────┬───────────┘  → Upload with progress tracking
+           │
+           ▼
+┌──────────────────────┐
+│  Upload API          │  POST /api/gedcom/upload
+│                      │  → Store in temp directory
+└──────────┬───────────┘  → Return uploadId
+           │
+           ▼
+┌──────────────────────┐
+│  Auto-redirect to    │  #/gedcom/parsing/:uploadId
+│  Parsing Results     │  → Trigger parse immediately
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Parse API           │  POST /api/gedcom/parse/:uploadId
+│                      │  → Detect version (5.5.1 or 7.0)
+│                      │  → Parse individuals & families
+└──────────┬───────────┘  → Return summary with stats
+           │
+           ▼
+┌──────────────────────┐
+│  GedcomParsingResults│  Display results
+│  - ParseStatistics   │  → Show counts, version, date range
+│  - ParseErrorList    │  → Show errors/warnings if any
+│  - DuplicateSummary  │  → Show potential duplicates
+└──────────┬───────────┘  → User clicks "Continue to Preview"
+           │
+           ▼
+┌──────────────────────┐
+│  Preview Interface   │  #/gedcom/preview/:uploadId
+│  (Future: Story #104)│  → Review individuals and families
+└──────────┬───────────┘  → User clicks "Import"
+           │
+           ▼
+┌──────────────────────┐
+│  Import API          │  POST /api/gedcom/import/:uploadId
+│                      │  → Transaction-safe database writes
+│                      │  → Link to current user
+└──────────┬───────────┘  → Auto-cleanup on success
+           │
+           ▼
+┌──────────────────────┐
+│  Success/Error       │  → Data visible in family tree
+│                      │  OR
+│                      │  → Error log available for download
+└──────────────────────┘
 ```
 
 ## API Endpoints
@@ -561,6 +593,265 @@ escapeCSVField(field)
 - `TIMEOUT_ERROR` - Import timed out
 - `NETWORK_ERROR` - Network request failed
 - `UNKNOWN_ERROR` - Unexpected error occurred
+
+---
+
+## Frontend UI Components
+
+### GedcomUpload.svelte
+
+**Purpose:** Main upload page component for GEDCOM file selection and upload
+
+**Location:** `src/lib/GedcomUpload.svelte`
+
+**Features:**
+- Drag-and-drop and click-to-browse file selection
+- Client-side validation (file type, size)
+- Real-time upload progress tracking
+- Authentication guard (requires sign-in)
+- "What is GEDCOM?" help modal
+- Error handling with retry capability
+- Auto-redirect to parsing results after successful upload
+
+**Props:** None (uses route parameters from App.svelte)
+
+**Key Functions:**
+```javascript
+// Validate file before upload
+validateFile(file)
+  → Checks file extension (.ged, .gedcom)
+  → Checks file size (max 10MB)
+  → Returns: { valid: boolean, error?: string }
+
+// Upload file with progress tracking
+uploadFile(file)
+  → Calls api.uploadGedcomFile() with progress callback
+  → Updates progress bar in real-time
+  → Redirects to #/gedcom/parsing/:uploadId on success
+```
+
+**Routes:** Accessible at `#/gedcom/import`
+
+**Tests:** 45 comprehensive tests covering all scenarios
+
+---
+
+### FileDropZone.svelte
+
+**Purpose:** Reusable drag-and-drop file upload zone
+
+**Location:** `src/lib/components/FileDropZone.svelte`
+
+**Features:**
+- Drag-and-drop functionality with visual feedback
+- Click-to-browse file selection
+- Client-side validation (file type and size)
+- Displays selected file name and size
+- WCAG 2.1 AA accessibility compliant
+- Responsive design (mobile and desktop)
+
+**Props:**
+```javascript
+{
+  acceptedExtensions: string[],  // e.g., ['.ged', '.gedcom']
+  maxSize: number,               // Max file size in bytes
+  onFileSelected: (file: File) => void,
+  error: string | null           // Validation error to display
+}
+```
+
+**Events:**
+- `fileSelected` - Emitted when valid file is selected
+- `validationError` - Emitted when validation fails
+
+**Tests:** 38 comprehensive tests
+
+---
+
+### UploadProgress.svelte
+
+**Purpose:** Upload progress bar with cancel functionality
+
+**Location:** `src/lib/components/UploadProgress.svelte`
+
+**Features:**
+- Real-time progress bar (0-100%)
+- File name and formatted size display
+- Cancel upload button
+- ARIA progressbar attributes for accessibility
+- Smooth CSS transitions
+
+**Props:**
+```javascript
+{
+  fileName: string,
+  fileSize: number,       // Size in bytes
+  progress: number,       // 0-100
+  onCancel: () => void
+}
+```
+
+**Helper Functions:**
+```javascript
+// Format bytes to KB/MB
+formatBytes(bytes)
+  → Returns: "5.2 MB", "123 KB", etc.
+```
+
+**Tests:** 41 comprehensive tests
+
+---
+
+### GedcomParsingResults.svelte
+
+**Purpose:** Display parsing results, statistics, errors, and duplicates
+
+**Location:** `src/lib/GedcomParsingResults.svelte`
+
+**Features:**
+- Parsing statistics display (individuals, families, date range, version)
+- Error list with expandable details
+- Duplicate detection summary
+- CSV error log download link
+- Navigation buttons (Continue to Preview / Start Over)
+- Polling support for async parsing (future-ready)
+- Responsive grid layout
+
+**Props:**
+```javascript
+{
+  uploadId: string  // From route parameter
+}
+```
+
+**State Management:**
+```javascript
+let parseResults = null;
+let loading = true;
+let error = null;
+
+onMount(async () => {
+  // Trigger parse and get results
+  const results = await api.parseGedcom(uploadId);
+  parseResults = results;
+  loading = false;
+});
+```
+
+**Routes:** Accessible at `#/gedcom/parsing/:uploadId`
+
+**Tests:** Full integration testing with subcomponents
+
+---
+
+### ParseStatisticsCard.svelte
+
+**Purpose:** Display individual statistic with icon and label
+
+**Location:** `src/lib/components/ParseStatisticsCard.svelte`
+
+**Features:**
+- Icon-based visual representation
+- Formatted number display (with commas)
+- Hover effects
+- Responsive sizing
+
+**Props:**
+```javascript
+{
+  icon: string,      // e.g., '👤', '👨‍👩‍👧‍👦', '📅', 'ℹ️'
+  label: string,     // e.g., 'Individuals', 'Families'
+  value: string      // e.g., '1,234', '5.5.1', '1850-2020'
+}
+```
+
+**Usage Example:**
+```svelte
+<ParseStatisticsCard
+  icon="👤"
+  label="Individuals"
+  value={formatNumber(parseResults.individualCount)}
+/>
+```
+
+**Tests:** 11 comprehensive tests
+
+---
+
+### ParseErrorList.svelte
+
+**Purpose:** Expandable list of parsing errors and warnings
+
+**Location:** `src/lib/components/ParseErrorList.svelte`
+
+**Features:**
+- Groups errors by severity (errors vs warnings)
+- Expandable/collapsible accordion
+- Shows line number, error type, and message
+- Error count badges
+- Keyboard navigation support
+
+**Props:**
+```javascript
+{
+  errors: Array<{
+    severity: 'Error' | 'Warning',
+    line: number,
+    gedcomId: string,
+    message: string,
+    field: string
+  }>
+}
+```
+
+**Behavior:**
+- Errors section expanded by default
+- Warnings section collapsed by default
+- Click to toggle expand/collapse
+- Shows count badges (e.g., "3 Errors", "5 Warnings")
+
+**Tests:** 14 comprehensive tests
+
+---
+
+### DuplicateSummary.svelte
+
+**Purpose:** Preview of potential duplicate individuals
+
+**Location:** `src/lib/components/DuplicateSummary.svelte`
+
+**Features:**
+- Displays top 3 potential duplicates
+- Confidence percentage with color coding
+  - High (≥90%): Green
+  - Medium (70-89%): Orange
+  - Low (<70%): Red
+- Shows GEDCOM individual and matching existing person
+- "View All Duplicates" link for full list
+
+**Props:**
+```javascript
+{
+  duplicates: Array<{
+    gedcomPerson: {
+      gedcomId: string,
+      firstName: string,
+      lastName: string,
+      birthDate: string
+    },
+    existingPerson: {
+      id: number,
+      firstName: string,
+      lastName: string,
+      birthDate: string
+    },
+    confidence: number  // 0-100
+  }>,
+  uploadId: string
+}
+```
+
+**Tests:** 17 comprehensive tests
 
 ---
 
@@ -1156,17 +1447,29 @@ For issues, feature requests, or questions:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 2.3.0 | 2026-01-03 | Initial GEDCOM import implementation |
-|  |  | - File upload and validation |
-|  |  | - Parser for GEDCOM 5.5.1 and 7.0 |
-|  |  | - Preview interface |
-|  |  | - Transaction-safe import |
-|  |  | - Comprehensive error handling |
+| 2.3.1 | 2026-01-03 | Frontend UI implementation (Stories #102, #103) |
+|  |  | - GedcomUpload component (Story #102) |
+|  |  | - FileDropZone with drag-and-drop |
+|  |  | - UploadProgress bar component |
+|  |  | - GedcomParsingResults display (Story #103) |
+|  |  | - ParseStatisticsCard component |
+|  |  | - ParseErrorList with accordion |
+|  |  | - DuplicateSummary preview |
+|  |  | - Client-side validation (file type, size) |
+|  |  | - Real-time upload progress tracking |
+|  |  | - Parsing status polling infrastructure |
+|  |  | - 171 new UI tests (total: 327 tests) |
+| 2.3.0 | 2026-01-03 | Initial GEDCOM backend implementation |
+|  |  | - File upload and validation (Story #92) |
+|  |  | - Parser for GEDCOM 5.5.1 and 7.0 (Story #93) |
+|  |  | - Preview data API endpoints (Story #94) |
+|  |  | - Transaction-safe import (Story #95) |
+|  |  | - Comprehensive error handling (Story #97) |
 |  |  | - CSV error log download |
 |  |  | - Multi-user isolation |
-|  |  | - 156 comprehensive tests |
+|  |  | - 156 backend tests |
 
 ---
 
 **Last Updated:** 2026-01-03
-**Document Version:** 1.0.0
+**Document Version:** 1.1.0

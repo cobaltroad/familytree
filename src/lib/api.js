@@ -134,5 +134,115 @@ export const api = {
     })
     if (!response.ok) throw await createApiError(response, 'Failed to update user settings')
     return response.json()
+  },
+
+  /**
+   * Uploads a GEDCOM file for import processing
+   * Story #102: GEDCOM Upload UI Component
+   *
+   * @param {File} file - GEDCOM file to upload
+   * @param {Function} onProgress - Progress callback (receives percentage 0-100)
+   * @param {AbortController} abortController - Optional abort controller for cancellation
+   * @returns {Promise<Object>} Upload metadata with uploadId, fileName, fileSize
+   * @throws {Error} If upload fails
+   *
+   * @example
+   * const result = await api.uploadGedcomFile(
+   *   file,
+   *   (progress) => console.log(`${progress}% complete`),
+   *   abortController
+   * )
+   * // Returns: { uploadId: 'upload-123', fileName: 'family.ged', fileSize: 1024 }
+   */
+  async uploadGedcomFile(file, onProgress, abortController) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // Create XMLHttpRequest for progress tracking
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable && onProgress) {
+          const percentComplete = (event.loaded / event.total) * 100
+          onProgress(Math.round(percentComplete))
+        }
+      })
+
+      // Handle completion
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText)
+            resolve(response)
+          } catch (error) {
+            reject(new Error('Invalid response from server'))
+          }
+        } else {
+          const error = new Error(xhr.responseText || 'Upload failed')
+          error.status = xhr.status
+          reject(error)
+        }
+      })
+
+      // Handle errors
+      xhr.addEventListener('error', () => {
+        reject(new Error('Network error during upload'))
+      })
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload cancelled'))
+      })
+
+      // Set up abort controller
+      if (abortController) {
+        abortController.signal.addEventListener('abort', () => {
+          xhr.abort()
+        })
+      }
+
+      // Send request
+      xhr.open('POST', `${API_BASE}/gedcom/upload`)
+      xhr.send(formData)
+    })
+  },
+
+  /**
+   * Parses a GEDCOM file and returns validation results
+   * Story #103: GEDCOM Parsing Results Display
+   *
+   * @param {string} uploadId - Upload identifier from upload response
+   * @returns {Promise<Object>} Parsing results with statistics, errors, duplicates
+   * @throws {Error} If parsing fails
+   *
+   * @example
+   * const results = await api.parseGedcom('upload-123')
+   * // Returns: { uploadId, version, statistics, errors, duplicates, relationshipIssues }
+   */
+  async parseGedcom(uploadId) {
+    const response = await fetch(`${API_BASE}/gedcom/parse/${uploadId}`, {
+      method: 'POST'
+    })
+    if (!response.ok) throw await createApiError(response, 'Failed to parse GEDCOM file')
+    return response.json()
+  },
+
+  /**
+   * Gets the current parsing status for a GEDCOM file
+   * Story #103: GEDCOM Parsing Results Display
+   *
+   * @param {string} uploadId - Upload identifier
+   * @returns {Promise<Object>} Status object with status and progress
+   * @throws {Error} If request fails
+   *
+   * @example
+   * const status = await api.getParseStatus('upload-123')
+   * // Returns: { status: 'parsing', progress: 45 } or { status: 'complete' }
+   */
+  async getParseStatus(uploadId) {
+    const response = await fetch(`${API_BASE}/gedcom/parse/${uploadId}/status`)
+    if (!response.ok) throw await createApiError(response, 'Failed to get parse status')
+    return response.json()
   }
 }

@@ -6,6 +6,8 @@
   import RadialView from './lib/RadialView.svelte'
   import NetworkView from './lib/NetworkView.svelte'
   import ImportView from './lib/ImportView.svelte'
+  import GedcomUpload from './lib/GedcomUpload.svelte'
+  import GedcomParsingResults from './lib/GedcomParsingResults.svelte'
   import ViewSwitcher from './lib/ViewSwitcher.svelte'
   import PersonModal from './lib/PersonModal.svelte'
   import Notification from './lib/components/Notification.svelte'
@@ -15,6 +17,11 @@
 
   // Normalize path (treat '/', '/tree', and '/list' as '/pedigree')
   $: normalizedPath = (currentPath === '/' || currentPath === '/tree' || currentPath === '/list') ? '/pedigree' : currentPath
+
+  // Extract uploadId from GEDCOM parsing route
+  $: uploadId = normalizedPath.startsWith('/gedcom/parsing/')
+    ? normalizedPath.replace('/gedcom/parsing/', '')
+    : null
 
   // Handle route changes
   function handleHashChange() {
@@ -65,6 +72,10 @@
     <NetworkView />
   {:else if normalizedPath === '/import'}
     <ImportView />
+  {:else if normalizedPath === '/gedcom/import'}
+    <GedcomUpload isAuthenticated={true} />
+  {:else if normalizedPath.startsWith('/gedcom/parsing/')}
+    <GedcomParsingResults {uploadId} />
   {:else}
     <PedigreeView />
   {/if}
