@@ -16,6 +16,7 @@ import { requireAuth } from '$lib/server/session.js'
 import { getTempFileInfo } from '$lib/server/gedcomStorage.js'
 import { parseGedcom, extractStatistics } from '$lib/server/gedcomParser.js'
 import { findDuplicates } from '$lib/server/duplicateDetection.js'
+import { storePreviewData } from '$lib/server/gedcomPreview.js'
 import { promises as fs } from 'fs'
 import { db } from '$lib/db/client.js'
 import { people } from '$lib/db/schema.js'
@@ -72,6 +73,14 @@ export async function POST({ request, locals, params, ...event }) {
     // Validate relationship consistency
     const { validateRelationshipConsistency } = await import('$lib/server/gedcomParser.js')
     const relationshipIssues = validateRelationshipConsistency(parsed)
+
+    // Store preview data for later use (Story #94)
+    // This is a best-effort attempt - don't fail if storage fails
+    try {
+      await storePreviewData(uploadId, userId, parsed, duplicates)
+    } catch (storageError) {
+      console.warn('Failed to store preview data:', storageError)
+    }
 
     // Return results
     return json({
