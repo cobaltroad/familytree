@@ -5,6 +5,7 @@
   import PedigreeView from './lib/PedigreeView.svelte'
   import RadialView from './lib/RadialView.svelte'
   import NetworkView from './lib/NetworkView.svelte'
+  import ImportView from './lib/ImportView.svelte'
   import ViewSwitcher from './lib/ViewSwitcher.svelte'
   import PersonModal from './lib/PersonModal.svelte'
   import Notification from './lib/components/Notification.svelte'
@@ -62,6 +63,8 @@
     <RadialView />
   {:else if normalizedPath === '/network'}
     <NetworkView />
+  {:else if normalizedPath === '/import'}
+    <ImportView />
   {:else}
     <PedigreeView />
   {/if}

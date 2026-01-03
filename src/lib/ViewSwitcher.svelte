@@ -8,6 +8,7 @@
     { path: '/timeline', label: 'Timeline', icon: '📅' },
     { path: '/radial', label: 'Radial', icon: '⭕' },
     { path: '/network', label: 'Network', icon: '🕸️' },
+    { path: '/import', label: 'Import', icon: '📁' },
     { path: '/admin', label: 'Admin', icon: '🔧' }
   ]
 
