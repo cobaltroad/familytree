@@ -344,5 +344,45 @@ export const api = {
     })
     if (!response.ok) throw await createApiError(response, 'Failed to save resolution decisions')
     return response.json()
+  },
+
+  /**
+   * Imports GEDCOM data into user's family tree
+   * Story #107: GEDCOM Import Progress and Confirmation
+   *
+   * @param {string} uploadId - Upload identifier
+   * @param {Object} options - Import options
+   * @param {boolean} options.importAll - Import all individuals (default: true)
+   * @param {string[]} options.selectedIds - Specific GEDCOM IDs to import (optional)
+   * @returns {Promise<Object>} Import results with statistics or error
+   * @throws {Error} If request fails
+   *
+   * @example
+   * const result = await api.importGedcom('upload-123', { importAll: true })
+   * // Returns: { success: true, imported: { persons: 125, updated: 5, relationships: 150 } }
+   * // Or on error: { success: false, error: { code, message, details, canRetry, errorLogUrl } }
+   */
+  async importGedcom(uploadId, options = {}) {
+    const response = await fetch(`${API_BASE}/gedcom/import/${uploadId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        importAll: options.importAll !== undefined ? options.importAll : true,
+        selectedIds: options.selectedIds || []
+      })
+    })
+
+    // Parse response (both success and error responses are JSON)
+    const data = await response.json()
+
+    // For error responses, throw an error with the data attached
+    if (!response.ok || !data.success) {
+      const error = new Error(data.error?.message || 'Import failed')
+      error.status = response.status
+      error.data = data
+      throw error
+    }
+
+    return data
   }
 }

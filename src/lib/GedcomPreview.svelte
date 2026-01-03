@@ -124,9 +124,9 @@
     activeTab = tab
   }
 
-  // Navigate to import confirmation
+  // Navigate to import confirmation (Story #107: Import Progress Page)
   function continueToImport() {
-    window.location.hash = `#/gedcom/import/${uploadId}/confirm`
+    window.location.hash = `/gedcom/import-progress/${uploadId}`
   }
 
   // Navigate back to upload
