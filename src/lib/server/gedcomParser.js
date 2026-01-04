@@ -431,14 +431,15 @@ function extractFamily(record) {
  * Extracts statistics from parsed GEDCOM data
  *
  * @param {Object} parsed - Parsed GEDCOM data
- * @returns {Object} Statistics object
+ * @returns {Object} Statistics object with fields matching GedcomParsingResults component
  */
 export function extractStatistics(parsed) {
   const stats = {
-    totalIndividuals: parsed.individuals?.length || 0,
-    totalFamilies: parsed.families?.length || 0,
+    individualsCount: parsed.individuals?.length || 0,
+    familiesCount: parsed.families?.length || 0,
     version: parsed.version,
-    dateRange: null
+    earliestDate: null,
+    latestDate: null
   }
 
   // Calculate date range
@@ -457,10 +458,8 @@ export function extractStatistics(parsed) {
 
   if (dates.length > 0) {
     dates.sort()
-    stats.dateRange = {
-      earliest: dates[0],
-      latest: dates[dates.length - 1]
-    }
+    stats.earliestDate = dates[0]
+    stats.latestDate = dates[dates.length - 1]
   }
 
   return stats

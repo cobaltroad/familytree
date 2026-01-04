@@ -211,7 +211,7 @@ describe('GedcomUpload Component', () => {
       })
 
       await waitFor(() => {
-        expect(window.location.hash).toBe('#/gedcom/parse/upload-abc123')
+        expect(window.location.hash).toBe('#/gedcom/parsing/upload-abc123')
       })
     })
 

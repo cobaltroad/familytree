@@ -44,8 +44,8 @@
       uploadState = 'completed'
       notificationStore.success('File uploaded successfully')
 
-      // Redirect to parse view with uploadId
-      window.location.hash = `#/gedcom/parse/${result.uploadId}`
+      // Redirect to parsing view with uploadId
+      window.location.hash = `#/gedcom/parsing/${result.uploadId}`
     } catch (error) {
       // Handle different error types
       if (error.message === 'Upload cancelled') {

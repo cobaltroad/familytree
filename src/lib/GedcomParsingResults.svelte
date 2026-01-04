@@ -40,6 +40,7 @@
       polling = false
       stopPolling()
     } catch (err) {
+      console.error('[GedcomParsingResults] Parsing failed:', err.message)
       error = err.message
       loading = false
       polling = false

@@ -237,11 +237,10 @@ describe('gedcomParser - extractStatistics', () => {
 
     const stats = extractStatistics(parsed)
 
-    expect(stats.totalIndividuals).toBe(3)
-    expect(stats.totalFamilies).toBe(1)
-    expect(stats.dateRange).toBeDefined()
-    expect(stats.dateRange.earliest).toBe('1950-01-15')
-    expect(stats.dateRange.latest).toBe('2020-12-20')
+    expect(stats.individualsCount).toBe(3)
+    expect(stats.familiesCount).toBe(1)
+    expect(stats.earliestDate).toBe('1950-01-15')
+    expect(stats.latestDate).toBe('2020-12-20')
     expect(stats.version).toBe('5.5.1')
   })
 
@@ -257,9 +256,10 @@ describe('gedcomParser - extractStatistics', () => {
 
     const stats = extractStatistics(parsed)
 
-    expect(stats.totalIndividuals).toBe(1)
-    expect(stats.totalFamilies).toBe(0)
-    expect(stats.dateRange).toBeNull()
+    expect(stats.individualsCount).toBe(1)
+    expect(stats.familiesCount).toBe(0)
+    expect(stats.earliestDate).toBeNull()
+    expect(stats.latestDate).toBeNull()
   })
 })
 
