@@ -88,7 +88,7 @@ export async function POST({ request, locals, params, ...event }) {
     const existingPeople = await db
       .select()
       .from(people)
-      .where(eq(people.user_id, userId))
+      .where(eq(people.userId, userId))
     console.log('[GEDCOM Parse API] Existing people count:', existingPeople.length)
 
     // Find duplicates

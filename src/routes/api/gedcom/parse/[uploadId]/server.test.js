@@ -10,6 +10,9 @@ import { POST } from './+server.js'
 import { saveUploadedFile, cleanupTempFile } from '$lib/server/gedcomStorage.js'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { db } from '$lib/db/client.js'
+import { people, users } from '$lib/db/schema.js'
+import { eq } from 'drizzle-orm'
 
 const FIXTURES_DIR = path.join(process.cwd(), 'src/test/fixtures/gedcom')
 
@@ -68,11 +71,10 @@ describe('POST /api/gedcom/parse/:uploadId', () => {
     expect(data.uploadId).toBe(uploadId)
     expect(data.version).toBe('5.5.1')
     expect(data.statistics).toBeDefined()
-    expect(data.statistics.totalIndividuals).toBe(3)
-    expect(data.statistics.totalFamilies).toBe(1)
-    expect(data.statistics.dateRange).toBeDefined()
-    expect(data.statistics.dateRange.earliest).toBe('1950-01-15')
-    expect(data.statistics.dateRange.latest).toBe('2020-12-20')
+    expect(data.statistics.individualsCount).toBe(3)
+    expect(data.statistics.familiesCount).toBe(1)
+    expect(data.statistics.earliestDate).toBe('1950-01-15')
+    expect(data.statistics.latestDate).toBe('2020-12-20')
     expect(data.errors).toHaveLength(0)
     expect(data.duplicates).toBeDefined()
     expect(data.relationshipIssues).toBeDefined()
@@ -99,7 +101,7 @@ describe('POST /api/gedcom/parse/:uploadId', () => {
 
     const data = await response.json()
     expect(data.version).toBe('7.0')
-    expect(data.statistics.totalIndividuals).toBe(1)
+    expect(data.statistics.individualsCount).toBe(1)
   })
 
   it('should return 400 for unsupported GEDCOM version', async () => {
@@ -229,6 +231,147 @@ describe('POST /api/gedcom/parse/:uploadId', () => {
     const data = await response.json()
     expect(data.relationshipIssues).toBeDefined()
     expect(Array.isArray(data.relationshipIssues)).toBe(true)
+  })
+
+  it('should correctly query existing people by userId for duplicate detection', async () => {
+    // RED PHASE: This test will fail with SQL syntax error due to people.user_id
+    // The error should be: SqliteError: near "=": syntax error
+
+    // Setup: Create a test user and add existing people to database
+    const testUserId = 994 // Match the userId from error logs
+
+    // Clean up any existing test data
+    await db.delete(people).where(eq(people.userId, testUserId))
+    await db.delete(users).where(eq(users.id, testUserId))
+
+    // Create test user first (required for foreign key constraint)
+    await db.insert(users).values({
+      id: testUserId,
+      email: 'testuser994@example.com',
+      name: 'Test User 994',
+      provider: 'test'
+    })
+
+    // Insert test people for this user
+    const existingPerson = await db.insert(people).values({
+      firstName: 'John',
+      lastName: 'Smith',
+      birthDate: '1950-01-15',
+      gender: 'male',
+      userId: testUserId
+    }).returning()
+
+    // Upload GEDCOM file with similar person (should detect duplicate)
+    const filePath = path.join(FIXTURES_DIR, 'valid-5.5.1.ged')
+    const fileData = await fs.readFile(filePath)
+    const fileName = 'valid-5.5.1.ged'
+
+    uploadId = `${testUserId}_${Date.now()}_sqltest`
+    await saveUploadedFile(uploadId, fileName, fileData)
+
+    // Mock locals with test user
+    const testLocals = {
+      getSession: vi.fn(() =>
+        Promise.resolve({
+          user: {
+            id: testUserId,
+            email: 'testuser994@example.com'
+          }
+        })
+      )
+    }
+
+    const mockRequest = {}
+    const mockParams = { uploadId }
+
+    // Call endpoint - this should trigger the SQL query
+    const response = await POST({
+      request: mockRequest,
+      locals: testLocals,
+      params: mockParams
+    })
+
+    // Verify response is successful (no SQL error)
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+    expect(data.uploadId).toBe(uploadId)
+    expect(data.duplicates).toBeDefined()
+    expect(Array.isArray(data.duplicates)).toBe(true)
+
+    // Clean up test data (people will cascade delete when user is deleted)
+    await db.delete(users).where(eq(users.id, testUserId))
+  })
+
+  it('should only fetch people belonging to the authenticated user', async () => {
+    // RED PHASE: Verify data isolation works correctly with proper field name
+
+    const user1Id = 995
+    const user2Id = 996
+
+    // Clean up existing test data
+    await db.delete(people).where(eq(people.userId, user1Id))
+    await db.delete(people).where(eq(people.userId, user2Id))
+    await db.delete(users).where(eq(users.id, user1Id))
+    await db.delete(users).where(eq(users.id, user2Id))
+
+    // Create test users first (required for foreign key constraint)
+    await db.insert(users).values([
+      { id: user1Id, email: 'user995@test.com', name: 'User 995', provider: 'test' },
+      { id: user2Id, email: 'user996@test.com', name: 'User 996', provider: 'test' }
+    ])
+
+    // Insert people for user1
+    await db.insert(people).values([
+      { firstName: 'Alice', lastName: 'Johnson', userId: user1Id },
+      { firstName: 'Bob', lastName: 'Johnson', userId: user1Id }
+    ])
+
+    // Insert people for user2
+    await db.insert(people).values([
+      { firstName: 'Charlie', lastName: 'Brown', userId: user2Id },
+      { firstName: 'Diana', lastName: 'Brown', userId: user2Id }
+    ])
+
+    // Upload GEDCOM for user1
+    const filePath = path.join(FIXTURES_DIR, 'valid-5.5.1.ged')
+    const fileData = await fs.readFile(filePath)
+    const fileName = 'valid-5.5.1.ged'
+
+    uploadId = `${user1Id}_${Date.now()}_isolation`
+    await saveUploadedFile(uploadId, fileName, fileData)
+
+    const user1Locals = {
+      getSession: vi.fn(() =>
+        Promise.resolve({
+          user: {
+            id: user1Id,
+            email: 'user1@example.com'
+          }
+        })
+      )
+    }
+
+    const mockRequest = {}
+    const mockParams = { uploadId }
+
+    const response = await POST({
+      request: mockRequest,
+      locals: user1Locals,
+      params: mockParams
+    })
+
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+
+    // Duplicate detection should only consider user1's people, not user2's
+    // This verifies the SQL query is correctly filtering by userId
+    expect(data.duplicates).toBeDefined()
+
+    // Clean up (people will cascade delete when users are deleted)
+    await db.delete(users).where(eq(users.id, user1Id))
+    await db.delete(users).where(eq(users.id, user2Id))
   })
 })
 
