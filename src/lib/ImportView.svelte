@@ -144,8 +144,9 @@
       uploadProgress = 0
       console.log('[ImportView] Form reset')
 
-      // TODO: Redirect to parsing/validation step when Story #2 is implemented
-      console.log('[ImportView] Upload ID:', result.uploadId)
+      // Redirect to parsing results page
+      console.log('[ImportView] Redirecting to parsing results for uploadId:', result.uploadId)
+      window.location.hash = `#/gedcom/parsing/${result.uploadId}`
     } catch (uploadError) {
       console.error('[ImportView] Upload error caught:', uploadError)
       console.error('[ImportView] Error details:', {

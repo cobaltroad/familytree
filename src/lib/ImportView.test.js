@@ -10,6 +10,7 @@ import * as notificationStore from '../stores/notificationStore.js'
 
 describe('ImportView - Notification Integration', () => {
   let fetchMock
+  let originalLocation
 
   beforeEach(() => {
     // Mock fetch
@@ -19,10 +20,16 @@ describe('ImportView - Notification Integration', () => {
     // Spy on notification methods
     vi.spyOn(notificationStore, 'success')
     vi.spyOn(notificationStore, 'error')
+
+    // Mock window.location.hash for redirect testing
+    originalLocation = window.location
+    delete window.location
+    window.location = { hash: '' }
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    window.location = originalLocation
   })
 
   it('should call success notification method after successful upload', async () => {
@@ -143,5 +150,72 @@ describe('ImportView - Notification Integration', () => {
         'File size exceeds 10MB limit'
       )
     })
+  })
+
+  it('should redirect to parsing results page after successful upload', async () => {
+    // Arrange
+    const mockResult = {
+      uploadId: '123_456_789',
+      fileName: 'test.ged',
+      fileSize: 1024
+    }
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Map(),
+      json: async () => mockResult
+    })
+
+    render(ImportView)
+
+    // Create a file
+    const file = new File(['test content'], 'test.ged', { type: 'text/plain' })
+
+    // Act: Select file
+    const fileInput = screen.getByLabelText(/choose file/i)
+    await fireEvent.change(fileInput, { target: { files: [file] } })
+
+    // Act: Click upload button
+    const uploadButton = screen.getByRole('button', { name: /upload file/i })
+    await fireEvent.click(uploadButton)
+
+    // Assert: Wait for upload to complete and redirect to happen
+    await waitFor(() => {
+      expect(window.location.hash).toBe('#/gedcom/parsing/123_456_789')
+    })
+  })
+
+  it('should not redirect after failed upload', async () => {
+    // Arrange
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      headers: new Map(),
+      text: async () => 'Internal server error'
+    })
+
+    render(ImportView)
+
+    // Create a file
+    const file = new File(['test content'], 'test.ged', { type: 'text/plain' })
+
+    // Act: Select file
+    const fileInput = screen.getByLabelText(/choose file/i)
+    await fireEvent.change(fileInput, { target: { files: [file] } })
+
+    // Act: Click upload button
+    const uploadButton = screen.getByRole('button', { name: /upload file/i })
+    await fireEvent.click(uploadButton)
+
+    // Assert: Wait for error handling
+    await waitFor(() => {
+      expect(notificationStore.error).toHaveBeenCalled()
+    })
+
+    // Assert: Should not redirect on error
+    expect(window.location.hash).toBe('')
   })
 })
