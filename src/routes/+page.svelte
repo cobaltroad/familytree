@@ -10,6 +10,10 @@
   import NetworkView from '$lib/NetworkView.svelte'
   import ImportView from '$lib/ImportView.svelte'
   import AdminView from '$lib/AdminView.svelte'
+  import GedcomUpload from '$lib/GedcomUpload.svelte'
+  import GedcomParsingResults from '$lib/GedcomParsingResults.svelte'
+  import GedcomPreview from '$lib/GedcomPreview.svelte'
+  import GedcomImportProgress from '$lib/components/GedcomImportProgress.svelte'
   import ViewSwitcher from '$lib/ViewSwitcher.svelte'
   import PersonModal from '$lib/PersonModal.svelte'
   import * as familyStore from '../stores/familyStore.js'
@@ -23,6 +27,21 @@
 
   // Normalize path (treat '/', '/tree', and '/list' as '/pedigree')
   $: normalizedPath = (currentPath === '/' || currentPath === '/tree' || currentPath === '/list') ? '/pedigree' : currentPath
+
+  // Extract uploadId from GEDCOM parsing route
+  $: parsingUploadId = normalizedPath.startsWith('/gedcom/parsing/')
+    ? normalizedPath.replace('/gedcom/parsing/', '')
+    : null
+
+  // Extract uploadId from GEDCOM preview route
+  $: previewUploadId = normalizedPath.startsWith('/gedcom/preview/')
+    ? normalizedPath.replace('/gedcom/preview/', '')
+    : null
+
+  // Extract uploadId from GEDCOM import progress route
+  $: importUploadId = normalizedPath.startsWith('/gedcom/import-progress/')
+    ? normalizedPath.replace('/gedcom/import-progress/', '')
+    : null
 
   // Handle route changes via hash
   function handleHashChange() {
@@ -93,6 +112,14 @@
     <ImportView />
   {:else if normalizedPath === '/admin'}
     <AdminView />
+  {:else if normalizedPath === '/gedcom/import'}
+    <GedcomUpload isAuthenticated={session && session.user} />
+  {:else if normalizedPath.startsWith('/gedcom/parsing/')}
+    <GedcomParsingResults uploadId={parsingUploadId} />
+  {:else if normalizedPath.startsWith('/gedcom/preview/')}
+    <GedcomPreview uploadId={previewUploadId} />
+  {:else if normalizedPath.startsWith('/gedcom/import-progress/')}
+    <GedcomImportProgress uploadId={importUploadId} />
   {:else}
     <PedigreeView />
   {/if}

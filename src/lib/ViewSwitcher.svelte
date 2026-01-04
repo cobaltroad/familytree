@@ -8,12 +8,18 @@
     { path: '/timeline', label: 'Timeline', icon: '📅' },
     { path: '/radial', label: 'Radial', icon: '⭕' },
     { path: '/network', label: 'Network', icon: '🕸️' },
-    { path: '/import', label: 'Import', icon: '📁' },
+    { path: '/gedcom/import', label: 'Import', icon: '📁' },
     { path: '/admin', label: 'Admin', icon: '🔧' }
   ]
 
-  // Normalize current path for comparison (treat '/' and '/tree' as '/pedigree')
-  $: normalizedCurrent = (currentPath === '/' || currentPath === '/tree') ? '/pedigree' : currentPath
+  // Normalize current path for comparison
+  // - Treat '/' and '/tree' as '/pedigree'
+  // - Treat all GEDCOM routes as '/gedcom/import' for tab highlighting
+  $: normalizedCurrent = (() => {
+    if (currentPath === '/' || currentPath === '/tree') return '/pedigree'
+    if (currentPath.startsWith('/gedcom/')) return '/gedcom/import'
+    return currentPath
+  })()
 </script>
 
 <nav class="view-switcher">
