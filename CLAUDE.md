@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Guidelines
+
+**Before starting development, review these essential guidelines:**
+
+- **`TESTING_GUIDELINES.md`** - Testing conventions, file naming, and API route testing requirements
+- **`CODING_GUIDELINES.md`** - View component development, API routes, and code style standards
+
+These guidelines ensure consistency and prevent common issues like route mismatches and SvelteKit reserved file name conflicts.
+
 ## Development Commands
 
 ### Full-Stack SvelteKit Application

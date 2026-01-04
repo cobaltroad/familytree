@@ -175,6 +175,150 @@ npm test -- path/to/specific.test.js  # Run specific test
 npm run test:ui       # Open Vitest UI
 ```
 
+## API Route Testing
+
+### CRITICAL: Mock Routes Must Match Actual Routes
+
+**When testing API endpoints or mocking fetch calls, ALWAYS verify that the route paths match the actual SvelteKit route structure.**
+
+#### Common Pitfalls
+
+❌ **BAD - Route mismatch**:
+```javascript
+// Test file
+mockRequest = new Request('http://localhost/api/gedcom/parsing/upload-123')
+
+// Actual route file
+// src/routes/api/gedcom/parse/[uploadId]/+server.js  ← Different path!
+```
+
+✅ **GOOD - Routes match**:
+```javascript
+// Test file
+mockRequest = new Request('http://localhost/api/gedcom/parse/upload-123')
+
+// Actual route file
+// src/routes/api/gedcom/parse/[uploadId]/+server.js  ← Matches!
+```
+
+#### Verification Process
+
+Before writing or updating tests, follow these steps:
+
+1. **Identify the actual route file**:
+   ```bash
+   find src/routes/api -name '+server.js' | grep gedcom
+   # Example output: src/routes/api/gedcom/parse/[uploadId]/+server.js
+   ```
+
+2. **Extract the route path**:
+   - File: `src/routes/api/gedcom/parse/[uploadId]/+server.js`
+   - Route: `/api/gedcom/parse/:uploadId` or `/api/gedcom/parse/[uploadId]`
+   - **NOT**: `/api/gedcom/parsing/:uploadId` ❌
+
+3. **Use the exact route in tests**:
+   ```javascript
+   // Server-side route tests
+   mockRequest = new Request('http://localhost/api/gedcom/parse/upload-123')
+   mockEvent = {
+     request: mockRequest,
+     params: { uploadId: 'upload-123' }
+   }
+
+   // Client-side API mocks
+   fetchMock.mockResolvedValue({...})
+   await api.parseGedcom('upload-123')
+   expect(fetchMock).toHaveBeenCalledWith('/api/gedcom/parse/upload-123', {...})
+   ```
+
+4. **Verify the API client matches**:
+   - Check `src/lib/api.js` to ensure the client method uses the correct route
+   - If there's a mismatch, fix the API client first, then update tests
+
+#### Route Mapping Reference
+
+**Always use this mapping from file path to route URL:**
+
+| File Path | Route URL |
+|-----------|-----------|
+| `src/routes/api/people/+server.js` | `/api/people` |
+| `src/routes/api/people/[id]/+server.js` | `/api/people/:id` or `/api/people/[id]` |
+| `src/routes/api/gedcom/upload/+server.js` | `/api/gedcom/upload` |
+| `src/routes/api/gedcom/parse/[uploadId]/+server.js` | `/api/gedcom/parse/:uploadId` |
+| `src/routes/api/gedcom/parse/[uploadId]/status/+server.js` | `/api/gedcom/parse/:uploadId/status` |
+| `src/routes/api/gedcom/preview/[uploadId]/duplicates/+server.js` | `/api/gedcom/preview/:uploadId/duplicates` |
+
+**Note**: SvelteKit uses `[paramName]` in file paths, which becomes `:paramName` in route URLs.
+
+#### Testing API Routes
+
+When testing SvelteKit API route handlers (`+server.js` files):
+
+```javascript
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { GET, POST } from './+server.js'  // Import actual handler
+
+describe('GET /api/people', () => {  // ← Use actual route path in description
+  let mockEvent
+
+  beforeEach(() => {
+    mockEvent = {
+      request: new Request('http://localhost/api/people'),  // ← Match actual route
+      locals: {},
+      params: {}
+    }
+  })
+
+  it('should return all people', async () => {
+    const response = await GET(mockEvent)
+    expect(response.status).toBe(200)
+  })
+})
+```
+
+#### Testing API Client Methods
+
+When testing the API client (`src/lib/api.js`):
+
+```javascript
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { api } from './api.js'
+
+describe('API Client', () => {
+  let fetchMock
+
+  beforeEach(() => {
+    fetchMock = vi.fn()
+    global.fetch = fetchMock
+  })
+
+  it('should call correct route for parseGedcom', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true })
+    })
+
+    await api.parseGedcom('upload-123')
+
+    // Verify the route matches the actual file structure
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/gedcom/parse/upload-123',  // ← Must match src/routes/api/gedcom/parse/[uploadId]/+server.js
+      expect.any(Object)
+    )
+  })
+})
+```
+
+### Pre-Test Checklist
+
+Before submitting tests, verify:
+
+- [ ] Route paths in tests match the actual `src/routes/api/**` file structure
+- [ ] API client methods in `src/lib/api.js` use the correct routes
+- [ ] Mock requests use the same route as the actual handler
+- [ ] Test descriptions document the correct route path
+- [ ] Parameter names match (`[uploadId]` in files, `:uploadId` or actual value in tests)
+
 ## Additional Resources
 
 - [SvelteKit Routing Documentation](https://kit.svelte.dev/docs/routing)
