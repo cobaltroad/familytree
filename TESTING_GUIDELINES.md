@@ -1,17 +1,54 @@
 # Testing Guidelines
 
-## Test File Placement
+## Test File Naming Convention
 
-### CRITICAL: Avoid SvelteKit Reserved File Names
+### CRITICAL RULE: NEVER Use `+*.test.js` Pattern
 
-**Files with `+` prefix in the `src/routes/` directory are RESERVED for SvelteKit route files.**
+**The `+` prefix is STRICTLY RESERVED by SvelteKit and must NEVER be used for test files.**
 
-Using `+` prefix for test files will cause this error:
+❌ **PROHIBITED - These patterns are FORBIDDEN**:
+```
++page.test.js
++server.test.js
++gedcomParser.test.js
++api.test.js
++anything.test.js
+```
+
+✅ **CORRECT - Use these patterns instead**:
+```
+page.test.js
+server.test.js
+gedcomParser.test.js
+api.test.js
+anything.test.js
+```
+
+### Why This Rule Exists
+
+SvelteKit reserves the `+` prefix for special route files (`+page.svelte`, `+server.js`, `+layout.svelte`, etc.). Using `+*.test.js` anywhere in your codebase will cause this error:
+
 ```
 Files prefixed with + are reserved (saw src/routes/+page.auth.test.js)
 ```
 
-This error **breaks the entire application** - the dev server will not start.
+This error **breaks the entire application** - the dev server will not start, even if the test file is outside the routes directory.
+
+### Universal Application
+
+This rule applies to **ALL test files** in the codebase:
+- ✅ `src/lib/tests/*.test.js` - No `+` prefix
+- ✅ `src/routes/**/*.test.js` - No `+` prefix
+- ✅ `src/lib/server/__tests__/*.test.js` - No `+` prefix
+- ✅ Any other location - No `+` prefix
+
+**There are NO exceptions to this rule.**
+
+## Test File Placement
+
+### CRITICAL: Avoid SvelteKit Reserved File Names in Routes Directory
+
+**Files with `+` prefix in the `src/routes/` directory are RESERVED for SvelteKit route files.**
 
 ### Correct Test File Locations
 
@@ -110,17 +147,24 @@ mv src/routes/+page.auth.test.js src/lib/tests/page.auth.test.js
 Use descriptive names that indicate what is being tested:
 
 ```
-✅ GOOD:
-- page.auth.test.js
-- personModal.test.js
-- server.test.js
-- familyStore.test.js
+✅ CORRECT:
+- page.auth.test.js           (descriptive, no + prefix)
+- personModal.test.js         (descriptive, no + prefix)
+- server.test.js              (descriptive, no + prefix)
+- familyStore.test.js         (descriptive, no + prefix)
+- gedcomParser.test.js        (descriptive, no + prefix)
+
+❌ PROHIBITED:
+- +page.test.js               (FORBIDDEN - breaks SvelteKit!)
+- +server.test.js             (FORBIDDEN - breaks SvelteKit!)
+- +anything.test.js           (FORBIDDEN - breaks SvelteKit!)
 
 ❌ AVOID:
-- +page.test.js (breaks SvelteKit)
-- test.js (not descriptive)
-- spec.js (use .test.js consistently)
+- test.js                     (not descriptive enough)
+- spec.js                     (use .test.js consistently)
 ```
+
+**Remember**: The `+` prefix is absolutely forbidden for test files. See "CRITICAL RULE" section above for details.
 
 ## Running Tests
 

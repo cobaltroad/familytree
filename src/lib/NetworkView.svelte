@@ -15,7 +15,7 @@
   } from './d3Helpers.js'
   import { modal } from '../stores/modalStore.js'
   import { people, relationships } from '../stores/familyStore.js'
-  import { notifications } from '../stores/notificationStore.js'
+  import { info } from '../stores/notificationStore.js'
 
   let svgElement
   let svg, g, zoom
@@ -214,7 +214,7 @@
       console.warn('[NetworkView] Performance warning', {
         peopleCount: nodes.length
       })
-      notifications.info('Large family tree detected. Performance may be affected. Consider filtering the view.')
+      info('Large family tree detected. Performance may be affected. Consider filtering the view.')
     }
 
     // Stop existing simulation if any

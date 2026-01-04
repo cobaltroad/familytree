@@ -27,6 +27,8 @@ npm run test:watch    # Run tests in watch mode
 npm run test:ui       # Open Vitest UI for interactive testing
 ```
 
+**CRITICAL**: Test files must NEVER use the `+*.test.js` naming pattern. The `+` prefix is reserved by SvelteKit and will break the application. See `TESTING_GUIDELINES.md` for complete rules and conventions.
+
 **Test Suite Status**: Comprehensive test coverage with 1,840 total tests. The test suite includes:
 - Server route integration tests with Drizzle ORM
 - Component tests with @testing-library/svelte
