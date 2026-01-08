@@ -444,4 +444,247 @@ describe('RelationshipCard', () => {
       expect(card).toBeTruthy()
     })
   })
+
+  describe('delete button functionality', () => {
+    const mockRelationship = {
+      id: 100,
+      person1Id: 1,
+      person2Id: 2,
+      type: 'parentOf',
+      parentRole: 'mother'
+    }
+
+    it('should NOT show delete button when relationship prop is missing', () => {
+      const { container } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Mother',
+          relationship: null, // No relationship object
+          isMobile: false
+        }
+      })
+
+      const deleteButton = container.querySelector('.delete-button, button[aria-label*="Remove"]')
+      expect(deleteButton).toBeFalsy()
+    })
+
+    it('should show delete button when relationship prop is provided on desktop (always visible)', () => {
+      const { container } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Mother',
+          relationship: mockRelationship,
+          isMobile: false
+        }
+      })
+
+      // Delete button should be visible immediately without hovering
+      const deleteButton = container.querySelector('.delete-button, button[aria-label*="Remove"]')
+      expect(deleteButton).toBeTruthy()
+    })
+
+    it('should show delete button when relationship prop is provided on mobile', () => {
+      const { container } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Father',
+          relationship: mockRelationship,
+          isMobile: true
+        }
+      })
+
+      const deleteButton = container.querySelector('.delete-button, button[aria-label*="Remove"]')
+      expect(deleteButton).toBeTruthy()
+    })
+
+    it('should emit delete event when delete button is clicked', async () => {
+      const { container, component } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Mother',
+          relationship: mockRelationship,
+          isMobile: false
+        }
+      })
+
+      let deleteEventEmitted = false
+      let emittedData = null
+
+      component.$on('delete', (event) => {
+        deleteEventEmitted = true
+        emittedData = event.detail
+      })
+
+      const deleteButton = container.querySelector('.delete-button, button[aria-label*="Remove"]')
+      expect(deleteButton).toBeTruthy()
+
+      await fireEvent.click(deleteButton)
+
+      expect(deleteEventEmitted).toBe(true)
+      expect(emittedData).toBeTruthy()
+      expect(emittedData.relationship).toEqual(mockRelationship)
+      expect(emittedData.person).toEqual(mockPerson)
+      expect(emittedData.relationshipType).toBe('Mother')
+    })
+
+    it('should not trigger card click when delete button is clicked', async () => {
+      const { container, component } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Father',
+          relationship: mockRelationship,
+          isMobile: false
+        }
+      })
+
+      let cardClickEmitted = false
+      let deleteClickEmitted = false
+
+      component.$on('click', () => {
+        cardClickEmitted = true
+      })
+
+      component.$on('delete', () => {
+        deleteClickEmitted = true
+      })
+
+      const deleteButton = container.querySelector('.delete-button, button[aria-label*="Remove"]')
+      await fireEvent.click(deleteButton)
+
+      expect(deleteClickEmitted).toBe(true)
+      expect(cardClickEmitted).toBe(false) // Card click should not be triggered
+    })
+
+    it('should have accessible aria-label for delete button', () => {
+      const { container } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Mother',
+          relationship: mockRelationship,
+          isMobile: false
+        }
+      })
+
+      const deleteButton = container.querySelector('.delete-button, button[aria-label*="Remove"]')
+      expect(deleteButton).toBeTruthy()
+
+      const ariaLabel = deleteButton.getAttribute('aria-label')
+      expect(ariaLabel).toBeTruthy()
+      expect(ariaLabel.toLowerCase()).toContain('john doe')
+      expect(ariaLabel.toLowerCase()).toContain('mother')
+    })
+
+    it('should support keyboard access for delete button (Enter key)', async () => {
+      const { container, component } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Father',
+          relationship: mockRelationship,
+          isMobile: false
+        }
+      })
+
+      let deleteEventEmitted = false
+      component.$on('delete', () => {
+        deleteEventEmitted = true
+      })
+
+      const deleteButton = container.querySelector('.delete-button, button[aria-label*="Remove"]')
+      await fireEvent.keyDown(deleteButton, { key: 'Enter', code: 'Enter' })
+
+      expect(deleteEventEmitted).toBe(true)
+    })
+
+    it('should support keyboard access for delete button (Space key)', async () => {
+      const { container, component } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Mother',
+          relationship: mockRelationship,
+          isMobile: false
+        }
+      })
+
+      let deleteEventEmitted = false
+      component.$on('delete', () => {
+        deleteEventEmitted = true
+      })
+
+      const deleteButton = container.querySelector('.delete-button, button[aria-label*="Remove"]')
+      await fireEvent.keyDown(deleteButton, { key: ' ', code: 'Space' })
+
+      expect(deleteEventEmitted).toBe(true)
+    })
+
+    it('should show delete button for parent relationships', () => {
+      const { container } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Mother',
+          relationship: mockRelationship,
+          isMobile: false
+        }
+      })
+
+      const deleteButton = container.querySelector('.delete-button')
+      expect(deleteButton).toBeTruthy()
+    })
+
+    it('should show delete button for child relationships', () => {
+      const childRelationship = {
+        id: 101,
+        person1Id: 2,
+        person2Id: 1,
+        type: 'parentOf',
+        parentRole: 'mother'
+      }
+
+      const { container } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Child',
+          relationship: childRelationship,
+          isMobile: false
+        }
+      })
+
+      const deleteButton = container.querySelector('.delete-button')
+      expect(deleteButton).toBeTruthy()
+    })
+
+    it('should show delete button for spouse relationships', () => {
+      const spouseRelationship = {
+        id: 102,
+        person1Id: 1,
+        person2Id: 2,
+        type: 'spouse'
+      }
+
+      const { container } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Spouse',
+          relationship: spouseRelationship,
+          isMobile: false
+        }
+      })
+
+      const deleteButton = container.querySelector('.delete-button')
+      expect(deleteButton).toBeTruthy()
+    })
+
+    it('should NOT show delete button for sibling relationships (computed, not stored)', () => {
+      const { container } = render(RelationshipCard, {
+        props: {
+          person: mockPerson,
+          relationshipType: 'Sibling',
+          relationship: null, // Siblings don't have stored relationships
+          isMobile: false
+        }
+      })
+
+      const deleteButton = container.querySelector('.delete-button')
+      expect(deleteButton).toBeFalsy()
+    })
+  })
 })
