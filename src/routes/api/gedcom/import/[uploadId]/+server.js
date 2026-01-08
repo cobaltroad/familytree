@@ -16,6 +16,7 @@ import {
   buildRelationshipsAfterInsertion,
   mapGedcomPersonToSchema
 } from '$lib/server/gedcomImporter.js'
+import { requireAuth } from '$lib/server/session.js'
 
 /**
  * POST /api/gedcom/import/:uploadId
@@ -30,18 +31,13 @@ import {
  * - imported: { persons: number, relationships: number, updated: number }
  * - errors: string[] (optional)
  */
-export async function POST({ request, params, locals }) {
-  try {
-    // Authentication check
-    if (!locals.session || !locals.session.userId) {
-      return json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
+export async function POST({ request, params, locals, ...event }) {
+  const { uploadId } = params
 
-    const userId = locals.session.userId
-    const { uploadId } = params
+  try {
+    // Require authentication (consistent with other API endpoints)
+    const session = await requireAuth({ locals, ...event })
+    const userId = session.user.id
 
     // Parse request body
     const body = await request.json()
@@ -145,6 +141,14 @@ export async function POST({ request, params, locals }) {
       }
     })
   } catch (error) {
+    // Handle authentication errors
+    if (error.name === 'AuthenticationError') {
+      return json(
+        { error: error.message },
+        { status: error.status }
+      )
+    }
+
     console.error('Import error:', error)
 
     // Story #97: Enhanced error handling with actionable messages
