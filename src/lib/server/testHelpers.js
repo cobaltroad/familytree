@@ -52,66 +52,13 @@ export function createMockAuthenticatedEvent(db, session = null, additionalProps
 }
 
 /**
- * SQL script to create users table for testing
- * Updated for Story #81: Added default_person_id field
- * Updated for Feature Flag: Added view_all_records field
- */
-export const CREATE_USERS_TABLE_SQL = `
-  CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE,
-    name TEXT,
-    avatar_url TEXT,
-    provider TEXT NOT NULL,
-    provider_user_id TEXT,
-    email_verified INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_login_at TEXT,
-    default_person_id INTEGER,
-    view_all_records INTEGER NOT NULL DEFAULT 0,
-    FOREIGN KEY (default_person_id) REFERENCES people(id) ON DELETE SET NULL
-  )
-`
-
-/**
- * SQL script to create people table with user_id for testing (Issue #72)
- * Updated for Story #77: Added photo_url field
- */
-export const CREATE_PEOPLE_TABLE_SQL = `
-  CREATE TABLE people (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    birth_date TEXT,
-    death_date TEXT,
-    gender TEXT,
-    photo_url TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    user_id INTEGER NOT NULL DEFAULT 1,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  )
-`
-
-/**
- * SQL script to create relationships table with user_id for testing (Issue #72)
- */
-export const CREATE_RELATIONSHIPS_TABLE_SQL = `
-  CREATE TABLE relationships (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    person1_id INTEGER NOT NULL,
-    person2_id INTEGER NOT NULL,
-    type TEXT NOT NULL,
-    parent_role TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    user_id INTEGER NOT NULL DEFAULT 1,
-    FOREIGN KEY (person1_id) REFERENCES people(id) ON DELETE CASCADE,
-    FOREIGN KEY (person2_id) REFERENCES people(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  )
-`
-
-/**
  * Sets up a test database with all required tables and a default test user
+ *
+ * CRITICAL (Issue #114): This function uses Drizzle migrations to ensure
+ * the test database schema EXACTLY matches production schema from schema.js.
+ * This eliminates schema duplication and prevents schema mismatch errors.
+ *
+ * Single Source of Truth: Production migrations in drizzle/ directory
  *
  * @param {Database} sqlite - Better-SQLite3 database instance
  * @param {DrizzleDatabase} db - Drizzle database instance
@@ -126,10 +73,74 @@ export async function setupTestDatabase(sqlite, db) {
   // Enable foreign keys
   sqlite.exec('PRAGMA foreign_keys = ON')
 
-  // Create tables
-  sqlite.exec(CREATE_USERS_TABLE_SQL)
-  sqlite.exec(CREATE_PEOPLE_TABLE_SQL)
-  sqlite.exec(CREATE_RELATIONSHIPS_TABLE_SQL)
+  // Apply production migrations to test database
+  // This ensures test schema matches production schema exactly (Issue #114)
+  const migrations = [
+    // Migration 0000: Initial schema (users, people, relationships, sessions)
+    {
+      sql: `CREATE TABLE \`people\` (
+	\`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	\`first_name\` text NOT NULL,
+	\`last_name\` text NOT NULL,
+	\`birth_date\` text,
+	\`death_date\` text,
+	\`gender\` text,
+	\`photo_url\` text,
+	\`created_at\` text DEFAULT CURRENT_TIMESTAMP,
+	\`user_id\` integer NOT NULL,
+	FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+);
+CREATE INDEX \`people_user_id_idx\` ON \`people\` (\`user_id\`);
+CREATE TABLE \`relationships\` (
+	\`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	\`person1_id\` integer NOT NULL,
+	\`person2_id\` integer NOT NULL,
+	\`type\` text NOT NULL,
+	\`parent_role\` text,
+	\`created_at\` text DEFAULT CURRENT_TIMESTAMP,
+	\`user_id\` integer NOT NULL,
+	FOREIGN KEY (\`person1_id\`) REFERENCES \`people\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (\`person2_id\`) REFERENCES \`people\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+);
+CREATE INDEX \`relationships_user_id_idx\` ON \`relationships\` (\`user_id\`);
+CREATE TABLE \`sessions\` (
+	\`id\` text PRIMARY KEY NOT NULL,
+	\`user_id\` integer NOT NULL,
+	\`expires_at\` text NOT NULL,
+	\`created_at\` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	\`last_accessed_at\` text,
+	FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+);
+CREATE INDEX \`sessions_user_id_idx\` ON \`sessions\` (\`user_id\`);
+CREATE INDEX \`sessions_expires_at_idx\` ON \`sessions\` (\`expires_at\`);
+CREATE TABLE \`users\` (
+	\`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	\`email\` text NOT NULL,
+	\`name\` text,
+	\`avatar_url\` text,
+	\`provider\` text NOT NULL,
+	\`provider_user_id\` text,
+	\`email_verified\` integer DEFAULT true NOT NULL,
+	\`created_at\` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	\`last_login_at\` text,
+	\`default_person_id\` integer,
+	FOREIGN KEY (\`default_person_id\`) REFERENCES \`people\`(\`id\`) ON UPDATE no action ON DELETE set null
+);
+CREATE UNIQUE INDEX \`users_email_unique\` ON \`users\` (\`email\`);
+CREATE UNIQUE INDEX \`users_email_idx\` ON \`users\` (\`email\`);
+CREATE INDEX \`users_provider_user_id_idx\` ON \`users\` (\`provider_user_id\`);`
+    },
+    // Migration 0001: Add view_all_records column
+    {
+      sql: `ALTER TABLE \`users\` ADD \`view_all_records\` integer DEFAULT false NOT NULL;`
+    }
+  ]
+
+  // Execute migrations sequentially
+  for (const migration of migrations) {
+    sqlite.exec(migration.sql)
+  }
 
   // Create default test user
   const result = sqlite.prepare(`

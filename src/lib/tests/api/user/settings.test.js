@@ -16,6 +16,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { eq } from 'drizzle-orm'
 import { users, sessions } from '$lib/db/schema.js'
+import { setupTestDatabase } from '$lib/server/testHelpers.js'
 import { PATCH } from '../../../../routes/api/user/settings/+server.js'
 
 describe('User Settings API - PATCH /api/user/settings', () => {
@@ -29,36 +30,8 @@ describe('User Settings API - PATCH /api/user/settings', () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Enable foreign keys
-    sqlite.exec('PRAGMA foreign_keys = ON')
-
-    // Create users table
-    sqlite.exec(`
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        name TEXT,
-        avatar_url TEXT,
-        provider TEXT NOT NULL,
-        provider_user_id TEXT,
-        email_verified INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_login_at TEXT,
-        default_person_id INTEGER,
-        view_all_records INTEGER NOT NULL DEFAULT 0
-      )
-    `)
-
-    // Create sessions table
-    sqlite.exec(`
-      CREATE TABLE sessions (
-        id TEXT PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        expires_at TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_accessed_at TEXT
-      )
-    `)
+    // Use setupTestDatabase for consistent schema (Issue #114)
+    const defaultUserId = await setupTestDatabase(sqlite, db)
 
     // Create test user with view_all_records = false
     const userResult = await db

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { users, sessions } from './schema.js'
+import { setupTestDatabase } from '$lib/server/testHelpers.js'
 import { eq, and } from 'drizzle-orm'
 
 /**
@@ -12,35 +13,21 @@ import { eq, and } from 'drizzle-orm'
  * - These tests verify the database schema works correctly
  * - Tests run against in-memory SQLite database
  * - Tests validate constraints, indexes, and relationships
+ *
+ * Issue #114: Uses setupTestDatabase() for single source of truth schema
  */
 
 describe('Users Table Integration Tests', () => {
   let db
   let sqlite
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create in-memory database for testing
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Create users table with all constraints and indexes
-    sqlite.exec(`
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL,
-        name TEXT,
-        avatar_url TEXT,
-        provider TEXT NOT NULL,
-        provider_user_id TEXT,
-        email_verified INTEGER DEFAULT 1 NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        last_login_at TEXT
-      );
-
-      CREATE UNIQUE INDEX users_email_unique ON users (email);
-      CREATE UNIQUE INDEX users_email_idx ON users (email);
-      CREATE INDEX users_provider_user_id_idx ON users (provider_user_id);
-    `)
+    // Use setupTestDatabase helper for consistent schema (Issue #114)
+    await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -51,7 +38,7 @@ describe('Users Table Integration Tests', () => {
     it('should create a new user with minimal required fields', async () => {
       // Arrange
       const newUser = {
-        email: 'test@example.com',
+        email: 'newuser@example.com', // Changed to avoid conflict with default test user
         provider: 'google'
       }
 
@@ -61,8 +48,7 @@ describe('Users Table Integration Tests', () => {
       // Assert
       expect(result).toHaveLength(1)
       expect(result[0]).toMatchObject({
-        id: 1,
-        email: 'test@example.com',
+        email: 'newuser@example.com',
         provider: 'google',
         name: null,
         avatarUrl: null,
@@ -71,6 +57,8 @@ describe('Users Table Integration Tests', () => {
         lastLoginAt: null
       })
       expect(result[0].createdAt).toBeDefined()
+      // Note: id is not necessarily 1 because setupTestDatabase creates a default user
+      expect(result[0].id).toBeGreaterThan(0)
     })
 
     it('should create a user with all fields populated', async () => {
@@ -137,7 +125,7 @@ describe('Users Table Integration Tests', () => {
     it('should set emailVerified to true by default', async () => {
       // Arrange
       const newUser = {
-        email: 'test@example.com',
+        email: 'verified@example.com', // Changed to avoid conflict with default test user
         provider: 'google'
       }
 
@@ -153,7 +141,7 @@ describe('Users Table Integration Tests', () => {
     it('should retrieve user by id', async () => {
       // Arrange
       const newUser = {
-        email: 'test@example.com',
+        email: 'retrieve@example.com', // Changed to avoid conflict with default test user
         name: 'Test User',
         provider: 'google'
       }
@@ -165,7 +153,7 @@ describe('Users Table Integration Tests', () => {
       // Assert
       expect(result).toHaveLength(1)
       expect(result[0]).toMatchObject({
-        email: 'test@example.com',
+        email: 'retrieve@example.com',
         name: 'Test User'
       })
     })
@@ -224,7 +212,8 @@ describe('Users Table Integration Tests', () => {
       const result = await db.select().from(users)
 
       // Assert
-      expect(result).toHaveLength(3)
+      // Note: setupTestDatabase creates 1 default user, so we expect 4 total
+      expect(result).toHaveLength(4)
     })
   })
 
@@ -352,44 +341,14 @@ describe('Sessions Table Integration Tests', () => {
   let sqlite
   let testUserId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create in-memory database for testing
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Create users and sessions tables
-    sqlite.exec(`
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL,
-        name TEXT,
-        avatar_url TEXT,
-        provider TEXT NOT NULL,
-        provider_user_id TEXT,
-        email_verified INTEGER DEFAULT 1 NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        last_login_at TEXT
-      );
-
-      CREATE TABLE sessions (
-        id TEXT PRIMARY KEY NOT NULL,
-        user_id INTEGER NOT NULL,
-        expires_at TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        last_accessed_at TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
-      CREATE INDEX sessions_user_id_idx ON sessions (user_id);
-      CREATE INDEX sessions_expires_at_idx ON sessions (expires_at);
-    `)
-
-    // Insert test user
-    const result = sqlite.prepare(`
-      INSERT INTO users (email, provider) VALUES (?, ?)
-    `).run('test@example.com', 'google')
-
-    testUserId = result.lastInsertRowid
+    // Use setupTestDatabase helper for consistent schema (Issue #114)
+    // This creates all tables including users and sessions
+    testUserId = await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {

@@ -17,6 +17,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { people, relationships, users, sessions } from '$lib/db/schema.js'
+import { setupTestDatabase } from '$lib/server/testHelpers.js'
 import { GET, POST } from '../../../../routes/api/relationships/+server.js'
 import { GET as GET_BY_ID, PUT, DELETE } from '../../../../routes/api/relationships/[id]/+server.js'
 
@@ -34,71 +35,8 @@ describe('Relationships API - Authentication Integration', () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Enable foreign keys
-    sqlite.exec('PRAGMA foreign_keys = ON')
-
-    // Create users table
-    sqlite.exec(`
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        name TEXT,
-        avatar_url TEXT,
-        provider TEXT NOT NULL,
-        provider_user_id TEXT,
-        email_verified INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_login_at TEXT,
-        default_person_id INTEGER,
-        view_all_records INTEGER NOT NULL DEFAULT 0
-      )
-    `)
-
-    // Create sessions table
-    sqlite.exec(`
-      CREATE TABLE sessions (
-        id TEXT PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        expires_at TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_accessed_at TEXT
-      )
-    `)
-
-    // Create people table with user_id
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
-      )
-    `)
-
-    // Create relationships table with user_id
-    sqlite.exec(`
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-        person2_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
-      )
-    `)
-
-    sqlite.exec(`
-      CREATE INDEX people_user_id_idx ON people(user_id)
-    `)
-
-    sqlite.exec(`
-      CREATE INDEX relationships_user_id_idx ON relationships(user_id)
-    `)
+    // Use setupTestDatabase for consistent schema (Issue #114)
+    const defaultUserId = await setupTestDatabase(sqlite, db)
 
     // Create test users
     const user1Result = await db

@@ -9,6 +9,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { eq } from 'drizzle-orm'
 import { people, relationships, users, sessions } from '$lib/db/schema.js'
+import { setupTestDatabase } from '$lib/server/testHelpers.js'
 import { GET } from '../../../../routes/api/relationships/+server.js'
 
 describe('Relationships API - view_all_records Feature Flag', () => {
@@ -21,60 +22,8 @@ describe('Relationships API - view_all_records Feature Flag', () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    sqlite.exec('PRAGMA foreign_keys = ON')
-
-    // Create tables
-    sqlite.exec(`
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        name TEXT,
-        avatar_url TEXT,
-        provider TEXT NOT NULL,
-        provider_user_id TEXT,
-        email_verified INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_login_at TEXT,
-        default_person_id INTEGER,
-        view_all_records INTEGER NOT NULL DEFAULT 0
-      )
-    `)
-
-    sqlite.exec(`
-      CREATE TABLE sessions (
-        id TEXT PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        expires_at TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_accessed_at TEXT
-      )
-    `)
-
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        photo_url TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
-      )
-    `)
-
-    sqlite.exec(`
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-        person2_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
-      )
-    `)
+    // Use setupTestDatabase for consistent schema (Issue #114)
+    const defaultUserId = await setupTestDatabase(sqlite, db)
 
     // Create test users
     const user1Result = await db.insert(users).values({ email: 'user1@example.com', name: 'User One', provider: 'google', viewAllRecords: false }).returning()
