@@ -79,10 +79,8 @@
 
   $: lifespan = person ? formatLifespan(person.birthDate, person.deathDate) : ''
 
-  // Always show delete button when relationship exists (improved discoverability)
-  // Previous behavior: only on hover (desktop) or always (mobile)
-  // New behavior: always visible for better UX
-  $: showDeleteButton = relationship !== null && relationship !== undefined
+  // Show delete button on hover (desktop) or always (mobile)
+  $: showDeleteButton = relationship && (isMobile || isHovering)
 </script>
 
 {#if person}
