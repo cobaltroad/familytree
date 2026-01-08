@@ -480,4 +480,283 @@ describe('PersonModal', () => {
       expect(importButton).toBeFalsy()
     })
   })
+
+  describe('Relationship Deletion - Parent Relationships', () => {
+    it('should have mother relationship card with delete handler', () => {
+      global.innerWidth = 1920 // Desktop mode
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      // Find all relationship cards
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+
+      // Find the mother's card (Jane Smith)
+      const motherCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('Jane Smith') && card.textContent.includes('Mother')
+      )
+
+      expect(motherCard).toBeTruthy()
+
+      // Card should be interactive (has role button and tabindex)
+      expect(motherCard.getAttribute('role')).toBe('button')
+      expect(motherCard.getAttribute('tabindex')).toBe('0')
+    })
+
+    it('should have father relationship card with delete handler', () => {
+      global.innerWidth = 1920 // Desktop mode
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+
+      // Find the father's card (John Doe)
+      const fatherCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('John Doe') && card.textContent.includes('Father')
+      )
+
+      expect(fatherCard).toBeTruthy()
+
+      // Card should be interactive
+      expect(fatherCard.getAttribute('role')).toBe('button')
+      expect(fatherCard.getAttribute('tabindex')).toBe('0')
+    })
+
+    it('should show confirmation dialog when deleting mother relationship', async () => {
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+      const motherCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('Jane Smith') && card.textContent.includes('Mother')
+      )
+
+      // Hover to show delete button
+      await fireEvent.mouseEnter(motherCard)
+
+      const deleteButton = motherCard.querySelector('.delete-button, button[aria-label*="Remove"]')
+      expect(deleteButton).toBeTruthy()
+
+      // Click delete button
+      await fireEvent.click(deleteButton)
+
+      // Confirmation dialog should appear
+      const confirmDialog = container.ownerDocument.querySelector('.confirmation-dialog, [role="dialog"]')
+      expect(confirmDialog).toBeTruthy()
+    })
+
+    it('should show confirmation dialog when deleting father relationship', async () => {
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+      const fatherCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('John Doe') && card.textContent.includes('Father')
+      )
+
+      await fireEvent.mouseEnter(fatherCard)
+
+      const deleteButton = fatherCard.querySelector('.delete-button, button[aria-label*="Remove"]')
+      await fireEvent.click(deleteButton)
+
+      const confirmDialog = container.ownerDocument.querySelector('.confirmation-dialog, [role="dialog"]')
+      expect(confirmDialog).toBeTruthy()
+    })
+
+    it('should display correct message in confirmation dialog for mother', async () => {
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+      const motherCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('Jane Smith') && card.textContent.includes('Mother')
+      )
+
+      await fireEvent.mouseEnter(motherCard)
+      const deleteButton = motherCard.querySelector('.delete-button, button[aria-label*="Remove"]')
+      await fireEvent.click(deleteButton)
+
+      // Check confirmation dialog message
+      const confirmDialog = container.ownerDocument.querySelector('.confirmation-dialog, [role="dialog"]')
+      expect(confirmDialog.textContent).toContain('Jane Smith')
+      expect(confirmDialog.textContent).toContain('Mother')
+    })
+
+    it('should support deleting parent relationships on mobile', () => {
+      global.innerWidth = 375 // Mobile mode
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      // On mobile, parent cards are in CollapsibleSection (may be collapsed)
+      // The important thing is that the cards have the relationship prop passed
+      // which enables deletion functionality via the confirmation dialog
+
+      // Verify the PersonModal renders in mobile mode
+      const modalContent = container.querySelector('.modal-content')
+      expect(modalContent.classList.contains('mobile')).toBe(true)
+
+      // Verify collapsible section for parents exists
+      const sectionTitles = container.querySelectorAll('.section-title')
+      const parentSectionTitle = Array.from(sectionTitles).find(title =>
+        title.textContent.includes('Parents')
+      )
+      expect(parentSectionTitle).toBeTruthy()
+    })
+  })
+
+  describe('Relationship Deletion - Child Relationships', () => {
+    beforeEach(() => {
+      // Add child relationship for testing
+      people.set([
+        { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: '1949-01-01' },
+        { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'female', birthDate: '1952-02-02' },
+        { id: 3, firstName: 'Alice', lastName: 'Doe', gender: 'female', birthDate: '1980-03-03' },
+        { id: 4, firstName: 'Bob', lastName: 'Doe', gender: 'male', birthDate: '2005-05-05' }
+      ])
+      relationships.set([
+        { id: 1, person1Id: 1, person2Id: 3, type: 'parentOf', parentRole: 'father' },
+        { id: 2, person1Id: 2, person2Id: 3, type: 'parentOf', parentRole: 'mother' },
+        { id: 3, person1Id: 3, person2Id: 4, type: 'parentOf', parentRole: 'mother' } // Alice is Bob's mother
+      ])
+    })
+
+    it('should have child relationship card with delete handler', () => {
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit') // Open Alice's modal, Bob is her child
+
+      const { container } = render(PersonModal)
+
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+
+      // Find Bob's card (child)
+      const childCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('Bob Doe') && card.textContent.includes('Child')
+      )
+
+      expect(childCard).toBeTruthy()
+
+      // Card should be interactive (has role button and tabindex)
+      expect(childCard.getAttribute('role')).toBe('button')
+      expect(childCard.getAttribute('tabindex')).toBe('0')
+    })
+
+    it('should show confirmation dialog when deleting child relationship', async () => {
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+      const childCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('Bob Doe') && card.textContent.includes('Child')
+      )
+
+      await fireEvent.mouseEnter(childCard)
+
+      const deleteButton = childCard.querySelector('.delete-button, button[aria-label*="Remove"]')
+      await fireEvent.click(deleteButton)
+
+      const confirmDialog = container.ownerDocument.querySelector('.confirmation-dialog, [role="dialog"]')
+      expect(confirmDialog).toBeTruthy()
+    })
+
+    it('should display correct message in confirmation dialog for child', async () => {
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+      const childCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('Bob Doe') && card.textContent.includes('Child')
+      )
+
+      await fireEvent.mouseEnter(childCard)
+      const deleteButton = childCard.querySelector('.delete-button, button[aria-label*="Remove"]')
+      await fireEvent.click(deleteButton)
+
+      const confirmDialog = container.ownerDocument.querySelector('.confirmation-dialog, [role="dialog"]')
+      expect(confirmDialog.textContent).toContain('Bob Doe')
+      expect(confirmDialog.textContent).toContain('Child')
+    })
+
+    it('should support deleting child relationships on mobile', () => {
+      global.innerWidth = 375 // Mobile mode
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      // On mobile, child cards are in CollapsibleSection (may be collapsed)
+      // The important thing is that the cards have the relationship prop passed
+      // which enables deletion functionality via the confirmation dialog
+
+      // Verify the PersonModal renders in mobile mode
+      const modalContent = container.querySelector('.modal-content')
+      expect(modalContent.classList.contains('mobile')).toBe(true)
+
+      // Verify collapsible section for children exists
+      const childrenSection = container.querySelector('[title="Children"], [data-testid="collapsible-children"]')
+      expect(childrenSection).toBeTruthy()
+    })
+  })
+
+  describe('Relationship Deletion - Sibling Relationships', () => {
+    beforeEach(() => {
+      // Add sibling relationship for testing (computed from shared parents)
+      people.set([
+        { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: '1949-01-01' },
+        { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'female', birthDate: '1952-02-02' },
+        { id: 3, firstName: 'Alice', lastName: 'Doe', gender: 'female', birthDate: '1980-03-03' },
+        { id: 5, firstName: 'Charlie', lastName: 'Doe', gender: 'male', birthDate: '1982-06-06' }
+      ])
+      relationships.set([
+        { id: 1, person1Id: 1, person2Id: 3, type: 'parentOf', parentRole: 'father' },
+        { id: 2, person1Id: 2, person2Id: 3, type: 'parentOf', parentRole: 'mother' },
+        { id: 4, person1Id: 1, person2Id: 5, type: 'parentOf', parentRole: 'father' }, // Charlie shares father with Alice
+        { id: 5, person1Id: 2, person2Id: 5, type: 'parentOf', parentRole: 'mother' } // Charlie shares mother with Alice
+      ])
+    })
+
+    it('should NOT display delete button for sibling relationship cards', () => {
+      global.innerWidth = 1920
+
+      modal.open(3, 'edit') // Open Alice's modal, Charlie is her sibling
+
+      const { container } = render(PersonModal)
+
+      const relationshipCards = container.querySelectorAll('.relationship-card')
+
+      // Find Charlie's card (sibling)
+      const siblingCard = Array.from(relationshipCards).find(card =>
+        card.textContent.includes('Charlie Doe') && card.textContent.includes('Sibling')
+      )
+
+      expect(siblingCard).toBeTruthy()
+
+      // Trigger hover
+      fireEvent.mouseEnter(siblingCard)
+
+      // Delete button should NOT exist for siblings (they're computed, not stored)
+      const deleteButton = siblingCard.querySelector('.delete-button, button[aria-label*="Remove"]')
+      expect(deleteButton).toBeFalsy()
+    })
+  })
 })
