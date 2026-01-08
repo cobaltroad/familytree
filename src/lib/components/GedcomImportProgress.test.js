@@ -8,9 +8,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte'
 import GedcomImportProgress from './GedcomImportProgress.svelte'
-import * as api from '../api.js'
 
-// Mock the API
+// Mock the API module
 vi.mock('../api.js', () => ({
   api: {
     importGedcom: vi.fn(),
@@ -18,18 +17,22 @@ vi.mock('../api.js', () => ({
   }
 }))
 
+// Import the mocked API after mocking
+import { api } from '../api.js'
+
 describe('GedcomImportProgress - Basic Functionality', () => {
   const mockUploadId = 'test-upload-123'
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Mock preview data
-    api.api.getGedcomPreviewIndividuals.mockResolvedValue({
+    // Mock preview data with CORRECT field names from API
+    api.getGedcomPreviewIndividuals.mockResolvedValue({
       statistics: {
-        total: 125,
-        duplicates: 5,
-        willImport: 120
+        totalIndividuals: 125,
+        duplicateIndividuals: 5,
+        newIndividuals: 120,
+        existingIndividuals: 5
       }
     })
   })
@@ -62,7 +65,7 @@ describe('GedcomImportProgress - Basic Functionality', () => {
   })
 
   it('should trigger import when start button clicked', async () => {
-    api.api.importGedcom.mockResolvedValue({
+    api.importGedcom.mockResolvedValue({
       success: true,
       imported: {
         persons: 120,
@@ -80,11 +83,11 @@ describe('GedcomImportProgress - Basic Functionality', () => {
 
     await fireEvent.click(startButton)
 
-    expect(api.api.importGedcom).toHaveBeenCalledWith(mockUploadId, { importAll: true })
+    expect(api.importGedcom).toHaveBeenCalledWith(mockUploadId, { importAll: true })
   })
 
   it('should display success message on completion', async () => {
-    api.api.importGedcom.mockResolvedValue({
+    api.importGedcom.mockResolvedValue({
       success: true,
       imported: {
         persons: 120,
@@ -118,7 +121,7 @@ describe('GedcomImportProgress - Basic Functionality', () => {
       }
     }
 
-    api.api.importGedcom.mockRejectedValue({
+    api.importGedcom.mockRejectedValue({
       message: mockError.error.message,
       data: mockError
     })
@@ -147,7 +150,7 @@ describe('GedcomImportProgress - Basic Functionality', () => {
       }
     }
 
-    api.api.importGedcom.mockRejectedValue({
+    api.importGedcom.mockRejectedValue({
       message: mockError.error.message,
       data: mockError
     })
@@ -164,6 +167,146 @@ describe('GedcomImportProgress - Basic Functionality', () => {
     await waitFor(() => {
       const retryButton = screen.getByRole('button', { name: /Retry Import/i })
       expect(retryButton).toBeDefined()
+    }, { timeout: 3000 })
+  })
+})
+
+describe('GedcomImportProgress - Statistics Display', () => {
+  const mockUploadId = 'test-upload-123'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should display total individuals from API statistics', async () => {
+    api.getGedcomPreviewIndividuals.mockResolvedValue({
+      statistics: {
+        totalIndividuals: 125,
+        duplicateIndividuals: 5,
+        newIndividuals: 120,
+        existingIndividuals: 5
+      }
+    })
+
+    render(GedcomImportProgress, { uploadId: mockUploadId })
+
+    // Debug: Check if mock was called
+    await waitFor(() => {
+      expect(api.getGedcomPreviewIndividuals).toHaveBeenCalled()
+    }, { timeout: 1000 })
+
+    await waitFor(() => {
+      const totalStat = screen.getByText('125')
+      const totalLabel = screen.getByText('Total Individuals')
+      expect(totalStat).toBeDefined()
+      expect(totalLabel).toBeDefined()
+    }, { timeout: 3000 })
+  })
+
+  it('should display duplicates resolved from API statistics', async () => {
+    api.getGedcomPreviewIndividuals.mockResolvedValue({
+      statistics: {
+        totalIndividuals: 125,
+        duplicateIndividuals: 5,
+        newIndividuals: 120,
+        existingIndividuals: 5
+      }
+    })
+
+    render(GedcomImportProgress, { uploadId: mockUploadId })
+
+    await waitFor(() => {
+      const duplicatesStat = screen.getByText('5')
+      const duplicatesLabel = screen.getByText('Duplicates Resolved')
+      expect(duplicatesStat).toBeDefined()
+      expect(duplicatesLabel).toBeDefined()
+    }, { timeout: 3000 })
+  })
+
+  it('should display will import count from API statistics', async () => {
+    api.getGedcomPreviewIndividuals.mockResolvedValue({
+      statistics: {
+        totalIndividuals: 125,
+        duplicateIndividuals: 5,
+        newIndividuals: 120,
+        existingIndividuals: 5
+      }
+    })
+
+    render(GedcomImportProgress, { uploadId: mockUploadId })
+
+    await waitFor(() => {
+      const willImportStat = screen.getByText('120')
+      const willImportLabel = screen.getByText('Will Import')
+      expect(willImportStat).toBeDefined()
+      expect(willImportLabel).toBeDefined()
+    }, { timeout: 3000 })
+  })
+
+  it('should handle missing statistics gracefully with zero defaults', async () => {
+    api.getGedcomPreviewIndividuals.mockResolvedValue({
+      statistics: null
+    })
+
+    render(GedcomImportProgress, { uploadId: mockUploadId })
+
+    await waitFor(() => {
+      const stats = screen.getAllByText('0')
+      // Should have three 0s (total, duplicates, willImport)
+      expect(stats.length).toBeGreaterThanOrEqual(3)
+    }, { timeout: 3000 })
+  })
+
+  it('should handle undefined statistics gracefully with zero defaults', async () => {
+    api.getGedcomPreviewIndividuals.mockResolvedValue({})
+
+    render(GedcomImportProgress, { uploadId: mockUploadId })
+
+    await waitFor(() => {
+      const stats = screen.getAllByText('0')
+      // Should have three 0s (total, duplicates, willImport)
+      expect(stats.length).toBeGreaterThanOrEqual(3)
+    }, { timeout: 3000 })
+  })
+
+  it('should handle partial statistics gracefully', async () => {
+    api.getGedcomPreviewIndividuals.mockResolvedValue({
+      statistics: {
+        totalIndividuals: 50
+        // Missing duplicateIndividuals and newIndividuals
+      }
+    })
+
+    render(GedcomImportProgress, { uploadId: mockUploadId })
+
+    await waitFor(() => {
+      const totalStat = screen.getByText('50')
+      expect(totalStat).toBeDefined()
+      // Duplicates and willImport should show 0
+      const zeroStats = screen.getAllByText('0')
+      expect(zeroStats.length).toBeGreaterThanOrEqual(2)
+    }, { timeout: 3000 })
+  })
+
+  it('should NOT display undefined in statistics', async () => {
+    api.getGedcomPreviewIndividuals.mockResolvedValue({
+      statistics: {
+        totalIndividuals: undefined,
+        duplicateIndividuals: undefined,
+        newIndividuals: undefined
+      }
+    })
+
+    render(GedcomImportProgress, { uploadId: mockUploadId })
+
+    await waitFor(() => {
+      const loadingText = screen.queryByText(/loading preview/i)
+      if (!loadingText) {
+        // Should show 0s, not "undefined"
+        expect(screen.queryByText('undefined')).toBeNull()
+        const zeroStats = screen.getAllByText('0')
+        expect(zeroStats.length).toBeGreaterThanOrEqual(3)
+      }
     }, { timeout: 3000 })
   })
 })

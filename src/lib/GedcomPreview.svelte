@@ -157,24 +157,26 @@
     </div>
   {:else if previewData}
     <!-- Summary Statistics Banner -->
+    {#if previewData.statistics}
     <div class="summary-banner">
       <div class="summary-stat">
-        <span class="summary-number">{previewData.statistics.totalIndividuals}</span>
+        <span class="summary-number">{previewData.statistics.totalIndividuals || 0}</span>
         <span class="summary-label">Individuals</span>
       </div>
       <div class="summary-stat">
-        <span class="summary-number new">{previewData.statistics.newIndividuals}</span>
+        <span class="summary-number new">{previewData.statistics.newIndividuals || 0}</span>
         <span class="summary-label">New</span>
       </div>
       <div class="summary-stat">
-        <span class="summary-number duplicate">{previewData.statistics.duplicateIndividuals}</span>
+        <span class="summary-number duplicate">{previewData.statistics.duplicateIndividuals || 0}</span>
         <span class="summary-label">Duplicates</span>
       </div>
       <div class="summary-stat">
-        <span class="summary-number existing">{previewData.statistics.existingIndividuals}</span>
+        <span class="summary-number existing">{previewData.statistics.existingIndividuals || 0}</span>
         <span class="summary-label">Existing</span>
       </div>
     </div>
+    {/if}
 
     <!-- Tab Navigation -->
     <div class="tabs" role="tablist">
@@ -201,7 +203,7 @@
         aria-selected={activeTab === 'duplicates'}
         on:click={() => changeTab('duplicates')}
       >
-        Duplicates {#if previewData && previewData.statistics.duplicateIndividuals > 0}({previewData.statistics.duplicateIndividuals}){/if}
+        Duplicates {#if previewData && previewData.statistics && previewData.statistics.duplicateIndividuals > 0}({previewData.statistics.duplicateIndividuals}){/if}
       </button>
     </div>
 
@@ -212,9 +214,9 @@
         {#if activeTab === 'individuals'}
           <GedcomIndividualsTable
             individuals={previewData.individuals || []}
-            currentPage={previewData.pagination.currentPage}
+            currentPage={previewData.pagination.page}
             totalPages={previewData.pagination.totalPages}
-            totalItems={previewData.pagination.totalItems}
+            totalItems={previewData.pagination.total}
             {sortBy}
             {sortOrder}
             on:personSelect={handlePersonSelect}

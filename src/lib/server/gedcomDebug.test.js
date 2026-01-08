@@ -72,8 +72,8 @@ describe('GEDCOM Debug Flow', () => {
       const stats = extractStatistics(result)
 
       // These should be logged
-      expect(stats.totalIndividuals).toBeGreaterThan(0)
-      expect(stats.totalFamilies).toBeGreaterThan(0)
+      expect(stats.individualsCount).toBeGreaterThan(0)
+      expect(stats.familiesCount).toBeGreaterThan(0)
     })
 
     it('should log any parsing errors or warnings', async () => {
@@ -129,8 +129,8 @@ describe('GEDCOM Debug Flow', () => {
 
       // Statistics calculation should be logged
       expect(stats).toBeDefined()
-      expect(stats.totalIndividuals).toBeDefined()
-      expect(stats.totalFamilies).toBeDefined()
+      expect(stats.individualsCount).toBeDefined()
+      expect(stats.familiesCount).toBeDefined()
       expect(stats.version).toBeDefined()
     })
 
@@ -142,9 +142,10 @@ describe('GEDCOM Debug Flow', () => {
       const stats = extractStatistics(parsed)
 
       // Date range should be logged if found
-      if (stats.dateRange) {
-        expect(stats.dateRange.earliest).toBeDefined()
-        expect(stats.dateRange.latest).toBeDefined()
+      if (stats.earliestDate || stats.latestDate) {
+        // earliestDate and latestDate are top-level fields, not nested in dateRange
+        expect(stats.earliestDate).toBeDefined()
+        expect(stats.latestDate).toBeDefined()
       }
     })
   })

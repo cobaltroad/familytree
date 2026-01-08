@@ -174,6 +174,14 @@ export async function getPreviewIndividuals(uploadId, userId, options = {}) {
   const offset = (page - 1) * limit
   const paginatedIndividuals = individuals.slice(offset, offset + limit)
 
+  // Build statistics object for GedcomPreview component
+  const statistics = {
+    totalIndividuals: previewData.summary.totalIndividuals,
+    newIndividuals: previewData.summary.newCount,
+    duplicateIndividuals: previewData.summary.duplicateCount,
+    existingIndividuals: previewData.summary.existingCount
+  }
+
   return {
     individuals: paginatedIndividuals,
     pagination: {
@@ -181,7 +189,8 @@ export async function getPreviewIndividuals(uploadId, userId, options = {}) {
       limit,
       total,
       totalPages
-    }
+    },
+    statistics
   }
 }
 

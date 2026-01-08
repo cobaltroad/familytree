@@ -37,15 +37,23 @@
         limit: 1
       })
 
-      previewStats = previewData.statistics || {
-        total: 0,
-        duplicates: 0,
-        willImport: 0
+      // Map API field names to component field names
+      const stats = previewData.statistics || {}
+      previewStats = {
+        total: stats.totalIndividuals || 0,
+        duplicates: stats.duplicateIndividuals || 0,
+        willImport: stats.newIndividuals || 0
       }
 
       loadingPreview = false
     } catch (error) {
       console.error('Failed to load preview:', error)
+      // Set safe defaults on error
+      previewStats = {
+        total: 0,
+        duplicates: 0,
+        willImport: 0
+      }
       loadingPreview = false
     }
 

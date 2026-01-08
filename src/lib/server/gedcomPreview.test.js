@@ -434,4 +434,64 @@ describe('gedcomPreview', () => {
       expect(result[0].resolution).toBe('merge')
     })
   })
+
+  describe('getPreviewIndividuals - statistics field', () => {
+    beforeEach(async () => {
+      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+    })
+
+    it('should include statistics object in response', async () => {
+      const result = await getPreviewIndividuals(uploadId, userId)
+
+      expect(result).toBeDefined()
+      expect(result.statistics).toBeDefined()
+      expect(typeof result.statistics).toBe('object')
+    })
+
+    it('should include totalIndividuals count in statistics', async () => {
+      const result = await getPreviewIndividuals(uploadId, userId)
+
+      expect(result.statistics.totalIndividuals).toBeDefined()
+      expect(result.statistics.totalIndividuals).toBe(3)
+    })
+
+    it('should include newIndividuals count in statistics', async () => {
+      const result = await getPreviewIndividuals(uploadId, userId)
+
+      expect(result.statistics.newIndividuals).toBeDefined()
+      expect(result.statistics.newIndividuals).toBe(2) // 3 total - 1 duplicate
+    })
+
+    it('should include duplicateIndividuals count in statistics', async () => {
+      const result = await getPreviewIndividuals(uploadId, userId)
+
+      expect(result.statistics.duplicateIndividuals).toBeDefined()
+      expect(result.statistics.duplicateIndividuals).toBe(1)
+    })
+
+    it('should include existingIndividuals count in statistics', async () => {
+      const result = await getPreviewIndividuals(uploadId, userId)
+
+      expect(result.statistics.existingIndividuals).toBeDefined()
+      expect(result.statistics.existingIndividuals).toBe(0) // Initially 0, updated after resolution
+    })
+
+    it('should return correct statistics structure for GedcomPreview component', async () => {
+      const result = await getPreviewIndividuals(uploadId, userId)
+
+      expect(result.statistics).toEqual({
+        totalIndividuals: 3,
+        newIndividuals: 2,
+        duplicateIndividuals: 1,
+        existingIndividuals: 0
+      })
+    })
+
+    it('should handle undefined statistics gracefully', async () => {
+      // Test that component can handle missing statistics
+      const result = await getPreviewIndividuals('non-existent', userId)
+
+      expect(result).toBeNull()
+    })
+  })
 })

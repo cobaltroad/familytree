@@ -589,10 +589,10 @@ describe('GedcomPreview Component', () => {
       }
     ],
     pagination: {
-      currentPage: 1,
+      page: 1,
       totalPages: 5,
-      totalItems: 237,
-      itemsPerPage: 50
+      total: 237,
+      limit: 50
     },
     statistics: {
       totalIndividuals: 237,
