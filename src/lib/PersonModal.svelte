@@ -90,13 +90,21 @@
         // For children: person is person1Id (parent), related person is person2Id (child)
         if (parentRole) {
           // Looking for a parent relationship
-          return rel.type === 'parentOf' &&
+          // IMPORTANT: API denormalizes parentOf relationships, so we need to check for both:
+          // - Denormalized format: type="mother" or type="father" with parentRole="mother"/"father"
+          // - Normalized format: type="parentOf" with parentRole="mother"/"father" (backwards compatibility)
+          const isParentRelationship = rel.type === 'parentOf' || rel.type === parentRole
+          return isParentRelationship &&
             rel.person2Id === person.id &&
             rel.person1Id === relatedPersonId &&
             rel.parentRole === parentRole
         } else {
           // Looking for a child relationship
-          return rel.type === 'parentOf' &&
+          // IMPORTANT: API denormalizes parentOf relationships, so we need to check for both:
+          // - Denormalized format: type="mother" or type="father"
+          // - Normalized format: type="parentOf" (backwards compatibility)
+          const isParentRelationship = rel.type === 'parentOf' || rel.type === 'mother' || rel.type === 'father'
+          return isParentRelationship &&
             rel.person1Id === person.id &&
             rel.person2Id === relatedPersonId
         }
