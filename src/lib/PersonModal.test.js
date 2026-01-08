@@ -308,7 +308,9 @@ describe('PersonModal', () => {
     })
   })
 
-  describe('Part 2: Re-Sync from Facebook Button', () => {
+  describe.skip('Part 2: Re-Sync from Facebook Button - TEMPORARILY DISABLED', () => {
+    // These tests are skipped because Facebook buttons are temporarily hidden
+    // To re-enable: remove .skip and change {#if false} to {#if true} in PersonModal.svelte
     describe('AC3: Button renamed and moved to footer', () => {
       it('should have Re-Sync from Facebook button in modal footer when editing', () => {
         modal.open(3, 'edit')
@@ -385,8 +387,8 @@ describe('PersonModal', () => {
       })
     })
 
-    describe('AC5: Button state management', () => {
-      it('should show "Import from Facebook" text in add mode', () => {
+    describe('AC5: Button state management - SKIPPED', () => {
+      it.skip('should show "Import from Facebook" text in add mode', () => {
         modal.openNew()
 
         const { container } = render(PersonModal)
@@ -397,7 +399,7 @@ describe('PersonModal', () => {
         expect(button.textContent).not.toContain('Re-Sync')
       })
 
-      it('should show "Re-Sync from Facebook" text in edit mode', () => {
+      it.skip('should show "Re-Sync from Facebook" text in edit mode', () => {
         modal.open(3, 'edit')
 
         const { container } = render(PersonModal)
@@ -408,8 +410,8 @@ describe('PersonModal', () => {
       })
     })
 
-    describe('AC4: Re-Sync functionality', () => {
-      it('should prompt for Facebook URL when Re-Sync button is clicked', async () => {
+    describe('AC4: Re-Sync functionality - SKIPPED', () => {
+      it.skip('should prompt for Facebook URL when Re-Sync button is clicked', async () => {
         modal.open(3, 'edit')
 
         const { container } = render(PersonModal)
@@ -456,6 +458,26 @@ describe('PersonModal', () => {
         // Implementation will be tested once the feature is built
         expect(true).toBe(true) // Placeholder
       })
+    })
+  })
+
+  describe('Facebook buttons hidden (temporary)', () => {
+    it('should NOT display Re-Sync from Facebook button in footer', () => {
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const resyncButton = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
+      expect(resyncButton).toBeFalsy()
+    })
+
+    it('should NOT display Import from Facebook button when adding new person', () => {
+      modal.openNew()
+
+      const { container } = render(PersonModal)
+
+      const importButton = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
+      expect(importButton).toBeFalsy()
     })
   })
 })

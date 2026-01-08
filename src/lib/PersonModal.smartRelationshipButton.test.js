@@ -44,7 +44,9 @@ describe('PersonModal - SmartRelationshipCreator Integration', () => {
     modal.close()
   })
 
-  describe('Add from Facebook button', () => {
+  describe.skip('Add from Facebook button - TEMPORARILY DISABLED', () => {
+    // These tests are skipped because Facebook buttons are temporarily hidden
+    // To re-enable: remove .skip and change {#if false} to {#if true} in PersonModal.svelte
     it('should display "Add from Facebook" button in relationships section on desktop', async () => {
       modal.open(1, 'edit') // Open modal for John Doe
 
@@ -87,7 +89,7 @@ describe('PersonModal - SmartRelationshipCreator Integration', () => {
     })
   })
 
-  describe('SmartRelationshipCreator modal opening', () => {
+  describe.skip('SmartRelationshipCreator modal opening - TEMPORARILY DISABLED', () => {
     it('should open SmartRelationshipCreator modal when "Add from Facebook" button is clicked', async () => {
       modal.open(1, 'edit')
 
@@ -140,7 +142,7 @@ describe('PersonModal - SmartRelationshipCreator Integration', () => {
     })
   })
 
-  describe('Modal stacking', () => {
+  describe.skip('Modal stacking - TEMPORARILY DISABLED', () => {
     it('should render SmartRelationshipCreator on top of PersonModal', async () => {
       modal.open(1, 'edit')
 
@@ -163,7 +165,7 @@ describe('PersonModal - SmartRelationshipCreator Integration', () => {
     })
   })
 
-  describe('Accessibility', () => {
+  describe.skip('Accessibility - TEMPORARILY DISABLED', () => {
     it('should have proper ARIA label for "Add from Facebook" button', async () => {
       modal.open(1, 'edit')
 
@@ -173,6 +175,33 @@ describe('PersonModal - SmartRelationshipCreator Integration', () => {
 
       expect(addFromFacebookButton.getAttribute('aria-label')).toBeTruthy()
       expect(addFromFacebookButton.getAttribute('aria-label')).toContain('Add family member from Facebook')
+    })
+  })
+
+  describe('Add from Facebook button hidden (temporary)', () => {
+    it('should NOT display "Add from Facebook" button in relationships section on desktop', () => {
+      modal.open(1, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const addFromFacebookButton = screen.queryByTestId('add-from-facebook-button')
+      expect(addFromFacebookButton).toBeFalsy()
+    })
+
+    it('should NOT display "Add from Facebook" button in relationships section on mobile', () => {
+      // Set mobile width
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 375
+      })
+
+      modal.open(1, 'edit')
+
+      const { container } = render(PersonModal)
+
+      const addFromFacebookButton = screen.queryByTestId('add-from-facebook-button')
+      expect(addFromFacebookButton).toBeFalsy()
     })
   })
 })

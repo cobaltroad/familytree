@@ -570,6 +570,9 @@
               </CollapsibleActionPanel>
 
               <!-- Add from Facebook button -->
+              <!-- TEMPORARILY HIDDEN: Facebook integration features disabled for now -->
+              <!-- TODO: Re-enable by changing {#if false} to {#if true} -->
+              {#if false}
               <div class="add-from-facebook-section">
                 <button
                   class="add-from-facebook-button"
@@ -581,6 +584,7 @@
                   Add from Facebook
                 </button>
               </div>
+              {/if}
             {:else}
               <div class="empty-relationships">
                 <p>Add person details to view relationships</p>
@@ -772,6 +776,9 @@
           </CollapsibleSection>
 
           <!-- Add from Facebook button (Mobile) -->
+          <!-- TEMPORARILY HIDDEN: Facebook integration features disabled for now -->
+          <!-- TODO: Re-enable by changing {#if false} to {#if true} -->
+          {#if false}
           <div class="add-from-facebook-section mobile">
             <button
               class="add-from-facebook-button"
@@ -783,6 +790,7 @@
               Add from Facebook
             </button>
           </div>
+          {/if}
         {/if}
       {/if}
 
@@ -791,6 +799,9 @@
           <button type="submit" form="person-form" class="update-button">
             {person ? 'Update' : 'Add'} Person
           </button>
+          <!-- TEMPORARILY HIDDEN: Facebook integration features disabled for now -->
+          <!-- TODO: Re-enable by changing {#if false} to {#if true} -->
+          {#if false}
           <button
             type="button"
             class="resync-facebook-button"
@@ -800,6 +811,7 @@
           >
             {isImporting ? 'Syncing...' : (person ? 'Re-Sync from Facebook' : 'Import from Facebook')}
           </button>
+          {/if}
         </div>
         {#if person}
           <button class="delete-button" on:click={handleDelete}>
