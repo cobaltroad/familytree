@@ -1618,5 +1618,324 @@ simulation.on('tick', () => {
 
 ---
 
+## GEDCOM Import Authentication and Session Handling
+
+### Bug Fix: 401 Unauthorized on GEDCOM Import (January 2026)
+
+**Symptoms:**
+- User clicked "Start Import" on GEDCOM file (backups/dollete.ged)
+- Console error: `XHR POST /api/gedcom/import/[uploadId] [HTTP/1.1 401 Unauthorized 25ms]`
+- GEDCOM import completely broken - all imports failed with authentication error
+- Other authenticated endpoints working correctly
+
+**Root Cause:**
+The GEDCOM import endpoint was checking for `locals.session.userId`, which doesn't exist in the Auth.js session structure. The correct path is `session.user.id`.
+
+```javascript
+// PROBLEMATIC CODE
+if (!locals.session || !locals.session.userId) {
+  return new Response('Unauthorized', { status: 401 })
+}
+
+const userId = locals.session.userId // ❌ Wrong field path
+```
+
+Auth.js session structure:
+```javascript
+{
+  user: {
+    id: 994,
+    email: "user@example.com",
+    name: "User Name"
+  },
+  expires: "2026-02-08T..."
+}
+```
+
+**Files Affected:**
+- `src/routes/api/gedcom/import/[uploadId]/+server.js` - Import endpoint with incorrect auth check
+
+**Solution:**
+
+1. **Import requireAuth helper** (consistent with other endpoints):
+   ```javascript
+   import { requireAuth } from '$lib/server/session.js'
+   ```
+
+2. **Replace manual auth check**:
+   ```javascript
+   // OLD: Manual session check with wrong path
+   if (!locals.session || !locals.session.userId) {
+     return new Response('Unauthorized', { status: 401 })
+   }
+
+   // NEW: Use requireAuth helper
+   const session = await requireAuth({ locals, ...event })
+   const userId = session.user.id // ✅ Correct path
+   ```
+
+3. **Add AuthenticationError handling**:
+   ```javascript
+   } catch (error) {
+     if (error.name === 'AuthenticationError') {
+       return new Response(error.message, { status: error.status })
+     }
+     // ... other error handling
+   }
+   ```
+
+### Key Lessons
+
+1. **Use Standard Authentication Helpers**
+   - Always use `requireAuth()` helper instead of manual session checks
+   - Helper ensures consistent session access patterns across all API endpoints
+   - Helper handles edge cases: missing session, invalid session, expired tokens
+   - Follows DRY principle - authentication logic in one place
+
+2. **Verify Session Structure for Authentication Provider**
+   - Different auth providers have different session structures
+   - Auth.js: `session.user.id` (not `session.userId`)
+   - NextAuth: `session.user.id`
+   - Custom auth: May vary
+   - **Always check docs** for correct session field paths
+   - Test authentication with actual auth provider, not mocked sessions
+
+3. **Authentication Consistency Across Endpoints**
+   - All API endpoints should use same authentication pattern
+   - Review existing endpoints to find the correct pattern
+   - Examples in codebase:
+     - `/api/people` - Uses `requireAuth()`
+     - `/api/relationships` - Uses `requireAuth()`
+     - `/api/user/settings` - Uses `requireAuth()`
+   - New endpoints should follow established patterns
+
+4. **Test Authentication Scenarios**
+   - **Unauthenticated request**: Should return 401
+   - **Session without user**: Should return 401
+   - **Session with user**: Should succeed
+   - **Expired session**: Should return 401
+   - **Malformed session**: Should return 500 with error handling
+   - Add these tests for ALL new API endpoints
+
+### Testing Approach (TDD Methodology)
+
+**RED Phase - 3 Failing Tests:**
+- Created `gedcomImport.test.js` with 9 comprehensive authentication tests
+- Initial: 3 failed (unauthenticated scenarios), 6 passed
+- Tests demonstrated the bug: endpoint returning 401 for all requests
+
+**GREEN Phase - Fix Implementation:**
+- Imported `requireAuth` helper
+- Updated function signature to pass full event context
+- Replaced manual auth check with `requireAuth()` call
+- Fixed userId extraction from `session.user.id`
+- Added AuthenticationError handling
+- All 9 tests passing
+
+**REFACTOR Phase:**
+- Verified consistency with other API endpoints
+- No code duplication (uses shared helper)
+- Clean error handling for auth failures
+- Maintained all existing functionality
+
+### Best Practices for API Authentication
+
+**✅ DO:**
+- Use `requireAuth()` helper for all authenticated endpoints
+- Check existing endpoints for established patterns
+- Verify session structure in auth provider documentation
+- Test with actual auth provider (not just mocked sessions)
+- Add authentication test coverage for all new endpoints
+- Return clear 401 error messages for auth failures
+- Handle AuthenticationError explicitly in catch blocks
+
+**❌ DON'T:**
+- Write custom authentication checks (use helpers)
+- Assume session structure without checking docs
+- Use `session.userId` for Auth.js (correct: `session.user.id`)
+- Skip authentication tests for new endpoints
+- Return generic errors for authentication failures
+- Mix authentication patterns across endpoints
+- Test only with mocked sessions (miss real auth issues)
+
+### Code Review Checklist for API Endpoints
+
+When reviewing new or modified API endpoints:
+- [ ] Does it use `requireAuth()` helper (not manual checks)?
+- [ ] Is session field access correct for auth provider (`session.user.id`)?
+- [ ] Are all authentication scenarios tested (unauthenticated, expired, invalid)?
+- [ ] Does it return 401 for unauthenticated requests?
+- [ ] Is AuthenticationError handled explicitly?
+- [ ] Is authentication pattern consistent with existing endpoints?
+- [ ] Are error messages clear and actionable?
+
+## Relationship Card Delete Button Visibility
+
+### Bug Fix: Delete Buttons Missing on Parent/Child Relationships (January 2026)
+
+**Symptoms:**
+- User unable to see delete buttons on parent relationship cards (mother/father)
+- User unable to see delete buttons on child relationship cards
+- Delete buttons visible and working correctly for spouse relationships
+- No JavaScript errors or console warnings
+- Buttons not visible on hover or at any time
+
+**Root Cause Investigation:**
+
+**Initial Assumption (Incorrect):**
+- Assumed delete buttons didn't exist for parent/child relationships
+- Wrote tests that passed but didn't match actual user experience
+- Tests verified code structure but not actual visibility behavior
+
+**Actual Root Cause (After User Report):**
+The `findRelationshipObject()` function in PersonModal was failing to find parent and child relationship objects because it was only checking for the normalized format (`type: "parentOf"`), but the API returns denormalized format (`type: "mother"`, `type: "father"`).
+
+```javascript
+// PROBLEMATIC CODE - Only checked normalized format
+} else if (type === 'parentOf') {
+  if (parentRole) {
+    // Looking for a parent relationship
+    return rel.type === 'parentOf' &&  // ❌ Never matches API response!
+      rel.person2Id === person.id &&
+      rel.person1Id === relatedPersonId &&
+      rel.parentRole === parentRole
+  }
+}
+```
+
+Since `findRelationshipObject()` returned `null`, the `relationship` prop was `null`, causing `showDeleteButton` to be `false` (never visible).
+
+**Files Affected:**
+- `src/lib/PersonModal.svelte` - Helper function `findRelationshipObject()` (lines 79-106)
+
+**Solution:**
+
+Modified `findRelationshipObject()` to check for BOTH denormalized and normalized formats:
+
+```javascript
+// FIXED CODE - Checks both formats
+} else if (type === 'parentOf') {
+  if (parentRole) {
+    // Looking for a parent (check both denormalized and normalized)
+    const isParentRelationship = rel.type === 'parentOf' || rel.type === parentRole
+    return isParentRelationship &&
+      rel.person2Id === person.id &&
+      rel.person1Id === relatedPersonId
+  } else {
+    // Looking for a child (check both formats)
+    const isParentRelationship = rel.type === 'parentOf' ||
+                                 rel.type === 'mother' ||
+                                 rel.type === 'father'
+    return isParentRelationship &&
+      rel.person1Id === person.id &&
+      rel.person2Id === relatedPersonId
+  }
+}
+```
+
+### Key Lessons
+
+1. **API Response Format vs. Database Storage Format**
+   - **Database**: Stores normalized format (`type: "parentOf"` with `parent_role: "mother"|"father"`)
+   - **API Response**: Returns denormalized format (`type: "mother"|"father"`)
+   - **Frontend Code**: Must handle BOTH formats for robustness
+   - This is the **same lesson** from "Backend-Frontend Data Format Synchronization" earlier
+   - Applies to ALL relationship lookups, not just derived stores
+
+2. **Tests Can Pass While Feature Is Broken**
+   - Tests verified code structure existed (buttons in component, event handlers, etc.)
+   - Tests did NOT verify actual user experience (visible buttons, working clicks)
+   - **Critical**: Test what users SEE and DO, not just code structure
+   - Integration tests must simulate real user workflows
+
+3. **Trust User Reports Over Passing Tests**
+   - When user reports "I don't see the buttons", believe them
+   - Passing tests don't guarantee working features
+   - Re-examine assumptions when user experience contradicts test results
+   - **"Works in tests" ≠ "Works for users"**
+
+4. **Rollback When First Fix Doesn't Work**
+   - First attempt: Changed `showDeleteButton` to always true (wrong layer)
+   - User reported still broken
+   - Rolled back cleanly, investigated deeper
+   - Found real issue: `relationship` prop was `null` (upstream problem)
+   - **Lesson**: Fix root cause, not symptoms
+
+5. **Field Name Mismatches Are Common**
+   - Backend uses snake_case (`parent_role`)
+   - JavaScript uses camelCase (`parentRole`)
+   - API denormalizes relationships for frontend convenience
+   - **Always verify** actual API response format, don't assume
+   - Use browser DevTools Network tab to inspect real API responses
+
+### Testing Approach (TDD Methodology)
+
+**RED Phase - Write Failing Tests:**
+- Created `PersonModal.findRelationshipObject.test.js` with 15 tests
+- Tests used ACTUAL API response format (denormalized: `type: "mother"`, `type: "father"`)
+- Initially: 4 tests failed (parent/child with denormalized format)
+- Tests accurately reproduced user-reported bug
+
+**GREEN Phase - Fix Implementation:**
+- Modified `findRelationshipObject()` to check both formats
+- Added `isParentRelationship` variable for clarity
+- Checked for: `rel.type === 'parentOf' || rel.type === parentRole`
+- All 15 tests passing
+
+**REFACTOR Phase:**
+- Cleaned up logic for readability
+- Maintained backwards compatibility with normalized format
+- Removed incorrect first attempt (always-visible buttons)
+- Added comprehensive documentation in `DELETE_BUTTON_FIX_SUMMARY.md`
+
+### Best Practices for Relationship Data Handling
+
+**✅ DO:**
+- Check ACTUAL API responses (browser DevTools Network tab)
+- Handle both denormalized and normalized formats in all lookups
+- Trust user reports when they contradict passing tests
+- Roll back when fix doesn't work, investigate deeper
+- Test with real API data structures (not mocked)
+- Verify `findRelationshipObject()` returns truthy value before assuming delete button works
+- Add comprehensive logging when debugging subtle bugs
+
+**❌ DON'T:**
+- Assume API format matches database format (often denormalized)
+- Trust tests that pass but don't match user experience
+- Fix symptoms instead of root causes (e.g., forcing buttons visible)
+- Skip testing with real API responses
+- Assume camelCase matches snake_case fields
+- Test only code structure (must test actual user experience)
+- Give up after first fix attempt (root cause may be deeper)
+
+### Code Review Checklist for Relationship Features
+
+When reviewing relationship display/manipulation code:
+- [ ] Does it handle both denormalized (`mother`, `father`) and normalized (`parentOf`) formats?
+- [ ] Has it been tested with ACTUAL API responses (not mocked data)?
+- [ ] Do tests verify user experience (visible buttons, working clicks)?
+- [ ] Are field names correct (camelCase vs snake_case)?
+- [ ] Does `findRelationshipObject()` successfully find parent/child relationships?
+- [ ] Is the `relationship` prop truthy for all relationship types?
+- [ ] Have tests been verified against real browser behavior?
+
+### Related Documentation
+
+- See "Backend-Frontend Data Format Synchronization" section (earlier in this document)
+- See `DELETE_BUTTON_FIX_SUMMARY.md` for detailed fix documentation
+- Related tests: `PersonModal.findRelationshipObject.test.js` (15 tests)
+- Commit: 200a165 fix: enable delete buttons for parent and child relationship cards
+
+### Version History Update
+
+- **January 2026**: Delete button visibility for parent/child relationships
+  - Root cause: `findRelationshipObject()` only checked normalized format, API returns denormalized
+  - Solution: Check both `type: "parentOf"` AND `type: "mother"|"father"` formats
+  - Tests added: 15 tests in PersonModal.findRelationshipObject.test.js
+  - Key lesson: Trust user reports over passing tests, verify with actual API responses
+  - Commit: 200a165 fix: enable delete buttons for parent and child relationship cards
+
+---
+
 **Note to Future Developers:**
 This document should be updated whenever significant bugs are discovered or architectural decisions are made. Keep it current to maximize its value as a knowledge base.
