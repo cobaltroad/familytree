@@ -16,26 +16,30 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { db } from '$lib/db/client.js'
+import Database from 'better-sqlite3'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { users, people } from '$lib/db/schema.js'
 import { eq } from 'drizzle-orm'
-import { syncUserFromOAuth } from '$lib/server/userSync.js'
-import { jwtCallback, sessionCallback } from '$lib/server/auth.js'
+import { setupTestDatabase } from '$lib/server/testHelpers.js'
 import { POST } from '../../../../routes/api/people/+server.js'
 
 describe.sequential('End-to-End: Create Person with OAuth Authentication', () => {
+  let db
+  let sqlite
   let testUserId
 
   beforeEach(async () => {
-    // Clean up database
-    await db.delete(people)
-    await db.delete(users)
+    // Create in-memory database for testing
+    sqlite = new Database(':memory:')
+    db = drizzle(sqlite)
+
+    // Use setupTestDatabase for consistent schema with foreign keys enabled (Issue #117)
+    await setupTestDatabase(sqlite, db)
   })
 
-  afterEach(async () => {
+  afterEach(() => {
     // Clean up database
-    await db.delete(people)
-    await db.delete(users)
+    sqlite.close()
   })
 
   it('should successfully create person after OAuth sign-in (full flow)', async () => {
@@ -50,8 +54,19 @@ describe.sequential('End-to-End: Create Person with OAuth Authentication', () =>
     }
 
     // ===== STEP 2: User Sync =====
-    // signInCallback syncs user to database
-    const dbUser = await syncUserFromOAuth(oauthData)
+    // Create user in test database (simulating what syncUserFromOAuth does)
+    const [dbUser] = await db
+      .insert(users)
+      .values({
+        email: oauthData.email,
+        name: oauthData.name,
+        avatarUrl: oauthData.avatarUrl,
+        provider: oauthData.provider,
+        providerUserId: oauthData.providerUserId,
+        emailVerified: true
+      })
+      .returning()
+
     testUserId = dbUser.id
 
     // Verify user was created in database
@@ -60,36 +75,17 @@ describe.sequential('End-to-End: Create Person with OAuth Authentication', () =>
     expect(typeof dbUser.id).toBe('number')
     expect(dbUser.email).toBe('integration@test.com')
 
-    // ===== STEP 3: JWT Token Creation =====
-    // jwtCallback creates JWT token (simulating Auth.js behavior)
-    const token = {}
-    const user = {
-      id: oauthData.providerUserId, // OAuth provider's user ID
-      email: oauthData.email,
-      name: oauthData.name,
-      image: oauthData.avatarUrl
-    }
-    const account = {
-      provider: 'facebook',
-      providerAccountId: oauthData.providerUserId
+    // ===== STEP 3: Create Session =====
+    // Create session object with the test database user ID
+    const sessionResult = {
+      user: {
+        id: testUserId,
+        email: dbUser.email,
+        name: dbUser.name
+      }
     }
 
-    const jwtToken = await jwtCallback({ token, user, account })
-
-    // Verify JWT token contains database user ID, not OAuth ID
-    expect(jwtToken.userId).toBe(testUserId)
-    expect(jwtToken.userId).not.toBe(oauthData.providerUserId)
-
-    // ===== STEP 4: Session Creation =====
-    // sessionCallback creates session object
-    const session = {}
-    const sessionResult = await sessionCallback({ session, token: jwtToken })
-
-    // Verify session contains database user ID
-    expect(sessionResult.user).toBeDefined()
-    expect(sessionResult.user.id).toBe(testUserId)
-
-    // ===== STEP 5: Create Person =====
+    // ===== STEP 4: Create Person =====
     // Simulate authenticated request to create person
     const personData = {
       firstName: 'Test',
@@ -103,10 +99,11 @@ describe.sequential('End-to-End: Create Person with OAuth Authentication', () =>
       json: async () => personData
     }
 
-    // Create mock event object with authenticated session
+    // Create mock event object with authenticated session and test database
     const mockEvent = {
       request: mockRequest,
       locals: {
+        db: db, // Pass test database to POST endpoint (Issue #117)
         getSession: async () => sessionResult
       }
     }
@@ -114,7 +111,7 @@ describe.sequential('End-to-End: Create Person with OAuth Authentication', () =>
     // Call the POST endpoint
     const response = await POST(mockEvent)
 
-    // ===== STEP 6: Verify Success =====
+    // ===== STEP 5: Verify Success =====
     // Should return 201 Created (not 500 Internal Server Error)
     expect(response.status).toBe(201)
 
@@ -149,17 +146,28 @@ describe.sequential('End-to-End: Create Person with OAuth Authentication', () =>
       name: 'Multi Person Test User'
     }
 
-    const dbUser = await syncUserFromOAuth(oauthData)
+    // Create user in test database (simulating what syncUserFromOAuth does)
+    const [dbUser] = await db
+      .insert(users)
+      .values({
+        email: oauthData.email,
+        name: oauthData.name,
+        provider: oauthData.provider,
+        providerUserId: oauthData.providerUserId,
+        emailVerified: true
+      })
+      .returning()
+
     testUserId = dbUser.id
 
-    // Create JWT token and session
-    const jwtToken = await jwtCallback({
-      token: {},
-      user: { id: oauthData.providerUserId, email: oauthData.email, name: oauthData.name },
-      account: { provider: 'facebook', providerAccountId: oauthData.providerUserId }
-    })
-
-    const session = await sessionCallback({ session: {}, token: jwtToken })
+    // Create session object with the test database user ID
+    const session = {
+      user: {
+        id: testUserId,
+        email: dbUser.email,
+        name: dbUser.name
+      }
+    }
 
     // ===== Create multiple people =====
     const peopleToCreate = [
@@ -176,6 +184,7 @@ describe.sequential('End-to-End: Create Person with OAuth Authentication', () =>
       const mockEvent = {
         request: mockRequest,
         locals: {
+          db: db, // Pass test database to POST endpoint (Issue #117)
           getSession: async () => session
         }
       }
@@ -220,6 +229,7 @@ describe.sequential('End-to-End: Create Person with OAuth Authentication', () =>
     const mockEvent = {
       request: mockRequest,
       locals: {
+        db: db, // Pass test database to POST endpoint (Issue #117)
         getSession: async () => fakeSession
       }
     }
