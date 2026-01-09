@@ -34,12 +34,39 @@ vi.mock('$app/navigation', () => ({
 
 vi.mock('$app/stores', () => ({
   page: {
-    subscribe: vi.fn()
+    subscribe: vi.fn((callback) => {
+      // Call callback with default page data
+      callback({
+        url: new URL('http://localhost:5173'),
+        params: {},
+        route: { id: '/' },
+        status: 200,
+        error: null,
+        data: {
+          session: {
+            user: {
+              id: 1,
+              email: 'test@example.com',
+              name: 'Test User'
+            }
+          }
+        },
+        form: null
+      })
+      // Return unsubscribe function
+      return () => {}
+    })
   },
   navigating: {
-    subscribe: vi.fn()
+    subscribe: vi.fn((callback) => {
+      callback(null)
+      return () => {}
+    })
   },
   updated: {
-    subscribe: vi.fn()
+    subscribe: vi.fn((callback) => {
+      callback(false)
+      return () => {}
+    })
   }
 }));
