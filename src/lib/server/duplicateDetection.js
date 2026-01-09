@@ -270,3 +270,117 @@ export function findDuplicates(gedcomPeople, existingPeople) {
 
   return duplicates
 }
+
+/**
+ * Finds all duplicate pairs within a single array of people
+ * Story #108: Duplicate Detection Service (Foundation)
+ *
+ * Compares each person against all other people in the array to find potential duplicates.
+ * Only reports each pair once (avoids reporting both A->B and B->A).
+ *
+ * @param {Array} people - Array of people from database
+ * @param {number} threshold - Confidence threshold (default: 70)
+ * @returns {Array} Array of duplicate pairs with confidence scores
+ */
+export function findAllDuplicates(people, threshold = CONFIDENCE_THRESHOLD) {
+  if (!people || people.length <= 1) {
+    return []
+  }
+
+  const duplicates = []
+
+  // Compare each person with every other person (avoiding duplicates)
+  for (let i = 0; i < people.length; i++) {
+    for (let j = i + 1; j < people.length; j++) {
+      const person1 = people[i]
+      const person2 = people[j]
+
+      // Calculate match confidence between the two database persons
+      // We need to adapt the format to work with calculateMatchConfidence
+      const match = calculateMatchConfidence(
+        {
+          firstName: person1.firstName,
+          lastName: person1.lastName,
+          birthDate: person1.birthDate
+        },
+        person2
+      )
+
+      if (match.confidence >= threshold) {
+        duplicates.push({
+          person1: {
+            id: person1.id,
+            name: `${person1.firstName || ''} ${person1.lastName || ''}`.trim(),
+            birthDate: person1.birthDate
+          },
+          person2: {
+            id: person2.id,
+            name: `${person2.firstName || ''} ${person2.lastName || ''}`.trim(),
+            birthDate: person2.birthDate
+          },
+          confidence: match.confidence,
+          matchingFields: match.matchingFields
+        })
+      }
+    }
+  }
+
+  // Sort by confidence (highest first)
+  duplicates.sort((a, b) => b.confidence - a.confidence)
+
+  return duplicates
+}
+
+/**
+ * Finds duplicate candidates for a specific person
+ * Story #108: Duplicate Detection Service (Foundation)
+ *
+ * Compares the target person against all other people in the array.
+ * Excludes the target person itself from results.
+ *
+ * @param {Object} targetPerson - The person to find duplicates for
+ * @param {Array} allPeople - Array of all people from database
+ * @param {number} threshold - Confidence threshold (default: 70)
+ * @returns {Array} Array of potential duplicate persons with confidence scores
+ */
+export function findDuplicatesForPerson(targetPerson, allPeople, threshold = CONFIDENCE_THRESHOLD) {
+  if (!targetPerson || !allPeople || allPeople.length <= 1) {
+    return []
+  }
+
+  const duplicates = []
+
+  for (const person of allPeople) {
+    // Skip the target person itself
+    if (person.id === targetPerson.id) {
+      continue
+    }
+
+    // Calculate match confidence
+    const match = calculateMatchConfidence(
+      {
+        firstName: targetPerson.firstName,
+        lastName: targetPerson.lastName,
+        birthDate: targetPerson.birthDate
+      },
+      person
+    )
+
+    if (match.confidence >= threshold) {
+      duplicates.push({
+        person: {
+          id: person.id,
+          name: `${person.firstName || ''} ${person.lastName || ''}`.trim(),
+          birthDate: person.birthDate
+        },
+        confidence: match.confidence,
+        matchingFields: match.matchingFields
+      })
+    }
+  }
+
+  // Sort by confidence (highest first)
+  duplicates.sort((a, b) => b.confidence - a.confidence)
+
+  return duplicates
+}

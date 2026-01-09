@@ -31,21 +31,10 @@ describe('User Settings API - PATCH /api/user/settings', () => {
     db = drizzle(sqlite)
 
     // Use setupTestDatabase for consistent schema (Issue #114)
-    const defaultUserId = await setupTestDatabase(sqlite, db)
+    // This creates a default test user with email 'test@example.com'
+    userId = await setupTestDatabase(sqlite, db)
 
-    // Create test user with view_all_records = false
-    const userResult = await db
-      .insert(users)
-      .values({
-        email: 'test@example.com',
-        name: 'Test User',
-        provider: 'google',
-        viewAllRecords: false
-      })
-      .returning()
-    userId = userResult[0].id
-
-    // Create valid session
+    // Create valid session for the default test user
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
     const sessionResult = await db
       .insert(sessions)

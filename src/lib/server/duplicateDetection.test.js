@@ -1,6 +1,7 @@
 /**
  * Duplicate Detection Module - Unit Tests
  * Story #93: GEDCOM File Parsing and Validation
+ * Story #108: Duplicate Detection Service (Foundation)
  *
  * RED phase: Writing failing tests for duplicate detection algorithm
  */
@@ -11,7 +12,9 @@ import {
   findDuplicates,
   compareNames,
   compareDates,
-  compareParents
+  compareParents,
+  findAllDuplicates,
+  findDuplicatesForPerson
 } from './duplicateDetection.js'
 
 describe('duplicateDetection - compareNames', () => {
@@ -307,5 +310,202 @@ describe('duplicateDetection - findDuplicates', () => {
     const duplicates = findDuplicates(gedcomWithFamily, existingPeople)
 
     expect(duplicates[0].confidence).toBeGreaterThan(duplicates[1]?.confidence || 0)
+  })
+})
+
+describe('duplicateDetection - findAllDuplicates (Story #108)', () => {
+  it('should detect duplicates across entire people array', () => {
+    const people = [
+      { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 3, firstName: 'Jane', lastName: 'Doe', birthDate: '1960-05-20' }
+    ]
+
+    const duplicates = findAllDuplicates(people)
+
+    expect(duplicates).toHaveLength(1)
+    expect(duplicates[0].person1.id).toBe(1)
+    expect(duplicates[0].person2.id).toBe(2)
+    expect(duplicates[0].confidence).toBeGreaterThan(70)
+  })
+
+  it('should return multiple duplicate pairs when they exist', () => {
+    const people = [
+      { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 3, firstName: 'Jane', lastName: 'Doe', birthDate: '1960-05-20' },
+      { id: 4, firstName: 'Jane', lastName: 'Doe', birthDate: '1960-05-20' },
+      { id: 5, firstName: 'Bob', lastName: 'Jones', birthDate: '1945-01-01' },
+      { id: 6, firstName: 'Bob', lastName: 'Jones', birthDate: '1945-01-01' }
+    ]
+
+    const duplicates = findAllDuplicates(people)
+
+    expect(duplicates).toHaveLength(3) // 3 pairs: (1,2), (3,4), (5,6)
+  })
+
+  it('should sort results by confidence (highest first)', () => {
+    const people = [
+      { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }, // 80% match with person 1
+      { id: 3, firstName: 'Jon', lastName: 'Smith', birthDate: '1950-01-15' } // 75% match with both
+    ]
+
+    const duplicates = findAllDuplicates(people)
+
+    // Should have 3 pairs: (1,2)=80%, (1,3)=75%, (2,3)=75%
+    expect(duplicates.length).toBeGreaterThanOrEqual(2)
+    expect(duplicates[0].confidence).toBeGreaterThanOrEqual(duplicates[1].confidence)
+  })
+
+  it('should respect custom confidence threshold', () => {
+    const people = [
+      { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }, // 80% match (exact name + date)
+      { id: 3, firstName: 'Jon', lastName: 'Smith', birthDate: '1950-01-15' } // 75% match (close name + date)
+    ]
+
+    const duplicatesDefault = findAllDuplicates(people) // 70% threshold
+    expect(duplicatesDefault).toHaveLength(3) // All 3 pairs above 70%: (1,2), (1,3), (2,3)
+
+    const duplicatesHigh = findAllDuplicates(people, 80) // 80% threshold
+    expect(duplicatesHigh).toHaveLength(1) // Only (1,2) pair at 80%
+  })
+
+  it('should return empty array when no duplicates exist', () => {
+    const people = [
+      { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 2, firstName: 'Jane', lastName: 'Doe', birthDate: '1960-05-20' },
+      { id: 3, firstName: 'Bob', lastName: 'Jones', birthDate: '1945-01-01' }
+    ]
+
+    const duplicates = findAllDuplicates(people)
+
+    expect(duplicates).toEqual([])
+  })
+
+  it('should return empty array when people array is empty', () => {
+    const duplicates = findAllDuplicates([])
+
+    expect(duplicates).toEqual([])
+  })
+
+  it('should return empty array when people array has only one person', () => {
+    const people = [
+      { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    ]
+
+    const duplicates = findAllDuplicates(people)
+
+    expect(duplicates).toEqual([])
+  })
+
+  it('should include matching fields in result', () => {
+    const people = [
+      { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    ]
+
+    const duplicates = findAllDuplicates(people)
+
+    expect(duplicates[0].matchingFields).toContain('name')
+    expect(duplicates[0].matchingFields).toContain('birthDate')
+  })
+
+  it('should not report same pair twice (person1=A,person2=B and person1=B,person2=A)', () => {
+    const people = [
+      { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    ]
+
+    const duplicates = findAllDuplicates(people)
+
+    // Should only have one entry for this pair
+    expect(duplicates).toHaveLength(1)
+    expect(duplicates[0].person1.id).toBeLessThan(duplicates[0].person2.id)
+  })
+})
+
+describe('duplicateDetection - findDuplicatesForPerson (Story #108)', () => {
+  it('should find duplicates for specific person', () => {
+    const targetPerson = { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    const allPeople = [
+      targetPerson,
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' },
+      { id: 3, firstName: 'Jane', lastName: 'Doe', birthDate: '1960-05-20' }
+    ]
+
+    const duplicates = findDuplicatesForPerson(targetPerson, allPeople)
+
+    expect(duplicates).toHaveLength(1)
+    expect(duplicates[0].person.id).toBe(2)
+    expect(duplicates[0].confidence).toBeGreaterThan(70)
+  })
+
+  it('should exclude the target person from results', () => {
+    const targetPerson = { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    const allPeople = [
+      targetPerson,
+      { id: 2, firstName: 'Jane', lastName: 'Doe', birthDate: '1960-05-20' }
+    ]
+
+    const duplicates = findDuplicatesForPerson(targetPerson, allPeople)
+
+    // Should not include person with id=1 in results
+    expect(duplicates.every(d => d.person.id !== 1)).toBe(true)
+  })
+
+  it('should return empty array when no duplicates exist', () => {
+    const targetPerson = { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    const allPeople = [
+      targetPerson,
+      { id: 2, firstName: 'Jane', lastName: 'Doe', birthDate: '1960-05-20' }
+    ]
+
+    const duplicates = findDuplicatesForPerson(targetPerson, allPeople)
+
+    expect(duplicates).toEqual([])
+  })
+
+  it('should respect custom confidence threshold', () => {
+    const targetPerson = { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    const allPeople = [
+      targetPerson,
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }, // 80% match (exact)
+      { id: 3, firstName: 'Jon', lastName: 'Smith', birthDate: '1950-01-15' } // 75% match (close name)
+    ]
+
+    const duplicatesDefault = findDuplicatesForPerson(targetPerson, allPeople) // 70% threshold
+    expect(duplicatesDefault).toHaveLength(2)
+
+    const duplicatesHigh = findDuplicatesForPerson(targetPerson, allPeople, 80) // 80% threshold
+    expect(duplicatesHigh).toHaveLength(1)
+  })
+
+  it('should sort results by confidence (highest first)', () => {
+    const targetPerson = { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    const allPeople = [
+      targetPerson,
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950' }, // Lower match (~80%)
+      { id: 3, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' } // Higher match (80%)
+    ]
+
+    const duplicates = findDuplicatesForPerson(targetPerson, allPeople)
+
+    expect(duplicates.length).toBeGreaterThan(0)
+    expect(duplicates[0].confidence).toBeGreaterThanOrEqual(duplicates[1].confidence)
+  })
+
+  it('should include matching fields in result', () => {
+    const targetPerson = { id: 1, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    const allPeople = [
+      targetPerson,
+      { id: 2, firstName: 'John', lastName: 'Smith', birthDate: '1950-01-15' }
+    ]
+
+    const duplicates = findDuplicatesForPerson(targetPerson, allPeople)
+
+    expect(duplicates[0].matchingFields).toContain('name')
+    expect(duplicates[0].matchingFields).toContain('birthDate')
   })
 })
