@@ -11,6 +11,7 @@ import { db } from '$lib/db/client.js'
 import { people, relationships, users } from '$lib/db/schema.js'
 import { eq, and } from 'drizzle-orm'
 import { storePreviewData, saveResolutionDecisions } from '$lib/server/gedcomPreview.js'
+import { createMockAuthenticatedEvent, createMockSession } from '$lib/server/testHelpers.js'
 
 describe('POST /api/gedcom/import/:uploadId', () => {
   let testUserId
@@ -90,19 +91,15 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       })
     })
 
-    // Mock locals with session
-    const mockLocals = {
-      session: {
-        userId: testUserId
-      }
-    }
+    // Create authenticated event with matching user ID
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
+      request,
+      params: { uploadId }
+    })
 
     // Call endpoint
-    const response = await POST({
-      request,
-      params: { uploadId },
-      locals: mockLocals
-    })
+    const response = await POST(event)
 
     expect(response.status).toBe(200)
 
@@ -178,11 +175,13 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       body: JSON.stringify({ importAll: true })
     })
 
-    const response = await POST({
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
       request,
-      params: { uploadId },
-      locals: { session: { userId: testUserId } }
+      params: { uploadId }
     })
+
+    const response = await POST(event)
 
     expect(response.status).toBe(200)
 
@@ -291,11 +290,13 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       body: JSON.stringify({ importAll: true })
     })
 
-    const response = await POST({
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
       request,
-      params: { uploadId },
-      locals: { session: { userId: testUserId } }
+      params: { uploadId }
     })
+
+    const response = await POST(event)
 
     expect(response.status).toBe(200)
 
@@ -383,11 +384,13 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       body: JSON.stringify({ importAll: true })
     })
 
-    const response = await POST({
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
       request,
-      params: { uploadId },
-      locals: { session: { userId: testUserId } }
+      params: { uploadId }
     })
+
+    const response = await POST(event)
 
     expect(response.status).toBe(200)
 
@@ -443,11 +446,13 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       body: JSON.stringify({ importAll: true })
     })
 
-    const response = await POST({
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
       request,
-      params: { uploadId },
-      locals: { session: { userId: testUserId } }
+      params: { uploadId }
     })
+
+    const response = await POST(event)
 
     // If successful, verify all data is there
     if (response.status === 200) {
@@ -468,11 +473,13 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       body: JSON.stringify({ importAll: true })
     })
 
-    const response = await POST({
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
       request,
-      params: { uploadId: 'nonexistent' },
-      locals: { session: { userId: testUserId } }
+      params: { uploadId: 'nonexistent' }
     })
+
+    const response = await POST(event)
 
     expect(response.status).toBe(404)
 
@@ -487,11 +494,17 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       body: JSON.stringify({ importAll: true })
     })
 
-    const response = await POST({
+    // Create event with truly no session (getSession returns null)
+    const event = {
       request,
       params: { uploadId },
-      locals: { session: null }
-    })
+      locals: {
+        db,
+        getSession: async () => null
+      }
+    }
+
+    const response = await POST(event)
 
     expect(response.status).toBe(401)
   })
@@ -532,11 +545,13 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       body: JSON.stringify({ importAll: true })
     })
 
-    const response = await POST({
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
       request,
-      params: { uploadId },
-      locals: { session: { userId: testUserId } }
+      params: { uploadId }
     })
+
+    const response = await POST(event)
 
     expect(response.status).toBe(200)
 
@@ -590,11 +605,13 @@ describe('POST /api/gedcom/import/:uploadId', () => {
       body: JSON.stringify({ importAll: true })
     })
 
-    const response = await POST({
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
       request,
-      params: { uploadId },
-      locals: { session: { userId: testUserId } }
+      params: { uploadId }
     })
+
+    const response = await POST(event)
 
     expect(response.status).toBe(200)
 
