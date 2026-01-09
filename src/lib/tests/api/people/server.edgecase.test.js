@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { GET, POST } from '../../../../routes/api/people/+server.js'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
+import { setupTestDatabase, createMockAuthenticatedEvent, createMockSession } from '$lib/server/testHelpers.js'
 
 /**
  * Edge Case Tests for People API Collection Endpoints
@@ -35,7 +35,7 @@ describe('POST /api/people - Edge Cases', () => {
       json: async () => ({ firstName: 'A', lastName: 'Smith' })
     }
 
-    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+    const response = await POST(createMockAuthenticatedEvent(db, createMockSession(userId), { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -508,7 +508,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+    const response = await POST(createMockAuthenticatedEvent(db, createMockSession(userId), { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -527,7 +527,7 @@ describe('POST /api/people - Edge Cases', () => {
       })
     }
 
-    const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+    const response = await POST(createMockAuthenticatedEvent(db, createMockSession(userId), { request }))
     const data = await response.json()
 
     expect(response.status).toBe(201)
@@ -559,13 +559,13 @@ describe('POST /api/people - Edge Cases', () => {
 describe('GET /api/people - Edge Cases', () => {
   let db
   let sqlite
+  let userId
 
   beforeEach(async () => {
     sqlite = new Database(':memory:')
-
+    db = drizzle(sqlite)
 
     // Setup test database with users table and default test user (Issue #72)
-
     userId = await setupTestDatabase(sqlite, db)
   })
 
@@ -584,7 +584,7 @@ describe('GET /api/people - Edge Cases', () => {
       stmt.run(`Person${i}`, `LastName${i}`, userId)
     }
 
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockAuthenticatedEvent(db, createMockSession(userId)))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -599,7 +599,7 @@ describe('GET /api/people - Edge Cases', () => {
       VALUES (?, ?, ?)
     `).run("D'Angelo", "O'Brien-Smith", userId)
 
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockAuthenticatedEvent(db, createMockSession(userId)))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -613,7 +613,7 @@ describe('GET /api/people - Edge Cases', () => {
       VALUES (?, ?, ?)
     `).run('José', 'Müller', userId)
 
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockAuthenticatedEvent(db, createMockSession(userId)))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -627,7 +627,7 @@ describe('GET /api/people - Edge Cases', () => {
       VALUES (?, ?, ?)
     `).run('李', '明', userId)
 
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockAuthenticatedEvent(db, createMockSession(userId)))
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -643,13 +643,13 @@ describe('GET /api/people - Edge Cases', () => {
     `).run('John', 'Doe', userId)
 
     // Call GET multiple times
-    const response1 = await GET(createMockAuthenticatedEvent(db))
+    const response1 = await GET(createMockAuthenticatedEvent(db, createMockSession(userId)))
     const data1 = await response1.json()
 
-    const response2 = await GET(createMockAuthenticatedEvent(db))
+    const response2 = await GET(createMockAuthenticatedEvent(db, createMockSession(userId)))
     const data2 = await response2.json()
 
-    const response3 = await GET(createMockAuthenticatedEvent(db))
+    const response3 = await GET(createMockAuthenticatedEvent(db, createMockSession(userId)))
     const data3 = await response3.json()
 
     // All responses should be identical
