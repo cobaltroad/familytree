@@ -275,7 +275,7 @@ describe('Performance Benchmarks - Relationships API', () => {
     expect(duration).toBeLessThan(200)
   })
 
-  it('should create relationship in < 50ms', async () => {
+  it('should create relationship in < 60ms', async () => {
     const start = performance.now()
 
     const response = await postRelationship(createMockAuthenticatedEvent(db, null, {
