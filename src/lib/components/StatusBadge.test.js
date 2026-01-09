@@ -15,7 +15,7 @@ describe('StatusBadge', () => {
     it('should render new status badge with correct styling', () => {
       render(StatusBadge, { status: 'new' })
 
-      const badge = screen.getByText('New')
+      const badge = screen.getByRole('status')
       expect(badge).toBeTruthy()
       expect(badge.classList.contains('status-badge')).toBe(true)
       expect(badge.classList.contains('status-new')).toBe(true)
@@ -38,7 +38,7 @@ describe('StatusBadge', () => {
     it('should render duplicate status badge with correct styling', () => {
       render(StatusBadge, { status: 'duplicate' })
 
-      const badge = screen.getByText('Duplicate')
+      const badge = screen.getByRole('status')
       expect(badge).toBeTruthy()
       expect(badge.classList.contains('status-badge')).toBe(true)
       expect(badge.classList.contains('status-duplicate')).toBe(true)
@@ -61,7 +61,7 @@ describe('StatusBadge', () => {
     it('should render existing status badge with correct styling', () => {
       render(StatusBadge, { status: 'existing' })
 
-      const badge = screen.getByText('Existing')
+      const badge = screen.getByRole('status')
       expect(badge).toBeTruthy()
       expect(badge.classList.contains('status-badge')).toBe(true)
       expect(badge.classList.contains('status-existing')).toBe(true)
@@ -84,7 +84,7 @@ describe('StatusBadge', () => {
     it('should render unknown status with default styling', () => {
       render(StatusBadge, { status: 'invalid' })
 
-      const badge = screen.getByText('Unknown')
+      const badge = screen.getByRole('status')
       expect(badge).toBeTruthy()
       expect(badge.classList.contains('status-badge')).toBe(true)
       expect(badge.classList.contains('status-unknown')).toBe(true)

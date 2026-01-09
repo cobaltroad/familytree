@@ -381,10 +381,16 @@ describe('personActions - Integration Tests', () => {
       people.set([])
 
       // First attempt fails
-      api.createPerson.mockRejectedValueOnce(new Error('Validation error'))
+      api.createPerson.mockImplementationOnce(async () => {
+        throw new Error('Validation error')
+      })
 
       // ACT - First attempt
-      await createPerson({ firstName: 'John', lastName: 'Doe' })
+      try {
+        await createPerson({ firstName: 'John', lastName: 'Doe' })
+      } catch (err) {
+        // Expected to fail
+      }
 
       // ASSERT - Temp person should be removed
       expect(get(people)).toHaveLength(0)

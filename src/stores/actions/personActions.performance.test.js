@@ -413,11 +413,17 @@ describe('personActions - Performance Tests', () => {
       // ARRANGE
       people.set([])
 
-      api.createPerson.mockRejectedValue(new Error('Create failed'))
+      api.createPerson.mockImplementation(async () => {
+        throw new Error('Create failed')
+      })
 
       // ACT
       const startTime = performance.now()
-      await createPerson({ firstName: 'John', lastName: 'Doe' })
+      try {
+        await createPerson({ firstName: 'John', lastName: 'Doe' })
+      } catch (err) {
+        // Expected to fail
+      }
       const cleanupTime = performance.now() - startTime
 
       // ASSERT

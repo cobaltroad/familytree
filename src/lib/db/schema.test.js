@@ -115,9 +115,10 @@ describe('Database Schema Definition', () => {
 
       expect(foreignKeys).toBeDefined()
       expect(Array.isArray(foreignKeys)).toBe(true)
-      expect(foreignKeys.length).toBe(2)
+      // Relationships table has 3 FKs: person1_id, person2_id (both to people), and user_id (to users)
+      expect(foreignKeys.length).toBe(3)
 
-      // Verify both foreign keys reference the people table
+      // Verify all foreign keys have proper references
       foreignKeys.forEach(fk => {
         expect(fk.reference).toBeDefined()
         expect(typeof fk.reference).toBe('function')

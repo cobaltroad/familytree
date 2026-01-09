@@ -25,10 +25,15 @@ vi.mock('$app/stores', () => ({
 // Mock the notifications store
 vi.mock('../stores/notificationStore.js', () => ({
   notifications: {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn()
-  }
+    subscribe: vi.fn((callback) => {
+      callback([])
+      return () => {}
+    })
+  },
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  clearNotification: vi.fn()
 }))
 
 describe('NetworkView Debug Logging', () => {

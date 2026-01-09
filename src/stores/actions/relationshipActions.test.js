@@ -322,8 +322,8 @@ describe('relationshipActions - deleteRelationship', () => {
       expect(currentRelationships).toContainEqual(spouse1)
       expect(currentRelationships).toContainEqual(spouse2)
 
-      // Only one API call should have been attempted
-      expect(api.deleteRelationship).toHaveBeenCalledTimes(1)
+      // Both API calls are attempted (Promise.all makes both calls even if one fails)
+      expect(api.deleteRelationship).toHaveBeenCalledTimes(2)
       expect(notificationStore.error).toHaveBeenCalledWith('Failed to remove relationship')
     })
 

@@ -100,8 +100,8 @@ describe('Auth Configuration', () => {
       // Act
       const config = getAuthConfig()
 
-      // Assert
-      expect(config.facebook.scopes).toBe('email,public_profile')
+      // Assert (defaults now include user_birthday and user_gender per Issue #79)
+      expect(config.facebook.scopes).toBe('email,public_profile,user_birthday,user_gender')
     })
 
     it('should throw error when FACEBOOK_APP_ID is missing', () => {

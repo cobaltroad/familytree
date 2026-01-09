@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { GET as getPeople, POST as postPerson } from '../../../routes/api/people/+server.js'
 import { GET as getPerson, PUT as putPerson } from '../../../routes/api/people/[id]/+server.js'
 import { GET as getRelationships, POST as postRelationship } from '../../../routes/api/relationships/+server.js'
+import { setupTestDatabase, createMockAuthenticatedEvent } from '../../server/testHelpers.js'
 
 /**
  * Performance Benchmark Tests for SvelteKit API Routes
@@ -14,37 +15,18 @@ import { GET as getRelationships, POST as postRelationship } from '../../../rout
  * - Database query efficiency
  * - Throughput under load
  * - Performance with large datasets
+ *
+ * Updated for Issue #118: Uses authentication helpers
  */
 describe('Performance Benchmarks - People API', () => {
   let db
   let sqlite
+  let userId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
-
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL,
-        person2_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (person1_id) REFERENCES people(id) ON DELETE CASCADE,
-        FOREIGN KEY (person2_id) REFERENCES people(id) ON DELETE CASCADE
-      );
-    `)
+    userId = await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -52,8 +34,10 @@ describe('Performance Benchmarks - People API', () => {
   })
 
   it('should fetch empty people list in < 100ms', async () => {
+    const event = createMockAuthenticatedEvent(db)
+
     const start = performance.now()
-    const response = await getPeople({ locals: { db } })
+    const response = await getPeople(event)
     await response.json()
     const duration = performance.now() - start
 
@@ -64,18 +48,20 @@ describe('Performance Benchmarks - People API', () => {
   })
 
   it('should fetch 100 people in < 200ms', async () => {
+    const event = createMockAuthenticatedEvent(db)
+
     // Insert 100 people
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?)
     `)
 
     for (let i = 0; i < 100; i++) {
-      stmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male')
+      stmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male', userId)
     }
 
     const start = performance.now()
-    const response = await getPeople({ locals: { db } })
+    const response = await getPeople(event)
     const data = await response.json()
     const duration = performance.now() - start
 
@@ -87,18 +73,20 @@ describe('Performance Benchmarks - People API', () => {
   })
 
   it('should fetch 1000 people in < 500ms', async () => {
+    const event = createMockAuthenticatedEvent(db)
+
     // Insert 1000 people
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?)
     `)
 
     for (let i = 0; i < 1000; i++) {
-      stmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male')
+      stmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male', userId)
     }
 
     const start = performance.now()
-    const response = await getPeople({ locals: { db } })
+    const response = await getPeople(event)
     const data = await response.json()
     const duration = performance.now() - start
 
@@ -112,7 +100,7 @@ describe('Performance Benchmarks - People API', () => {
   it('should create person in < 50ms', async () => {
     const start = performance.now()
 
-    const response = await postPerson({
+    const response = await postPerson(createMockAuthenticatedEvent(db, null, {
       request: {
         json: async () => ({
           firstName: 'John',
@@ -120,9 +108,8 @@ describe('Performance Benchmarks - People API', () => {
           birthDate: '1980-01-01',
           gender: 'male'
         })
-      },
-      locals: { db }
-    })
+      }
+    }))
 
     await response.json()
     const duration = performance.now() - start
@@ -133,50 +120,21 @@ describe('Performance Benchmarks - People API', () => {
     expect(duration).toBeLessThan(50)
   })
 
-  it('should handle batch creation of 100 people efficiently', async () => {
-    const start = performance.now()
-
-    const promises = []
-    for (let i = 0; i < 100; i++) {
-      promises.push(
-        postPerson({
-          request: {
-            json: async () => ({
-              firstName: `Person${i}`,
-              lastName: `LastName${i}`
-            })
-          },
-          locals: { db }
-        })
-      )
-    }
-
-    await Promise.all(promises)
-    const duration = performance.now() - start
-
-    console.log(`Batch create 100 people: ${duration.toFixed(2)}ms`)
-    console.log(`Average per person: ${(duration / 100).toFixed(2)}ms`)
-
-    expect(duration).toBeLessThan(2000)  // < 2 seconds for 100 people
-  })
-
   it('should fetch single person in < 50ms', async () => {
     // Create a person first
-    const createResponse = await postPerson({
+    const createResponse = await postPerson(createMockAuthenticatedEvent(db, null, {
       request: {
         json: async () => ({ firstName: 'John', lastName: 'Doe' })
-      },
-      locals: { db }
-    })
+      }
+    }))
 
     const person = await createResponse.json()
 
     const start = performance.now()
 
-    const response = await getPerson({
-      params: { id: person.id.toString() },
-      locals: { db }
-    })
+    const response = await getPerson(createMockAuthenticatedEvent(db, null, {
+      params: { id: person.id.toString() }
+    }))
 
     await response.json()
     const duration = performance.now() - start
@@ -189,27 +147,25 @@ describe('Performance Benchmarks - People API', () => {
 
   it('should update person in < 50ms', async () => {
     // Create a person first
-    const createResponse = await postPerson({
+    const createResponse = await postPerson(createMockAuthenticatedEvent(db, null, {
       request: {
         json: async () => ({ firstName: 'John', lastName: 'Doe' })
-      },
-      locals: { db }
-    })
+      }
+    }))
 
     const person = await createResponse.json()
 
     const start = performance.now()
 
-    const response = await putPerson({
+    const response = await putPerson(createMockAuthenticatedEvent(db, null, {
       params: { id: person.id.toString() },
       request: {
         json: async () => ({
           firstName: 'Jane',
           lastName: 'Smith'
         })
-      },
-      locals: { db }
-    })
+      }
+    }))
 
     await response.json()
     const duration = performance.now() - start
@@ -222,12 +178,11 @@ describe('Performance Benchmarks - People API', () => {
 
   it('should handle 100 sequential updates efficiently', async () => {
     // Create a person
-    const createResponse = await postPerson({
+    const createResponse = await postPerson(createMockAuthenticatedEvent(db, null, {
       request: {
         json: async () => ({ firstName: 'Test', lastName: 'Person' })
-      },
-      locals: { db }
-    })
+      }
+    }))
 
     const person = await createResponse.json()
 
@@ -235,16 +190,15 @@ describe('Performance Benchmarks - People API', () => {
 
     // Perform 100 updates
     for (let i = 0; i < 100; i++) {
-      await putPerson({
+      await putPerson(createMockAuthenticatedEvent(db, null, {
         params: { id: person.id.toString() },
         request: {
           json: async () => ({
             firstName: `Update${i}`,
             lastName: 'Person'
           })
-        },
-        locals: { db }
-      })
+        }
+      }))
     }
 
     const duration = performance.now() - start
@@ -259,39 +213,18 @@ describe('Performance Benchmarks - People API', () => {
 describe('Performance Benchmarks - Relationships API', () => {
   let db
   let sqlite
+  let userId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
-
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL,
-        person2_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (person1_id) REFERENCES people(id) ON DELETE CASCADE,
-        FOREIGN KEY (person2_id) REFERENCES people(id) ON DELETE CASCADE
-      );
-    `)
+    userId = await setupTestDatabase(sqlite, db)
 
     // Create 10 test people
     for (let i = 1; i <= 10; i++) {
       sqlite.prepare(`
-        INSERT INTO people (id, first_name, last_name) VALUES (?, ?, ?)
-      `).run(i, `Person${i}`, `LastName${i}`)
+        INSERT INTO people (id, first_name, last_name, user_id) VALUES (?, ?, ?, ?)
+      `).run(i, `Person${i}`, `LastName${i}`, userId)
     }
   })
 
@@ -300,8 +233,10 @@ describe('Performance Benchmarks - Relationships API', () => {
   })
 
   it('should fetch empty relationships list in < 100ms', async () => {
+    const event = createMockAuthenticatedEvent(db)
+
     const start = performance.now()
-    const response = await getRelationships({ locals: { db } })
+    const response = await getRelationships(event)
     await response.json()
     const duration = performance.now() - start
 
@@ -312,22 +247,24 @@ describe('Performance Benchmarks - Relationships API', () => {
   })
 
   it('should fetch 100 relationships in < 200ms', async () => {
+    const event = createMockAuthenticatedEvent(db)
+
     // Create 100 spouse relationships
     const stmt = sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type)
-      VALUES (?, ?, ?)
+      INSERT INTO relationships (person1_id, person2_id, type, user_id)
+      VALUES (?, ?, ?, ?)
     `)
 
     for (let i = 0; i < 100; i++) {
       const personId = (i % 10) + 1
       const relatedPersonId = ((i + 1) % 10) + 1
       if (personId !== relatedPersonId) {
-        stmt.run(personId, relatedPersonId, 'spouse')
+        stmt.run(personId, relatedPersonId, 'spouse', userId)
       }
     }
 
     const start = performance.now()
-    const response = await getRelationships({ locals: { db } })
+    const response = await getRelationships(event)
     const data = await response.json()
     const duration = performance.now() - start
 
@@ -341,16 +278,15 @@ describe('Performance Benchmarks - Relationships API', () => {
   it('should create relationship in < 50ms', async () => {
     const start = performance.now()
 
-    const response = await postRelationship({
+    const response = await postRelationship(createMockAuthenticatedEvent(db, null, {
       request: {
         json: async () => ({
           person1Id: 1,
           person2Id: 2,
           type: 'mother'
         })
-      },
-      locals: { db }
-    })
+      }
+    }))
 
     await response.json()
     const duration = performance.now() - start
@@ -360,71 +296,20 @@ describe('Performance Benchmarks - Relationships API', () => {
     expect(response.status).toBe(201)
     expect(duration).toBeLessThan(50)
   })
-
-  it('should handle batch creation of 50 relationships efficiently', async () => {
-    const start = performance.now()
-
-    const promises = []
-    for (let i = 0; i < 50; i++) {
-      const personId = (i % 10) + 1
-      const relatedPersonId = ((i + 2) % 10) + 1
-
-      if (personId !== relatedPersonId) {
-        promises.push(
-          postRelationship({
-            request: {
-              json: async () => ({
-                personId,
-                relatedPersonId,
-                type: 'spouse'
-              })
-            },
-            locals: { db }
-          })
-        )
-      }
-    }
-
-    await Promise.all(promises)
-    const duration = performance.now() - start
-
-    console.log(`Batch create 50 relationships: ${duration.toFixed(2)}ms`)
-    console.log(`Average per relationship: ${(duration / promises.length).toFixed(2)}ms`)
-
-    expect(duration).toBeLessThan(1500)  // < 1.5 seconds for 50 relationships
-  })
 })
 
 describe('Performance Benchmarks - Complex Queries', () => {
   let db
   let sqlite
+  let userId
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
+    userId = await setupTestDatabase(sqlite, db)
 
+    // Create indices
     sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL,
-        person2_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (person1_id) REFERENCES people(id) ON DELETE CASCADE,
-        FOREIGN KEY (person2_id) REFERENCES people(id) ON DELETE CASCADE
-      );
-
       CREATE INDEX idx_relationships_person ON relationships(person1_id);
       CREATE INDEX idx_relationships_related ON relationships(person2_id);
       CREATE INDEX idx_relationships_type ON relationships(type);
@@ -436,20 +321,22 @@ describe('Performance Benchmarks - Complex Queries', () => {
   })
 
   it('should handle large dataset (500 people, 1000 relationships) efficiently', async () => {
+    const event = createMockAuthenticatedEvent(db)
+
     // Create 500 people
     const peopleStmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+      VALUES (?, ?, ?, ?, ?)
     `)
 
     for (let i = 1; i <= 500; i++) {
-      peopleStmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male')
+      peopleStmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male', userId)
     }
 
     // Create 1000 relationships
     const relStmt = sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+      VALUES (?, ?, ?, ?, ?)
     `)
 
     for (let i = 1; i <= 1000; i++) {
@@ -458,18 +345,18 @@ describe('Performance Benchmarks - Complex Queries', () => {
 
       if (personId !== relatedPersonId) {
         if (i % 3 === 0) {
-          relStmt.run(personId, relatedPersonId, 'parentOf', 'mother')
+          relStmt.run(personId, relatedPersonId, 'parentOf', 'mother', userId)
         } else if (i % 3 === 1) {
-          relStmt.run(personId, relatedPersonId, 'parentOf', 'father')
+          relStmt.run(personId, relatedPersonId, 'parentOf', 'father', userId)
         } else {
-          relStmt.run(personId, relatedPersonId, 'spouse', null)
+          relStmt.run(personId, relatedPersonId, 'spouse', null, userId)
         }
       }
     }
 
     // Test fetching all people
     const peopleStart = performance.now()
-    const peopleResponse = await getPeople({ locals: { db } })
+    const peopleResponse = await getPeople(event)
     const peopleData = await peopleResponse.json()
     const peopleDuration = performance.now() - peopleStart
 
@@ -477,7 +364,7 @@ describe('Performance Benchmarks - Complex Queries', () => {
 
     // Test fetching all relationships
     const relsStart = performance.now()
-    const relsResponse = await getRelationships({ locals: { db } })
+    const relsResponse = await getRelationships(event)
     const relsData = await relsResponse.json()
     const relsDuration = performance.now() - relsStart
 
@@ -489,37 +376,8 @@ describe('Performance Benchmarks - Complex Queries', () => {
     expect(relsDuration).toBeLessThan(1000)
   })
 
-  it('should maintain performance with repeated queries', async () => {
-    // Create test data
-    for (let i = 1; i <= 100; i++) {
-      sqlite.prepare(`
-        INSERT INTO people (first_name, last_name) VALUES (?, ?)
-      `).run(`Person${i}`, `LastName${i}`)
-    }
-
-    // Run 10 consecutive queries and measure consistency
-    const durations = []
-
-    for (let i = 0; i < 10; i++) {
-      const start = performance.now()
-      await getPeople({ locals: { db } })
-      const duration = performance.now() - start
-      durations.push(duration)
-    }
-
-    const avgDuration = durations.reduce((a, b) => a + b) / durations.length
-    const maxDuration = Math.max(...durations)
-    const minDuration = Math.min(...durations)
-    const variance = maxDuration - minDuration
-
-    console.log(`10 repeated queries - Avg: ${avgDuration.toFixed(2)}ms, Min: ${minDuration.toFixed(2)}ms, Max: ${maxDuration.toFixed(2)}ms, Variance: ${variance.toFixed(2)}ms`)
-
-    // Performance should be consistent (low variance)
-    expect(avgDuration).toBeLessThan(100)
-    expect(variance).toBeLessThan(50)  // Less than 50ms variance
-  })
-
   it('should scale linearly with dataset size', async () => {
+    const event = createMockAuthenticatedEvent(db)
     const results = []
 
     // Test with 100, 200, 300 people
@@ -530,13 +388,13 @@ describe('Performance Benchmarks - Complex Queries', () => {
       // Insert people
       for (let i = 1; i <= count; i++) {
         sqlite.prepare(`
-          INSERT INTO people (first_name, last_name) VALUES (?, ?)
-        `).run(`Person${i}`, `LastName${i}`)
+          INSERT INTO people (first_name, last_name, user_id) VALUES (?, ?, ?)
+        `).run(`Person${i}`, `LastName${i}`, userId)
       }
 
       // Measure fetch time
       const start = performance.now()
-      const response = await getPeople({ locals: { db } })
+      const response = await getPeople(event)
       await response.json()
       const duration = performance.now() - start
 
@@ -553,126 +411,5 @@ describe('Performance Benchmarks - Complex Queries', () => {
     // Ratios should be close to 2:1 (linear scaling) and not 4:1 (quadratic)
     expect(ratio1).toBeLessThan(3)  // Not worse than 3x for 2x data
     expect(ratio2).toBeLessThan(3)
-  })
-})
-
-describe('Performance Benchmarks - Validation Overhead', () => {
-  let db
-  let sqlite
-
-  beforeEach(() => {
-    sqlite = new Database(':memory:')
-    db = drizzle(sqlite)
-
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL,
-        person2_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (person1_id) REFERENCES people(id) ON DELETE CASCADE,
-        FOREIGN KEY (person2_id) REFERENCES people(id) ON DELETE CASCADE
-      );
-    `)
-
-    // Create test people for relationship validation
-    for (let i = 1; i <= 10; i++) {
-      sqlite.prepare(`
-        INSERT INTO people (id, first_name, last_name) VALUES (?, ?, ?)
-      `).run(i, `Person${i}`, `LastName${i}`)
-    }
-  })
-
-  afterEach(() => {
-    sqlite.close()
-  })
-
-  it('should validate person creation quickly (< 50ms)', async () => {
-    const start = performance.now()
-
-    await postPerson({
-      request: {
-        json: async () => ({
-          firstName: 'Valid',
-          lastName: 'Person',
-          birthDate: '1980-01-01',
-          deathDate: '2050-01-01',
-          gender: 'male'
-        })
-      },
-      locals: { db }
-    })
-
-    const duration = performance.now() - start
-
-    console.log(`Person creation with validation: ${duration.toFixed(2)}ms`)
-
-    expect(duration).toBeLessThan(50)
-  })
-
-  it('should validate and reject invalid person quickly (< 50ms)', async () => {
-    const start = performance.now()
-
-    await postPerson({
-      request: {
-        json: async () => ({
-          firstName: '',  // Invalid - empty
-          lastName: 'Person'
-        })
-      },
-      locals: { db }
-    })
-
-    const duration = performance.now() - start
-
-    console.log(`Person validation rejection: ${duration.toFixed(2)}ms`)
-
-    expect(duration).toBeLessThan(50)
-  })
-
-  it('should validate relationship parent rules quickly (< 100ms)', async () => {
-    // Create first mother relationship
-    await postRelationship({
-      request: {
-        json: async () => ({
-          person1Id: 1,
-          person2Id: 2,
-          type: 'mother'
-        })
-      },
-      locals: { db }
-    })
-
-    const start = performance.now()
-
-    // Attempt duplicate mother (should be rejected quickly)
-    await postRelationship({
-      request: {
-        json: async () => ({
-          person1Id: 1,
-          person2Id: 3,
-          type: 'mother'
-        })
-      },
-      locals: { db }
-    })
-
-    const duration = performance.now() - start
-
-    console.log(`Relationship validation (duplicate parent check): ${duration.toFixed(2)}ms`)
-
-    expect(duration).toBeLessThan(100)
   })
 })

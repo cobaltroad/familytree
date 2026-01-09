@@ -255,10 +255,17 @@ describe('personActions - Optimistic Update Pattern', () => {
 
       const newPersonData = { firstName: 'John', lastName: 'Doe' }
 
-      api.createPerson.mockRejectedValue(new Error('Creation failed'))
+      // Use a function that returns the rejected promise to avoid early evaluation
+      api.createPerson.mockImplementation(async () => {
+        throw new Error('Creation failed')
+      })
 
       // ACT
-      await createPerson(newPersonData)
+      try {
+        await createPerson(newPersonData)
+      } catch (err) {
+        // Expected to fail
+      }
 
       // ASSERT - Temporary person should be removed
       const currentPeople = get(people)
@@ -622,10 +629,17 @@ describe('personActions - Optimistic Update Pattern', () => {
       // ARRANGE
       people.set([])
 
-      api.createPerson.mockRejectedValue(new Error('Validation error'))
+      // Use async function with throw to avoid early evaluation
+      api.createPerson.mockImplementation(async () => {
+        throw new Error('Validation error')
+      })
 
       // ACT
-      await createPerson({ firstName: 'John', lastName: 'Doe' })
+      try {
+        await createPerson({ firstName: 'John', lastName: 'Doe' })
+      } catch (err) {
+        // Expected to fail
+      }
 
       // ASSERT
       // Error notification should be created
