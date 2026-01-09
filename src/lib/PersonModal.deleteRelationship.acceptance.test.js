@@ -14,16 +14,16 @@ import { get } from 'svelte/store'
 import PersonModal from './PersonModal.svelte'
 import { modal } from '../stores/modalStore.js'
 import { people, relationships } from '../stores/familyStore.js'
-import { api } from './api.js'
 
-// Mock the API
+// Mock the API (use relative path to match PersonModal's import)
 vi.mock('./api.js', () => ({
   api: {
     createPerson: vi.fn(),
     updatePerson: vi.fn(),
     deletePerson: vi.fn(),
     createRelationship: vi.fn(),
-    deleteRelationship: vi.fn()
+    deleteRelationship: vi.fn(),
+    fetchFacebookProfile: vi.fn()
   }
 }))
 
@@ -53,35 +53,47 @@ describe('Issue #49: Delete Relationship from PersonModal - Acceptance Tests', (
 
   describe('AC1: Delete Button Visibility', () => {
     it('should show delete button on hover for desktop', async () => {
-      // Mock desktop width
-      global.innerWidth = 1024
-      window.dispatchEvent(new Event('resize'))
+      // Mock desktop width BEFORE opening modal and rendering
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 1024
+      })
 
       modal.open(1, 'edit')
 
       render(PersonModal)
 
+      // Give component time to mount and detect window size
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Wait for the delete button to be in the DOM (it exists but may not be visible)
       await waitFor(() => {
-        const motherCard = screen.getByText('Mary Doe').closest('.relationship-card')
-        expect(motherCard).toBeInTheDocument()
+        const deleteButton = screen.getByRole('button', { name: /remove.*mary doe.*mother/i })
+        expect(deleteButton).toBeInTheDocument()
       })
 
-      const motherCard = screen.getByText('Mary Doe').closest('.relationship-card')
+      // Get the button and its parent card
+      const deleteButton = screen.getByRole('button', { name: /remove.*mary doe.*mother/i })
+      const motherCard = deleteButton.closest('.relationship-card')
 
-      // Delete button should not be visible initially
-      expect(screen.queryByRole('button', { name: /remove.*mary doe.*mother/i })).not.toBeVisible()
+      // Delete button should not be visible initially (desktop has hover behavior)
+      expect(deleteButton).not.toBeVisible()
 
       // Hover over card
       await fireEvent.mouseEnter(motherCard)
 
       // Delete button should now be visible
-      const deleteButton = screen.getByRole('button', { name: /remove.*mary doe.*mother/i })
       expect(deleteButton).toBeVisible()
     })
 
     it('should always show delete button on mobile', async () => {
       // Mock mobile width
-      global.innerWidth = 375
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 375
+      })
       window.dispatchEvent(new Event('resize'))
 
       modal.open(1, 'edit')

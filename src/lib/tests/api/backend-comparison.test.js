@@ -171,7 +171,7 @@ async function cleanupResources() {
 	createdRelationships.sveltekit = [];
 }
 
-describe('Backend Comparison Tests', () => {
+describe.skip('Backend Comparison Tests (OBSOLETE - Go backend removed)', () => {
 	let goBackendAvailable = false;
 	let sveltekitBackendAvailable = false;
 
