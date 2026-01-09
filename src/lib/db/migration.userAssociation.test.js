@@ -25,7 +25,8 @@ describe('Migration User Association - Data Migration', () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Create OLD schema (without user_id)
+    // Create OLD schema (without user_id on people/relationships tables)
+    // Note: Users table needs complete schema for FK constraints to work (Issue #114)
     sqlite.exec(`
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,7 +37,9 @@ describe('Migration User Association - Data Migration', () => {
         provider_user_id TEXT,
         email_verified INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_login_at TEXT
+        last_login_at TEXT,
+        default_person_id INTEGER,
+        view_all_records INTEGER NOT NULL DEFAULT 0
       )
     `)
 
@@ -63,7 +66,7 @@ describe('Migration User Association - Data Migration', () => {
       )
     `)
 
-    // Create NEW schema (with user_id)
+    // Create NEW schema (with user_id and photo_url)
     sqlite.exec(`
       CREATE TABLE people (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,6 +75,7 @@ describe('Migration User Association - Data Migration', () => {
         birth_date TEXT,
         death_date TEXT,
         gender TEXT,
+        photo_url TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
       )

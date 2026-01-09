@@ -15,65 +15,20 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { people, relationships, users } from './schema.js'
+import { setupTestDatabase } from '$lib/server/testHelpers.js'
 import { eq } from 'drizzle-orm'
 
 describe('Schema User Association - Database Structure', () => {
   let sqlite
   let db
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create in-memory database for testing
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Create tables (this will use the updated schema)
-    // For now, these will fail because the schema doesn't have user_id yet
-    sqlite.exec(`
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        name TEXT,
-        avatar_url TEXT,
-        provider TEXT NOT NULL,
-        provider_user_id TEXT,
-        email_verified INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_login_at TEXT
-      )
-    `)
-
-    sqlite.exec(`
-      CREATE TABLE people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        birth_date TEXT,
-        death_date TEXT,
-        gender TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
-      )
-    `)
-
-    sqlite.exec(`
-      CREATE INDEX people_user_id_idx ON people(user_id)
-    `)
-
-    sqlite.exec(`
-      CREATE TABLE relationships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person1_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-        person2_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-        type TEXT NOT NULL,
-        parent_role TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
-      )
-    `)
-
-    sqlite.exec(`
-      CREATE INDEX relationships_user_id_idx ON relationships(user_id)
-    `)
+    // Use setupTestDatabase for consistent schema (Issue #114)
+    await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -155,11 +110,11 @@ describe('Schema User Association - Database Structure', () => {
     })
 
     it('should cascade delete people when user is deleted', async () => {
-      // Insert test user
+      // Insert test user (using unique email to avoid conflict with setupTestDatabase default user)
       const userResult = await db
         .insert(users)
         .values({
-          email: 'test@example.com',
+          email: 'cascade-people@example.com',
           name: 'Test User',
           provider: 'google'
         })
@@ -200,11 +155,11 @@ describe('Schema User Association - Database Structure', () => {
     })
 
     it('should cascade delete relationships when user is deleted', async () => {
-      // Insert test user
+      // Insert test user (using unique email to avoid conflict with setupTestDatabase default user)
       const userResult = await db
         .insert(users)
         .values({
-          email: 'test@example.com',
+          email: 'cascade-relationships@example.com',
           name: 'Test User',
           provider: 'google'
         })
