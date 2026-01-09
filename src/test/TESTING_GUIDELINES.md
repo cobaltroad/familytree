@@ -319,8 +319,204 @@ Before submitting tests, verify:
 - [ ] Test descriptions document the correct route path
 - [ ] Parameter names match (`[uploadId]` in files, `:uploadId` or actual value in tests)
 
+## Test Infrastructure and Helpers (v2.2.1)
+
+### Database Setup with setupTestDatabase()
+
+The `setupTestDatabase()` helper in `src/lib/server/testHelpers.js` provides consistent database initialization for integration tests. This helper eliminates schema duplication by applying production migrations directly to test databases.
+
+#### How It Works
+
+**Single Source of Truth**: Production migrations from `drizzle/` directory are embedded in the helper and applied to in-memory test databases. This ensures test schema exactly matches production schema, preventing schema mismatch errors.
+
+**Example Usage**:
+```javascript
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import Database from 'better-sqlite3'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { setupTestDatabase } from '$lib/server/testHelpers.js'
+import { GET } from './+server.js'
+
+describe('GET /api/people', () => {
+  let sqlite, db, userId
+
+  beforeEach(async () => {
+    // Create in-memory database
+    sqlite = new Database(':memory:')
+    db = drizzle(sqlite)
+
+    // Apply migrations and create test user
+    userId = await setupTestDatabase(sqlite, db)
+  })
+
+  afterEach(() => {
+    sqlite.close()
+  })
+
+  it('should return people for authenticated user', async () => {
+    // Test implementation...
+  })
+})
+```
+
+#### Key Benefits
+
+1. **No Schema Duplication**: Migrations are applied from embedded SQL, not duplicated CREATE statements
+2. **Foreign Key Support**: Automatically enables `PRAGMA foreign_keys = ON`
+3. **Test User Creation**: Returns userId for use in authentication mocks
+4. **Isolation**: Each test gets a fresh in-memory database
+
+### Authentication Patterns for API Routes
+
+Use `createMockAuthenticatedEvent()` from `src/lib/server/testHelpers.js` to simulate authenticated requests in API route tests.
+
+#### createMockAuthenticatedEvent(db, session, additionalProps)
+
+Creates a mock SvelteKit event object with authentication for testing server routes.
+
+**Parameters**:
+- `db`: Drizzle database instance (required)
+- `session`: Mock session object (optional, uses default if not provided)
+- `additionalProps`: Additional event properties like `request`, `params`, `url` (optional)
+
+**Example**:
+```javascript
+import { createMockAuthenticatedEvent, createMockSession } from '$lib/server/testHelpers.js'
+import { GET } from './+server.js'
+
+it('should return user-specific data', async () => {
+  const session = createMockSession(1, 'user@example.com', 'Test User')
+  const mockEvent = createMockAuthenticatedEvent(db, session, {
+    request: new Request('http://localhost/api/people'),
+    params: {}
+  })
+
+  const response = await GET(mockEvent)
+  expect(response.status).toBe(200)
+})
+```
+
+#### createMockSession(userId, userEmail, userName)
+
+Creates a mock authentication session object.
+
+**Parameters**:
+- `userId`: User ID (default: 1)
+- `userEmail`: User email (default: 'test@example.com')
+- `userName`: User name (default: 'Test User')
+
+**Example**:
+```javascript
+const session = createMockSession(42, 'admin@example.com', 'Admin User')
+// Returns: { user: { id: 42, email: 'admin@example.com', name: 'Admin User' } }
+```
+
+### Foreign Key Handling in Tests
+
+SQLite requires explicit enabling of foreign key constraints. The `setupTestDatabase()` helper handles this automatically, but if you're creating custom test databases:
+
+```javascript
+beforeEach(() => {
+  sqlite = new Database(':memory:')
+  sqlite.exec('PRAGMA foreign_keys = ON')  // CRITICAL: Enable foreign keys
+  db = drizzle(sqlite)
+})
+```
+
+**Why This Matters**:
+- Without `PRAGMA foreign_keys = ON`, foreign key constraints are silently ignored
+- Tests may pass even with invalid data relationships
+- Production database enforces constraints, causing runtime failures
+
+### Common Test Failure Patterns and Solutions
+
+Based on v2.2.1 test infrastructure improvements, here are common patterns and their solutions:
+
+#### Pattern 1: Schema Mismatch Errors
+
+**Symptom**: Test fails with "no such column" or "table not found"
+
+**Cause**: Test database schema doesn't match production schema
+
+**Solution**: Use `setupTestDatabase()` instead of manually creating tables
+```javascript
+// BAD: Manual table creation
+beforeEach(() => {
+  sqlite.exec(`CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT)`)
+})
+
+// GOOD: Use helper
+beforeEach(async () => {
+  userId = await setupTestDatabase(sqlite, db)
+})
+```
+
+#### Pattern 2: Authentication Not Working
+
+**Symptom**: Test fails with 401 Unauthorized
+
+**Cause**: Mock event missing proper authentication structure
+
+**Solution**: Use `createMockAuthenticatedEvent()`
+```javascript
+// BAD: Incomplete mock event
+const mockEvent = { locals: { db } }
+
+// GOOD: Complete authenticated event
+const mockEvent = createMockAuthenticatedEvent(db)
+```
+
+#### Pattern 3: Foreign Key Constraint Violations
+
+**Symptom**: Test fails with "FOREIGN KEY constraint failed"
+
+**Cause**: Foreign keys not enabled or test data created in wrong order
+
+**Solution**: Enable foreign keys and insert parent records first
+```javascript
+beforeEach(async () => {
+  sqlite = new Database(':memory:')
+  sqlite.exec('PRAGMA foreign_keys = ON')  // Enable constraints
+  db = drizzle(sqlite)
+  userId = await setupTestDatabase(sqlite, db)
+
+  // Insert parent record before child
+  await db.insert(people).values({ userId, firstName: 'John', lastName: 'Doe' })
+  // Now can insert relationships referencing the person
+})
+```
+
+#### Pattern 4: Svelte Store Mock Subscriptions
+
+**Symptom**: Component tests fail with "store is not iterable" or subscription errors
+
+**Cause**: Store mocks not implementing proper Svelte store contract
+
+**Solution**: Use proper store mock with subscribe method
+```javascript
+import { vi } from 'vitest'
+
+const mockStore = {
+  subscribe: vi.fn((callback) => {
+    callback(mockValue)  // Call immediately with value
+    return () => {}      // Return unsubscribe function
+  })
+}
+```
+
+### Best Practices Summary
+
+1. **Always use `setupTestDatabase()`** for API route integration tests
+2. **Always use `createMockAuthenticatedEvent()`** for authenticated route tests
+3. **Enable foreign keys** with `PRAGMA foreign_keys = ON` if not using helper
+4. **Clean up after tests** with `afterEach(() => sqlite.close())`
+5. **Use in-memory databases** (`:memory:`) for fast, isolated tests
+6. **Apply migrations, don't duplicate schema** to maintain single source of truth
+7. **Mock stores properly** with subscribe/unsubscribe pattern for component tests
+
 ## Additional Resources
 
 - [SvelteKit Routing Documentation](https://kit.svelte.dev/docs/routing)
 - [Vitest Documentation](https://vitest.dev/)
 - See `CLAUDE.md` for full architecture details
+- See `LESSONS_LEARNED.md` for v2.2.1 test infrastructure insights

@@ -31,14 +31,14 @@ npx drizzle-kit push        # Push schema directly (development)
 
 ### Testing
 ```bash
-npm test              # Run full test suite (1,840 tests)
+npm test              # Run full test suite (2,997 tests)
 npm run test:watch    # Run tests in watch mode
 npm run test:ui       # Open Vitest UI for interactive testing
 ```
 
 **CRITICAL**: Test files must NEVER use the `+*.test.js` naming pattern. The `+` prefix is reserved by SvelteKit and will break the application. See `TESTING_GUIDELINES.md` for complete rules and conventions.
 
-**Test Suite Status**: Comprehensive test coverage with 1,840 total tests. The test suite includes:
+**Test Suite Status**: Comprehensive test coverage with 2,997 total tests (2,820 passing as of v2.2.1). The test suite includes:
 - Server route integration tests with Drizzle ORM
 - Component tests with @testing-library/svelte
 - D3.js visualization optimization tests
@@ -46,6 +46,18 @@ npm run test:ui       # Open Vitest UI for interactive testing
 - Performance benchmarks
 - End-to-end acceptance tests
 - Facebook integration tests (130+ tests for OAuth and profile sync)
+- GEDCOM import and parsing tests (200+ tests for file format handling)
+
+**v2.2.1 Test Infrastructure Improvements**:
+The v2.2.1 release focused on major test infrastructure improvements, reducing test failures from 315 to 10 (97% reduction). Key improvements include:
+
+- **Test Helpers**: `setupTestDatabase()` and `createMockAuthenticatedEvent()` helpers in `src/lib/server/testHelpers.js` provide consistent test database setup and authentication mocking
+- **Schema Synchronization**: Test databases now use production migrations (single source of truth) instead of duplicated CREATE statements, eliminating schema mismatch errors
+- **Foreign Key Support**: Automatic `PRAGMA foreign_keys = ON` in test helpers ensures foreign key constraints are properly tested
+- **Store Mocking**: Improved Svelte store mock patterns with proper subscribe/unsubscribe contract implementation
+- **Performance Tuning**: Adjusted performance test thresholds to account for CI/CD environment variance
+
+See `TESTING_GUIDELINES.md` for test helper usage patterns and `LESSONS_LEARNED.md` for detailed insights from the v2.2.1 test infrastructure improvements.
 
 ## Architecture Overview
 
