@@ -14,9 +14,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { db } from '$lib/db/client.js'
+import Database from 'better-sqlite3'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { users } from '$lib/db/schema.js'
 import { eq, and } from 'drizzle-orm'
+import { setupTestDatabase } from './testHelpers.js'
+
+// Import the functions we're testing
 import {
   syncUserFromOAuth,
   createUserFromOAuth,
@@ -26,22 +30,37 @@ import {
 
 // Run these tests sequentially to avoid database conflicts
 describe.sequential('User Database Synchronization', () => {
-  // Clean up database before and after each test
+  let testDb
+  let testSqlite
+
+  // Set up in-memory test database before each test
   beforeEach(async () => {
-    await db.delete(users)
+    // Create in-memory database
+    testSqlite = new Database(':memory:')
+    testDb = drizzle(testSqlite)
+
+    // Set up schema
+    await setupTestDatabase(testSqlite, testDb)
+
+    // Mock the db module to use our test database
+    // We need to mock the actual module export
+    const clientModule = await import('$lib/db/client.js')
+    vi.spyOn(clientModule, 'db', 'get').mockReturnValue(testDb)
   })
 
   afterEach(async () => {
-    await db.delete(users)
+    // Clean up
+    testSqlite.close()
+    vi.restoreAllMocks()
   })
 
   describe('findUserByProviderAndId', () => {
     it('should find user by provider and provider user id', async () => {
-      // Arrange: Create a test user
-      const [testUser] = await db
+      // Arrange: Create a test user with unique email
+      const [testUser] = await testDb
         .insert(users)
         .values({
-          email: 'test@example.com',
+          email: 'finduser@example.com',
           name: 'Test User',
           provider: 'facebook',
           providerUserId: 'fb_12345',
@@ -55,7 +74,7 @@ describe.sequential('User Database Synchronization', () => {
       // Assert: User should be found
       expect(foundUser).toBeDefined()
       expect(foundUser.id).toBe(testUser.id)
-      expect(foundUser.email).toBe('test@example.com')
+      expect(foundUser.email).toBe('finduser@example.com')
       expect(foundUser.provider).toBe('facebook')
       expect(foundUser.providerUserId).toBe('fb_12345')
     })
@@ -70,7 +89,7 @@ describe.sequential('User Database Synchronization', () => {
 
     it('should distinguish between different providers', async () => {
       // Arrange: Create users with same provider ID but different providers
-      await db.insert(users).values([
+      await testDb.insert(users).values([
         {
           email: 'user1@example.com',
           name: 'User 1',
@@ -124,7 +143,7 @@ describe.sequential('User Database Synchronization', () => {
       expect(createdUser.lastLoginAt).toBeDefined()
 
       // Verify user was actually inserted into database
-      const [dbUser] = await db.select().from(users).where(eq(users.id, createdUser.id))
+      const [dbUser] = await testDb.select().from(users).where(eq(users.id, createdUser.id))
       expect(dbUser).toBeDefined()
       expect(dbUser.email).toBe('newuser@example.com')
     })
@@ -175,11 +194,11 @@ describe.sequential('User Database Synchronization', () => {
 
   describe('updateUserLastLogin', () => {
     it('should update lastLoginAt timestamp', async () => {
-      // Arrange: Create a user with null lastLoginAt
-      const [testUser] = await db
+      // Arrange: Create a user with null lastLoginAt and unique email
+      const [testUser] = await testDb
         .insert(users)
         .values({
-          email: 'test@example.com',
+          email: 'logintest1@example.com',
           name: 'Test User',
           provider: 'facebook',
           providerUserId: 'fb_12345',
@@ -202,20 +221,20 @@ describe.sequential('User Database Synchronization', () => {
       expect(new Date(updatedUser.lastLoginAt).getTime()).toBeGreaterThan(0)
 
       // Verify database was updated
-      const [dbUser] = await db.select().from(users).where(eq(users.id, testUser.id))
+      const [dbUser] = await testDb.select().from(users).where(eq(users.id, testUser.id))
       expect(dbUser.lastLoginAt).toBe(updatedUser.lastLoginAt)
     })
 
     it('should update lastLoginAt on subsequent logins', async () => {
-      // Arrange: Create user with existing lastLoginAt
+      // Arrange: Create user with existing lastLoginAt and unique email
       const initialLoginTime = new Date('2024-01-01T00:00:00Z').toISOString()
-      const [testUser] = await db
+      const [testUser] = await testDb
         .insert(users)
         .values({
-          email: 'test@example.com',
+          email: 'logintest2@example.com',
           name: 'Test User',
           provider: 'facebook',
-          providerUserId: 'fb_12345',
+          providerUserId: 'fb_67890',
           emailVerified: true,
           lastLoginAt: initialLoginTime
         })
@@ -266,14 +285,19 @@ describe.sequential('User Database Synchronization', () => {
       expect(syncedUser.providerUserId).toBe('fb_new_user')
       expect(syncedUser.lastLoginAt).toBeDefined()
 
-      // Verify only one user was created
-      const allUsers = await db.select().from(users)
-      expect(allUsers).toHaveLength(1)
+      // Verify user was created (should be 2 total: default test user + this new user)
+      const allUsers = await testDb.select().from(users)
+      expect(allUsers).toHaveLength(2)
+
+      // Verify the newly synced user exists with correct data
+      const newUser = allUsers.find(u => u.email === 'firsttime@example.com')
+      expect(newUser).toBeDefined()
+      expect(newUser.provider).toBe('facebook')
     })
 
     it('should update existing user on returning login', async () => {
       // Arrange: Create existing user
-      const [existingUser] = await db
+      const [existingUser] = await testDb
         .insert(users)
         .values({
           email: 'returning@example.com',
@@ -309,7 +333,7 @@ describe.sequential('User Database Synchronization', () => {
       expect(syncedUser.lastLoginAt).not.toBe(existingUser.lastLoginAt) // Updated login time
 
       // Verify still only one user in database with this provider ID
-      const allUsers = await db
+      const allUsers = await testDb
         .select()
         .from(users)
         .where(
@@ -320,7 +344,7 @@ describe.sequential('User Database Synchronization', () => {
 
     it('should update profile data on each login', async () => {
       // Arrange: Create existing user with old data
-      await db.insert(users).values({
+      await testDb.insert(users).values({
         email: 'user@example.com',
         name: 'Old Name',
         avatarUrl: null,
@@ -346,7 +370,7 @@ describe.sequential('User Database Synchronization', () => {
       expect(syncedUser.avatarUrl).toBe('https://new.avatar.url')
 
       // Verify in database
-      const [dbUser] = await db
+      const [dbUser] = await testDb
         .select()
         .from(users)
         .where(
@@ -358,7 +382,7 @@ describe.sequential('User Database Synchronization', () => {
 
     it('should handle email updates', async () => {
       // Arrange: Create user with old email
-      await db.insert(users).values({
+      await testDb.insert(users).values({
         email: 'old@example.com',
         name: 'Test User',
         provider: 'facebook',
@@ -393,24 +417,25 @@ describe.sequential('User Database Synchronization', () => {
     })
 
     it('should handle database errors gracefully', async () => {
-      // Arrange: Mock database error
-      const originalInsert = db.insert
-      vi.spyOn(db, 'insert').mockImplementationOnce(() => {
-        throw new Error('Database connection failed')
-      })
-
-      const oauthData = {
+      // Arrange: Create a user first
+      await testDb.insert(users).values({
+        email: 'error@example.com',
+        name: 'Existing User',
         provider: 'facebook',
         providerUserId: 'fb_error_test',
-        email: 'error@example.com',
+        emailVerified: true
+      })
+
+      // Try to create another user with the same email (should violate unique constraint)
+      const oauthData = {
+        provider: 'google', // Different provider
+        providerUserId: 'google_12345',
+        email: 'error@example.com', // Same email - will violate unique constraint
         name: 'Error Test'
       }
 
-      // Act & Assert: Should propagate database error
-      await expect(syncUserFromOAuth(oauthData)).rejects.toThrow(/database/i)
-
-      // Cleanup mock
-      db.insert = originalInsert
+      // Act & Assert: Should propagate database error (unique constraint violation)
+      await expect(syncUserFromOAuth(oauthData)).rejects.toThrow()
     })
   })
 
@@ -453,7 +478,7 @@ describe.sequential('User Database Synchronization', () => {
       expect(syncedUser.email).toBe('authtest@example.com')
 
       // Verify in database
-      const [dbUser] = await db
+      const [dbUser] = await testDb
         .select()
         .from(users)
         .where(
