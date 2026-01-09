@@ -66,11 +66,14 @@ export function appendDateModifierToNotes(notes, modifier) {
  * @returns {string|null} Photo URL or null if not found
  */
 export function extractPhotoUrlFromObje(individual) {
-  if (!individual._original || !individual._original.children) {
+  // Check for nested _original (after storePreviewData wrapping)
+  const original = individual._original?._original || individual._original
+
+  if (!original || !original.children) {
     return null
   }
 
-  const objeRecord = individual._original.children.find(r => r.type === 'OBJE')
+  const objeRecord = original.children.find(r => r.type === 'OBJE')
   if (!objeRecord || !objeRecord.children) {
     return null
   }

@@ -52,7 +52,7 @@ describe('POST /api/gedcom/import/:uploadId', () => {
     const previewData = {
       individuals: [
         {
-          gedcomId: 'I001',
+          id: 'I001',
           firstName: 'John',
           lastName: 'Smith',
           sex: 'M',
@@ -60,7 +60,7 @@ describe('POST /api/gedcom/import/:uploadId', () => {
           _original: { children: [] }
         },
         {
-          gedcomId: 'I002',
+          id: 'I002',
           firstName: 'Jane',
           lastName: 'Smith',
           sex: 'F',
@@ -136,21 +136,21 @@ describe('POST /api/gedcom/import/:uploadId', () => {
     const previewData = {
       individuals: [
         {
-          gedcomId: 'I001',
+          id: 'I001',
           firstName: 'John',
           lastName: 'Smith',
           sex: 'M',
           _original: { children: [] }
         },
         {
-          gedcomId: 'I002',
+          id: 'I002',
           firstName: 'Jane',
           lastName: 'Smith',
           sex: 'F',
           _original: { children: [] }
         },
         {
-          gedcomId: 'I003',
+          id: 'I003',
           firstName: 'Bob',
           lastName: 'Smith',
           sex: 'M',
@@ -242,7 +242,7 @@ describe('POST /api/gedcom/import/:uploadId', () => {
     const previewData = {
       individuals: [
         {
-          gedcomId: 'I001',
+          id: 'I001',  // storePreviewData expects 'id', not 'gedcomId'
           firstName: 'John Robert',
           lastName: 'Smith',
           sex: 'M',
@@ -250,7 +250,7 @@ describe('POST /api/gedcom/import/:uploadId', () => {
           _original: { children: [] }
         },
         {
-          gedcomId: 'I002',
+          id: 'I002',  // storePreviewData expects 'id', not 'gedcomId'
           firstName: 'Jane',
           lastName: 'Doe',
           sex: 'F',
@@ -337,14 +337,14 @@ describe('POST /api/gedcom/import/:uploadId', () => {
     const previewData = {
       individuals: [
         {
-          gedcomId: 'I001',
+          id: 'I001',  // storePreviewData expects 'id', not 'gedcomId'
           firstName: 'John',
           lastName: 'Smith',
           sex: 'M',
           _original: { children: [] }
         },
         {
-          gedcomId: 'I002',
+          id: 'I002',  // storePreviewData expects 'id', not 'gedcomId'
           firstName: 'Jane',
           lastName: 'Doe',
           sex: 'F',
@@ -416,7 +416,7 @@ describe('POST /api/gedcom/import/:uploadId', () => {
     const previewData = {
       individuals: [
         {
-          gedcomId: 'I001',
+          id: 'I001',
           firstName: 'John',
           lastName: 'Smith',
           sex: 'M',
@@ -513,14 +513,14 @@ describe('POST /api/gedcom/import/:uploadId', () => {
     const previewData = {
       individuals: [
         {
-          gedcomId: 'I001',
+          id: 'I001',
           firstName: 'John',
           lastName: 'Smith',
           sex: 'M',
           _original: { children: [] }
         },
         {
-          gedcomId: 'I002',
+          id: 'I002',
           firstName: 'Jane',
           lastName: 'Smith',
           sex: 'F',
@@ -578,7 +578,7 @@ describe('POST /api/gedcom/import/:uploadId', () => {
     const previewData = {
       individuals: [
         {
-          gedcomId: 'I001',
+          id: 'I001',  // storePreviewData expects 'id', not 'gedcomId'
           firstName: 'John',
           lastName: 'Smith',
           sex: 'M',
