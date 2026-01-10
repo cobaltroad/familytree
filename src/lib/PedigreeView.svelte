@@ -15,8 +15,8 @@
   let focusPersonId = null
   let initialized = false
 
-  // Story #82: Get user's defaultPersonId from session
-  $: defaultPersonId = $page?.data?.session?.user?.defaultPersonId
+  // Story #82: Get user's defaultPersonId from page data (exposed by +layout.server.js)
+  $: defaultPersonId = $page?.data?.defaultPersonId
 
   // Story #82: Default focus person
   // Priority: 1) User's defaultPersonId (if exists), 2) First root person, 3) First person

@@ -95,6 +95,7 @@ describe('RadialView - Default Focus Person (Story #82)', () => {
       relationships.set(testRelationships)
 
       // Mock page store with user session containing defaultPersonId
+      // Story #82: defaultPersonId is exposed at top level by +layout.server.js
       mockPage.set({
         data: {
           session: {
@@ -103,7 +104,8 @@ describe('RadialView - Default Focus Person (Story #82)', () => {
               email: 'test@example.com',
               defaultPersonId: 3 // "Me" is the default person
             }
-          }
+          },
+          defaultPersonId: 3 // Exposed at top level by +layout.server.js
         }
       })
 
@@ -128,11 +130,13 @@ describe('RadialView - Default Focus Person (Story #82)', () => {
       relationships.set([])
 
       // Mock session with default person
+      // Story #82: defaultPersonId is exposed at top level by +layout.server.js
       mockPage.set({
         data: {
           session: {
             user: { id: 1, defaultPersonId: 2 }
-          }
+          },
+          defaultPersonId: 2 // Exposed at top level by +layout.server.js
         }
       })
 
@@ -177,12 +181,14 @@ describe('RadialView - Default Focus Person (Story #82)', () => {
       relationships.set(testRelationships)
 
       // Mock session without defaultPersonId
+      // Story #82: defaultPersonId is null when user has no default person
       mockPage.set({
         data: {
           session: {
             user: { id: 1 }
             // No defaultPersonId
-          }
+          },
+          defaultPersonId: null // No default person
         }
       })
 
@@ -205,9 +211,11 @@ describe('RadialView - Default Focus Person (Story #82)', () => {
       relationships.set([])
 
       // Mock no session
+      // Story #82: defaultPersonId is null when user is not logged in
       mockPage.set({
         data: {
-          session: null
+          session: null,
+          defaultPersonId: null
         }
       })
 
@@ -233,11 +241,13 @@ describe('RadialView - Default Focus Person (Story #82)', () => {
       relationships.set([])
 
       // Mock session with invalid defaultPersonId
+      // Story #82: defaultPersonId exposed at top level
       mockPage.set({
         data: {
           session: {
             user: { id: 1, defaultPersonId: 999 } // Non-existent
-          }
+          },
+          defaultPersonId: 999 // Non-existent person
         }
       })
 

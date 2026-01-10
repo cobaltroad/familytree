@@ -21,14 +21,20 @@ export async function load(event) {
     // Get session from Auth.js via event.locals
     if (event.locals && typeof event.locals.getSession === 'function') {
       const session = await event.locals.getSession()
+
+      // Story #82: Extract defaultPersonId from session for easy access in components
+      const defaultPersonId = session?.user?.defaultPersonId || null
+
       return {
-        session
+        session,
+        defaultPersonId
       }
     }
 
     // No getSession available (shouldn't happen in production)
     return {
-      session: null
+      session: null,
+      defaultPersonId: null
     }
   } catch (error) {
     // Log error but don't break the app
@@ -36,7 +42,8 @@ export async function load(event) {
 
     // Return null session on error
     return {
-      session: null
+      session: null,
+      defaultPersonId: null
     }
   }
 }

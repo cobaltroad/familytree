@@ -193,4 +193,122 @@ describe('Layout Server Load Function', () => {
       expect(result.session.user.email).toBe('component@example.com')
     })
   })
+
+  describe('Story #82: Default Person ID Exposure', () => {
+    it('should return defaultPersonId when user has one in session', async () => {
+      // Arrange: Mock session with defaultPersonId
+      const mockSession = {
+        user: {
+          id: 'fb_12345',
+          email: 'user@example.com',
+          name: 'Test User',
+          defaultPersonId: 42
+        }
+      }
+
+      const event = {
+        locals: {
+          getSession: vi.fn().mockResolvedValue(mockSession)
+        }
+      }
+
+      // Act: Call load function
+      const result = await load(event)
+
+      // Assert: Should return defaultPersonId at top level
+      expect(result).toBeDefined()
+      expect(result.session).toEqual(mockSession)
+      expect(result.defaultPersonId).toBe(42)
+    })
+
+    it('should return null defaultPersonId when user has no default person', async () => {
+      // Arrange: Mock session without defaultPersonId
+      const mockSession = {
+        user: {
+          id: 'fb_12345',
+          email: 'user@example.com',
+          name: 'Test User'
+          // No defaultPersonId
+        }
+      }
+
+      const event = {
+        locals: {
+          getSession: vi.fn().mockResolvedValue(mockSession)
+        }
+      }
+
+      // Act: Call load function
+      const result = await load(event)
+
+      // Assert: Should return null defaultPersonId
+      expect(result).toBeDefined()
+      expect(result.session).toEqual(mockSession)
+      expect(result.defaultPersonId).toBeNull()
+    })
+
+    it('should return null defaultPersonId when user is not authenticated', async () => {
+      // Arrange: Mock unauthenticated event
+      const event = {
+        locals: {
+          getSession: vi.fn().mockResolvedValue(null)
+        }
+      }
+
+      // Act: Call load function
+      const result = await load(event)
+
+      // Assert: Should return null defaultPersonId
+      expect(result).toBeDefined()
+      expect(result.session).toBeNull()
+      expect(result.defaultPersonId).toBeNull()
+    })
+
+    it('should make defaultPersonId available via $page.data.defaultPersonId', async () => {
+      // This test documents the expected usage pattern
+      // In a Svelte component:
+      // <script>
+      //   import { page } from '$app/stores'
+      //   $: defaultPersonId = $page.data.defaultPersonId
+      // </script>
+
+      // Arrange: Mock session with defaultPersonId
+      const mockSession = {
+        user: {
+          id: 'fb_82_test',
+          email: 'story82@example.com',
+          name: 'Story 82 User',
+          defaultPersonId: 99
+        }
+      }
+
+      const event = {
+        locals: {
+          getSession: vi.fn().mockResolvedValue(mockSession)
+        }
+      }
+
+      // Act: Call load function
+      const result = await load(event)
+
+      // Assert: defaultPersonId should be accessible at top level
+      expect(result.defaultPersonId).toBe(99)
+      expect(result.session.user.defaultPersonId).toBe(99)
+    })
+
+    it('should handle missing session gracefully and return null defaultPersonId', async () => {
+      // Arrange: Mock event without getSession
+      const event = {
+        locals: {}
+      }
+
+      // Act: Call load function
+      const result = await load(event)
+
+      // Assert: Should return null defaultPersonId
+      expect(result).toBeDefined()
+      expect(result.session).toBeNull()
+      expect(result.defaultPersonId).toBeNull()
+    })
+  })
 })

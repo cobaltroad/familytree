@@ -87,6 +87,7 @@ describe('PedigreeView - Default Focus Person (Story #82)', () => {
       relationships.set(testRelationships)
 
       // Mock page store with user session containing defaultPersonId
+      // Story #82: defaultPersonId is exposed at top level by +layout.server.js
       mockPage.set({
         data: {
           session: {
@@ -95,7 +96,8 @@ describe('PedigreeView - Default Focus Person (Story #82)', () => {
               email: 'test@example.com',
               defaultPersonId: 3 // Charlie is the default person
             }
-          }
+          },
+          defaultPersonId: 3 // Exposed at top level by +layout.server.js
         }
       })
 
@@ -119,11 +121,13 @@ describe('PedigreeView - Default Focus Person (Story #82)', () => {
       relationships.set([])
 
       // Mock session with default person
+      // Story #82: defaultPersonId is exposed at top level by +layout.server.js
       mockPage.set({
         data: {
           session: {
             user: { id: 1, defaultPersonId: 1 }
-          }
+          },
+          defaultPersonId: 1 // Exposed at top level by +layout.server.js
         }
       })
 
@@ -168,6 +172,7 @@ describe('PedigreeView - Default Focus Person (Story #82)', () => {
       relationships.set(testRelationships)
 
       // Mock session without defaultPersonId
+      // Story #82: defaultPersonId is null when user has no default person
       mockPage.set({
         data: {
           session: {
@@ -176,7 +181,8 @@ describe('PedigreeView - Default Focus Person (Story #82)', () => {
               email: 'test@example.com'
               // No defaultPersonId
             }
-          }
+          },
+          defaultPersonId: null // No default person
         }
       })
 
@@ -199,9 +205,11 @@ describe('PedigreeView - Default Focus Person (Story #82)', () => {
       relationships.set([])
 
       // Mock no session (user not logged in)
+      // Story #82: defaultPersonId is null when user is not logged in
       mockPage.set({
         data: {
-          session: null
+          session: null,
+          defaultPersonId: null
         }
       })
 
@@ -226,11 +234,13 @@ describe('PedigreeView - Default Focus Person (Story #82)', () => {
       relationships.set([])
 
       // Mock session with invalid defaultPersonId
+      // Story #82: defaultPersonId exposed at top level
       mockPage.set({
         data: {
           session: {
             user: { id: 1, defaultPersonId: 999 } // Non-existent person
-          }
+          },
+          defaultPersonId: 999 // Non-existent person
         }
       })
 
