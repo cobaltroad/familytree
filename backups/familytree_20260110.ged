@@ -1,0 +1,246 @@
+0 HEAD
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+1 SOUR FamilyTree App
+1 DATE 10 JAN 2026
+0 @S1@ SUBM
+1 NAME Ron Dollete
+0 @I1@ INDI
+1 NAME Ron /Dollete/
+1 SEX M
+1 BIRT
+2 DATE 29 JAN 1979
+1 OBJE
+2 FILE https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=10163941699994078&height=50&width=50&ext=1769718605&hash=AT8eMLUxJ8_dI5IFqBxfIWXf
+0 @I2@ INDI
+1 NAME Oscar /Dollete/
+1 SEX M
+1 BIRT
+2 DATE 28 SEP 2018
+0 @I3@ INDI
+1 NAME Aquilino /Dollete/
+1 SEX M
+0 @I4@ INDI
+1 NAME Segunda /Torres/
+1 SEX F
+0 @I5@ INDI
+1 NAME Bernardo /Dollete/
+1 SEX M
+0 @I6@ INDI
+1 NAME Tirso /Dollete/
+1 SEX M
+0 @I7@ INDI
+1 NAME Maria /Darusin/
+1 SEX F
+0 @I8@ INDI
+1 NAME Raymund /Dollete/
+1 SEX M
+0 @I9@ INDI
+1 NAME Rodolfo /Dollete/
+1 SEX M
+1 BIRT
+2 DATE 15 JAN 1961
+0 @I10@ INDI
+1 NAME Winona /Dollete/
+1 SEX F
+1 BIRT
+2 DATE 24 AUG 1960
+0 @I11@ INDI
+1 NAME Leticia /Quejada/
+1 SEX F
+0 @I12@ INDI
+1 NAME Dominga /Dollete/
+1 SEX F
+0 @I13@ INDI
+1 NAME Lelanne /Arquero/
+1 SEX F
+0 @I14@ INDI
+1 NAME Merlyna /Dollete/
+1 SEX F
+0 @I15@ INDI
+1 NAME Joeven /Dollete/
+1 SEX M
+0 @I16@ INDI
+1 NAME Nelson /Quejada/
+1 SEX M
+0 @I17@ INDI
+1 NAME Hillary /Quejada/
+1 SEX F
+0 @I18@ INDI
+1 NAME Aleksei /Quejada/
+1 SEX M
+0 @I19@ INDI
+1 NAME McKenna /Dollete/
+1 SEX F
+1 BIRT
+2 DATE 30 NOV 1987
+0 @I20@ INDI
+1 NAME Cori /Mendoza/
+1 SEX F
+0 @I21@ INDI
+1 NAME Andy /Mendoza/
+1 SEX M
+0 @I22@ INDI
+1 NAME Charis /Quejada/
+1 SEX F
+0 @I23@ INDI
+1 NAME Adeline /Quejada/
+1 SEX F
+0 @I24@ INDI
+1 NAME Amber /Dollete/
+1 SEX F
+0 @I25@ INDI
+1 NAME Allain /Dollete/
+1 SEX M
+0 @I26@ INDI
+1 NAME Eugene /Dollete/
+1 SEX M
+0 @I27@ INDI
+1 NAME Aileen /Lê/
+1 SEX F
+0 @I28@ INDI
+1 NAME Andrew /Lê/
+1 SEX M
+0 @I29@ INDI
+1 NAME Crisalyn /Dollete/
+1 SEX F
+0 @I30@ INDI
+1 NAME Ian /Armas/
+1 SEX M
+0 @I31@ INDI
+1 NAME Loren /Armas/
+1 SEX M
+0 @I32@ INDI
+1 NAME Ken /Lazaro/
+1 SEX M
+0 @I33@ INDI
+1 NAME Carolina /Montero/
+1 SEX F
+0 @I34@ INDI
+1 NAME Gregorio /Cabaltica/
+1 SEX M
+0 @I35@ INDI
+1 NAME Editha /Najera/
+1 SEX F
+0 @I36@ INDI
+1 NAME Bernadette /Najera/
+1 SEX F
+0 @I37@ INDI
+1 NAME Maureen /Najera/
+1 SEX F
+0 @I38@ INDI
+1 NAME Angelyn /Najera/
+1 SEX F
+0 @F1@ FAM
+1 HUSB @I5@
+1 WIFE @I4@
+1 CHIL @I3@
+1 CHIL @I6@
+0 @F2@ FAM
+1 HUSB @I6@
+1 WIFE @I7@
+0 @F3@ FAM
+1 HUSB @I9@
+1 WIFE @I10@
+1 CHIL @I8@
+1 CHIL @I1@
+0 @F4@ FAM
+1 HUSB @I9@
+1 WIFE @I10@
+1 CHIL @I8@
+1 CHIL @I1@
+0 @F5@ FAM
+1 HUSB @I16@
+1 WIFE @I11@
+1 CHIL @I17@
+1 CHIL @I20@
+1 CHIL @I22@
+1 CHIL @I23@
+0 @F6@ FAM
+1 HUSB @I16@
+1 WIFE @I11@
+1 CHIL @I17@
+1 CHIL @I20@
+1 CHIL @I22@
+1 CHIL @I23@
+0 @F7@ FAM
+1 HUSB @I18@
+1 WIFE @I17@
+0 @F8@ FAM
+1 HUSB @I18@
+1 WIFE @I17@
+0 @F9@ FAM
+1 HUSB @I21@
+1 WIFE @I20@
+0 @F10@ FAM
+1 HUSB @I21@
+1 WIFE @I20@
+0 @F11@ FAM
+1 HUSB @I15@
+1 WIFE @I24@
+1 CHIL @I25@
+1 CHIL @I26@
+1 CHIL @I27@
+0 @F12@ FAM
+1 HUSB @I15@
+1 WIFE @I24@
+1 CHIL @I25@
+1 CHIL @I26@
+1 CHIL @I27@
+0 @F13@ FAM
+1 HUSB @I28@
+1 WIFE @I27@
+0 @F14@ FAM
+1 HUSB @I28@
+1 WIFE @I27@
+0 @F15@ FAM
+1 HUSB @I26@
+1 WIFE @I29@
+0 @F16@ FAM
+1 HUSB @I26@
+1 WIFE @I29@
+0 @F17@ FAM
+1 HUSB @I1@
+1 WIFE @I19@
+1 CHIL @I2@
+0 @F18@ FAM
+1 HUSB @I1@
+1 WIFE @I19@
+1 CHIL @I2@
+0 @F19@ FAM
+1 HUSB @I3@
+1 WIFE @I12@
+1 CHIL @I11@
+1 CHIL @I13@
+1 CHIL @I14@
+1 CHIL @I15@
+1 CHIL @I9@
+0 @F20@ FAM
+1 HUSB @I3@
+1 WIFE @I12@
+1 CHIL @I11@
+1 CHIL @I13@
+1 CHIL @I14@
+1 CHIL @I15@
+1 CHIL @I9@
+0 @F21@ FAM
+1 WIFE @I14@
+1 CHIL @I30@
+1 CHIL @I31@
+0 @F22@ FAM
+1 WIFE @I13@
+1 CHIL @I32@
+0 @F23@ FAM
+1 WIFE @I33@
+1 CHIL @I10@
+0 @F24@ FAM
+1 HUSB @I34@
+1 CHIL @I10@
+1 CHIL @I35@
+0 @F25@ FAM
+1 WIFE @I35@
+1 CHIL @I36@
+1 CHIL @I37@
+1 CHIL @I38@
+0 TRLR
