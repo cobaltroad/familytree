@@ -2,6 +2,7 @@
   import { people, relationships } from '../stores/familyStore.js'
   import { peopleById } from '../stores/derivedStores.js'
   import { api } from './api.js'
+  import * as notifications from '../stores/notificationStore.js'
   import { onMount } from 'svelte'
 
   // Reactive statements to get data
@@ -12,6 +13,9 @@
   let viewAllRecords = false
   let loading = false
   let error = null
+
+  // GEDCOM export state
+  let exporting = false
 
   // Check if user's view_all_records is enabled on mount
   onMount(async () => {
@@ -46,6 +50,20 @@
     }
   }
 
+  // Export family tree as GEDCOM
+  async function handleExportGedcom() {
+    exporting = true
+    try {
+      await api.exportGedcom('5.5.1')
+      notifications.success('Family tree exported successfully')
+    } catch (err) {
+      console.error('Failed to export GEDCOM:', err)
+      notifications.error('Failed to export family tree: ' + err.message)
+    } finally {
+      exporting = false
+    }
+  }
+
   // Helper function to get person name by ID
   function getPersonName(personId) {
     const person = $peopleById.get(personId)
@@ -71,28 +89,45 @@
   <h2>Admin View - Database Records</h2>
   <p class="subtitle">Development tool for viewing all records and verifying data isolation</p>
 
-  <!-- View All Records Toggle -->
+  <!-- View All Records Toggle and Export Button -->
   <div class="control-panel">
-    <div class="toggle-section">
-      <label class="toggle-label">
-        <input
-          type="checkbox"
-          bind:checked={viewAllRecords}
-          on:change={toggleViewAllRecords}
-          disabled={loading}
-          class="toggle-checkbox"
-        />
-        <span class="toggle-slider"></span>
-        <span class="toggle-text">
-          View All Users' Records
-        </span>
-      </label>
-      {#if loading}
-        <span class="loading-indicator">Updating...</span>
-      {/if}
-      {#if error}
-        <span class="error-message">{error}</span>
-      {/if}
+    <div class="control-row">
+      <div class="toggle-section">
+        <label class="toggle-label">
+          <input
+            type="checkbox"
+            bind:checked={viewAllRecords}
+            on:change={toggleViewAllRecords}
+            disabled={loading}
+            class="toggle-checkbox"
+          />
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">
+            View All Users' Records
+          </span>
+        </label>
+        {#if loading}
+          <span class="loading-indicator">Updating...</span>
+        {/if}
+        {#if error}
+          <span class="error-message">{error}</span>
+        {/if}
+      </div>
+      <button
+        class="export-button"
+        on:click={handleExportGedcom}
+        disabled={exporting}
+        aria-label="Export family tree as GEDCOM file"
+      >
+        <svg class="export-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+        {#if exporting}
+          Exporting...
+        {:else}
+          Export GEDCOM
+        {/if}
+      </button>
     </div>
   </div>
 
@@ -222,10 +257,54 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
   .toggle-section {
     display: flex;
     align-items: center;
     gap: 1rem;
+  }
+
+  .export-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .export-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .export-button:hover:not(:disabled) {
+    background: #45a049;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  }
+
+  .export-button:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .export-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .toggle-label {
@@ -461,6 +540,20 @@
 
     h3 {
       font-size: 1.15rem;
+    }
+
+    .control-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .toggle-section {
+      justify-content: space-between;
+    }
+
+    .export-button {
+      width: 100%;
+      justify-content: center;
     }
 
     .section-header {
