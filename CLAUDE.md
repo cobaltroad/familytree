@@ -25,9 +25,22 @@ npm run preview      # Preview production build
 ```bash
 npm run db:studio      # Open Drizzle Studio (database GUI)
 npx drizzle-kit generate    # Generate migrations from schema
-npx drizzle-kit migrate     # Apply migrations to database
 npx drizzle-kit push        # Push schema directly (development)
 ```
+
+**Applying Migrations Manually (Issue #122)**:
+Due to the existing database not being tracked from the start, Drizzle's automatic migrate command fails. To apply new migrations manually:
+
+1. Check the latest migration in `drizzle/` directory
+2. Apply it using SQLite:
+   ```bash
+   sqlite3 familytree.db < drizzle/XXXX_migration_name.sql
+   ```
+3. For migration `0002_tiny_lake.sql` (birth_surname and nickname):
+   ```bash
+   sqlite3 familytree.db "ALTER TABLE people ADD COLUMN birth_surname TEXT;"
+   sqlite3 familytree.db "ALTER TABLE people ADD COLUMN nickname TEXT;"
+   ```
 
 ### Testing
 ```bash
