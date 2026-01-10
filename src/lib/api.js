@@ -384,5 +384,52 @@ export const api = {
     }
 
     return data
+  },
+
+  /**
+   * Exports family tree as GEDCOM file
+   * Story #96: Export Family Tree as GEDCOM
+   *
+   * @param {string} format - GEDCOM version ("5.5.1" or "7.0")
+   * @returns {Promise<void>} Triggers file download in browser
+   * @throws {Error} If request fails
+   *
+   * @example
+   * await api.exportGedcom('5.5.1')
+   * // Browser downloads: familytree_20260109.ged
+   *
+   * @example
+   * await api.exportGedcom('7.0')
+   * // Downloads GEDCOM 7.0 format file
+   */
+  async exportGedcom(format = '5.5.1') {
+    const response = await fetch(`${API_BASE}/gedcom/export?format=${format}`)
+    if (!response.ok) throw await createApiError(response, 'Failed to export GEDCOM file')
+
+    // Get filename from Content-Disposition header
+    const contentDisposition = response.headers.get('Content-Disposition')
+    let filename = 'familytree.ged'
+
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="([^"]+)"/)
+      if (filenameMatch) {
+        filename = filenameMatch[1]
+      }
+    }
+
+    // Get GEDCOM content
+    const blob = await response.blob()
+
+    // Create download link and trigger download
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+
+    // Cleanup
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
   }
 }
