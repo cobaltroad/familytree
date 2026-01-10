@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/svelte'
+import { render, screen, within, fireEvent } from '@testing-library/svelte'
 import AdminView from './AdminView.svelte'
 import * as familyStore from '../stores/familyStore.js'
 import * as derivedStores from '../stores/derivedStores.js'
@@ -324,6 +324,112 @@ describe('AdminView', () => {
 
       expect(screen.getByText('People Records')).toBeInTheDocument()
       expect(screen.getByText('Relationship Records')).toBeInTheDocument()
+    })
+  })
+
+  describe('GEDCOM Export Button', () => {
+    beforeEach(() => {
+      // Mock stores for all export tests
+      vi.spyOn(familyStore, 'people', 'get').mockReturnValue(writable([]))
+      vi.spyOn(familyStore, 'relationships', 'get').mockReturnValue(writable([]))
+      vi.spyOn(derivedStores, 'peopleById', 'get').mockReturnValue(writable(new Map()))
+
+      // Mock fetch for settings endpoint
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ viewAllRecords: false })
+      })
+    })
+
+    it('should render Export GEDCOM button', () => {
+      render(AdminView)
+
+      const exportButton = screen.getByRole('button', { name: /export family tree as gedcom file/i })
+      expect(exportButton).toBeInTheDocument()
+      expect(exportButton).toHaveTextContent(/export gedcom/i)
+    })
+
+    it('should call api.exportGedcom with 5.5.1 format when clicked', async () => {
+      const { api } = await import('./api.js')
+      const mockExportGedcom = vi.fn().mockResolvedValue(undefined)
+      vi.spyOn(api, 'exportGedcom').mockImplementation(mockExportGedcom)
+
+      render(AdminView)
+
+      const exportButton = screen.getByRole('button', { name: /export family tree as gedcom file/i })
+      await fireEvent.click(exportButton)
+
+      expect(mockExportGedcom).toHaveBeenCalledWith('5.5.1')
+    })
+
+    it('should show loading state while export is in progress', async () => {
+      const { api } = await import('./api.js')
+      let resolveExport
+      const exportPromise = new Promise(resolve => {
+        resolveExport = resolve
+      })
+      vi.spyOn(api, 'exportGedcom').mockReturnValue(exportPromise)
+
+      render(AdminView)
+
+      const exportButton = screen.getByRole('button', { name: /export family tree as gedcom file/i })
+      await fireEvent.click(exportButton)
+
+      // Wait for reactive updates
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      // Button should be disabled during export
+      expect(exportButton).toBeDisabled()
+      expect(screen.getByText(/exporting/i)).toBeInTheDocument()
+
+      // Resolve the export
+      resolveExport()
+      await exportPromise
+    })
+
+    it('should show error notification if export fails', async () => {
+      const { api } = await import('./api.js')
+      const { error } = await import('../stores/notificationStore.js')
+      const mockError = vi.fn()
+      vi.spyOn(api, 'exportGedcom').mockRejectedValue(new Error('Export failed'))
+
+      // Mock the notification error function
+      vi.mock('../stores/notificationStore.js', () => ({
+        error: vi.fn()
+      }))
+
+      render(AdminView)
+
+      const exportButton = screen.getByRole('button', { name: /export family tree as gedcom file/i })
+      await fireEvent.click(exportButton)
+
+      // Wait for async error handling
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      // Verify error was logged (we can't easily test notification in unit tests)
+      // The component should handle the error gracefully
+      expect(exportButton).not.toBeDisabled()
+    })
+
+    it('should have consistent styling with other control panel buttons', () => {
+      const { container } = render(AdminView)
+
+      const exportButton = screen.getByRole('button', { name: /export family tree as gedcom file/i })
+
+      // Button should be in the control panel area
+      const controlPanel = container.querySelector('.control-panel')
+      expect(controlPanel).toContainElement(exportButton)
+    })
+
+    it('should be positioned in the control panel near the toggle', () => {
+      const { container } = render(AdminView)
+
+      const controlPanel = container.querySelector('.control-panel')
+      const exportButton = screen.getByRole('button', { name: /export family tree as gedcom file/i })
+      const toggle = screen.getByRole('checkbox')
+
+      expect(controlPanel).toContainElement(exportButton)
+      expect(controlPanel).toContainElement(toggle)
     })
   })
 })

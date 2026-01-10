@@ -12,6 +12,7 @@ import { requireAuth } from '$lib/server/session.js'
 import { people, relationships } from '$lib/db/schema.js'
 import { eq } from 'drizzle-orm'
 import { buildGedcomFile } from '$lib/server/gedcomExporter.js'
+import { db } from '$lib/db/client.js'
 
 /**
  * GET /api/gedcom/export
@@ -30,6 +31,9 @@ export async function GET(event) {
     // Require authentication
     const { user } = await requireAuth(event)
 
+    // Use locals.db if provided (for testing), otherwise use singleton db
+    const database = event.locals?.db || db
+
     // Get format parameter (default to 5.5.1)
     const format = event.url.searchParams.get('format') || '5.5.1'
 
@@ -41,13 +45,13 @@ export async function GET(event) {
     }
 
     // Fetch user's people
-    const userPeople = await event.locals.db
+    const userPeople = await database
       .select()
       .from(people)
       .where(eq(people.userId, user.id))
 
     // Fetch user's relationships
-    const userRelationships = await event.locals.db
+    const userRelationships = await database
       .select()
       .from(relationships)
       .where(eq(relationships.userId, user.id))

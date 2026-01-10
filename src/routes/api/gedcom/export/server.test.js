@@ -358,4 +358,49 @@ describe('GET /api/gedcom/export', () => {
     expect(gedcomContent).not.toContain('0 @I')
     expect(gedcomContent).not.toContain('0 @F')
   })
+
+  it('should work when event.locals.db is undefined (production scenario)', async () => {
+    // BUG REPRODUCTION TEST
+    // In production, event.locals.db is undefined because hooks.server.js doesn't set it.
+    // The endpoint should fall back to the singleton db import like other API endpoints do.
+    //
+    // This test verifies the fix: endpoint uses "event.locals?.db || db" instead of "event.locals.db"
+    // Before fix: TypeError: Cannot read properties of undefined (reading 'select')
+    // After fix: Returns valid GEDCOM file (even if empty for the test user)
+
+    // Create mock event WITHOUT locals.db (simulating production environment)
+    // In production, event.locals only has getSession(), not db
+    const mockSession = {
+      user: {
+        id: userId,
+        email: 'test@example.com',
+        name: 'Test User'
+      }
+    }
+
+    const mockEvent = {
+      locals: {
+        getSession: async () => mockSession
+        // NOTE: No db property here - this is the production scenario!
+      },
+      request: new Request('http://localhost/api/gedcom/export?format=5.5.1'),
+      url: new URL('http://localhost/api/gedcom/export?format=5.5.1')
+    }
+
+    const response = await GET(mockEvent)
+
+    // Should not return 500 Internal Server Error
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('text/x-gedcom')
+
+    // Should return valid GEDCOM structure (header, submitter, trailer)
+    // NOTE: Content may be empty (no INDI/FAM records) because the singleton db
+    // points to production database which doesn't have this test user's data.
+    // The important thing is that it doesn't crash.
+    const gedcomContent = await response.text()
+    expect(gedcomContent).toContain('0 HEAD')
+    expect(gedcomContent).toContain('0 @S1@ SUBM')
+    expect(gedcomContent).toContain('1 NAME Test User')
+    expect(gedcomContent).toContain('0 TRLR')
+  })
 })
