@@ -10,6 +10,8 @@
   let formData = {
     firstName: '',
     lastName: '',
+    birthSurname: '',
+    nickname: '',
     birthDate: '',
     deathDate: '',
     gender: '',
@@ -26,6 +28,8 @@
     formData = {
       firstName: person.firstName || '',
       lastName: person.lastName || '',
+      birthSurname: person.birthSurname || '',
+      nickname: person.nickname || '',
       birthDate: person.birthDate || '',
       deathDate: person.deathDate || '',
       gender: person.gender || '',
@@ -38,6 +42,8 @@
     formData = {
       firstName: '',
       lastName: '',
+      birthSurname: '',
+      nickname: '',
       birthDate: '',
       deathDate: '',
       gender: '',
@@ -57,7 +63,9 @@
       birthDate: formData.birthDate || null,
       deathDate: formData.deathDate || null,
       gender: formData.gender || null,
-      photoUrl: formData.photoUrl || null
+      photoUrl: formData.photoUrl || null,
+      birthSurname: formData.birthSurname || null,
+      nickname: formData.nickname || null
     }
 
     if (person) {
@@ -75,6 +83,8 @@
       formData = {
         firstName: '',
         lastName: '',
+        birthSurname: '',
+        nickname: '',
         birthDate: '',
         deathDate: '',
         gender: '',
@@ -114,6 +124,18 @@
       bind:value={formData.lastName}
       required
     />
+  </div>
+
+  <div class="form-group">
+    <label for="birthSurname">Birth Surname</label>
+    <input
+      id="birthSurname"
+      type="text"
+      bind:value={formData.birthSurname}
+      placeholder="Original family name before marriage"
+      maxlength="255"
+    />
+    <small class="help-text">Original family name before marriage</small>
   </div>
 
   <div class="form-group">
@@ -195,6 +217,16 @@
   <!-- Additional Metadata Section (Collapsible) -->
   <CollapsibleSection title="Additional Metadata" expanded={false}>
     <div class="form-group">
+      <label for="nickname">Nickname</label>
+      <input
+        id="nickname"
+        type="text"
+        bind:value={formData.nickname}
+        placeholder="Common name or alternate name"
+        maxlength="255"
+      />
+    </div>
+    <div class="form-group">
       <label for="photoUrl">Photo URL</label>
       <input
         id="photoUrl"
@@ -240,6 +272,14 @@
 
   .form-group input[type="checkbox"] {
     margin-right: 0.5rem;
+  }
+
+  .help-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #666;
+    font-style: italic;
   }
 
   .radio-group {

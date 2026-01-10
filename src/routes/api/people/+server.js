@@ -107,6 +107,7 @@ export async function POST({ request, locals, ...event }) {
 
     // Insert person into database with user_id (Issue #72: Data Association)
     // Story #77: Now includes photoUrl
+    // Issue #121: Now includes birthSurname and nickname
     const result = await database
       .insert(people)
       .values({
@@ -116,6 +117,8 @@ export async function POST({ request, locals, ...event }) {
         deathDate: data.deathDate || null,
         gender: data.gender || null,
         photoUrl: data.photoUrl || null,
+        birthSurname: data.birthSurname || null,
+        nickname: data.nickname || null,
         userId: userId
       })
       .returning()

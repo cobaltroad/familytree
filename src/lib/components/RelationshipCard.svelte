@@ -68,6 +68,17 @@
     return `${birth}–${death}`
   }
 
+  // Format person's full name with birth surname (Issue #121: AC4)
+  function formatPersonName(person) {
+    if (!person) return ''
+    const fullName = `${person.firstName} ${person.lastName}`
+    // If birth surname exists and is different from last name, show it in parentheses
+    if (person.birthSurname && person.birthSurname.trim() !== '') {
+      return `${fullName} (${person.birthSurname})`
+    }
+    return fullName
+  }
+
   // Generate accessible label
   $: ariaLabel = person
     ? `View ${person.firstName} ${person.lastName}, ${relationshipType}`
@@ -78,6 +89,8 @@
     : 'Remove relationship'
 
   $: lifespan = person ? formatLifespan(person.birthDate, person.deathDate) : ''
+
+  $: displayName = person ? formatPersonName(person) : ''
 
   // Show delete button on hover (desktop) or always (mobile)
   $: showDeleteButton = relationship && (isMobile || isHovering)
@@ -109,7 +122,7 @@
             <span class="you-badge">You</span>
           {/if}
         </div>
-        <div class="person-name">{person.firstName} {person.lastName}</div>
+        <div class="person-name">{displayName}</div>
         {#if lifespan}
           <div class="person-dates">{lifespan}</div>
         {/if}

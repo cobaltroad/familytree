@@ -172,6 +172,8 @@
             <tr>
               <th>ID</th>
               <th>Name</th>
+              <th>Birth Surname</th>
+              <th>Nickname</th>
               <th>Birth Date</th>
               <th>Death Date</th>
               <th>Gender</th>
@@ -184,6 +186,8 @@
               <tr>
                 <td>{person.id}</td>
                 <td>{person.firstName} {person.lastName}</td>
+                <td>{person.birthSurname || '—'}</td>
+                <td>{person.nickname || '—'}</td>
                 <td>{person.birthDate || '—'}</td>
                 <td>{person.deathDate || '—'}</td>
                 <td>{person.gender || '—'}</td>

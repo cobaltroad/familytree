@@ -24,6 +24,20 @@ describe('Database Schema Definition', () => {
       expect(columns).toHaveProperty('createdAt')
     })
 
+    test('should have birthSurname column for AC1', () => {
+      const columns = people[Symbol.for('drizzle:Columns')]
+      expect(columns).toHaveProperty('birthSurname')
+      expect(columns.birthSurname.dataType).toBe('string')
+      expect(columns.birthSurname.notNull).toBe(false)
+    })
+
+    test('should have nickname column for AC1', () => {
+      const columns = people[Symbol.for('drizzle:Columns')]
+      expect(columns).toHaveProperty('nickname')
+      expect(columns.nickname.dataType).toBe('string')
+      expect(columns.nickname.notNull).toBe(false)
+    })
+
     test('should have correct column types', () => {
       const columns = people[Symbol.for('drizzle:Columns')]
 

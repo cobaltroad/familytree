@@ -134,6 +134,11 @@ CREATE INDEX \`users_provider_user_id_idx\` ON \`users\` (\`provider_user_id\`);
     // Migration 0001: Add view_all_records column
     {
       sql: `ALTER TABLE \`users\` ADD \`view_all_records\` integer DEFAULT false NOT NULL;`
+    },
+    // Migration 0002: Add birth_surname and nickname columns (Issue #121)
+    {
+      sql: `ALTER TABLE \`people\` ADD \`birth_surname\` text;
+ALTER TABLE \`people\` ADD \`nickname\` text;`
     }
   ]
 

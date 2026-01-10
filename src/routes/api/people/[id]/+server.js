@@ -140,6 +140,7 @@ export async function PUT({ params, request, locals, ...event }) {
 
     // Update person
     // Story #77: Now includes photoUrl
+    // Issue #121: Now includes birthSurname and nickname
     const updateData = {
       firstName: data.firstName,
       lastName: data.lastName,
@@ -151,6 +152,16 @@ export async function PUT({ params, request, locals, ...event }) {
     // Only update photoUrl if it's explicitly provided in the request
     if (data.photoUrl !== undefined) {
       updateData.photoUrl = data.photoUrl
+    }
+
+    // Only update birthSurname if it's explicitly provided in the request (Issue #121)
+    if (data.birthSurname !== undefined) {
+      updateData.birthSurname = data.birthSurname
+    }
+
+    // Only update nickname if it's explicitly provided in the request (Issue #121)
+    if (data.nickname !== undefined) {
+      updateData.nickname = data.nickname
     }
 
     const result = await database

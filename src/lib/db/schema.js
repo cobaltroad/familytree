@@ -12,6 +12,10 @@ import { sql } from 'drizzle-orm'
  *
  * Photo Support (Story #77):
  * - photo_url: URL to person's photo (nullable, for avatar display)
+ *
+ * Birth Surname and Nickname (Issue #121):
+ * - birth_surname: Original family name before marriage (nullable)
+ * - nickname: Common name or alternate name (nullable)
  */
 export const people = sqliteTable('people', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -21,6 +25,8 @@ export const people = sqliteTable('people', {
   deathDate: text('death_date'),
   gender: text('gender'),
   photoUrl: text('photo_url'),
+  birthSurname: text('birth_surname'),
+  nickname: text('nickname'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   userId: integer('user_id')
     .notNull()

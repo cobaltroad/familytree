@@ -24,6 +24,7 @@ function toRFC3339(sqliteDateTime) {
  *
  * Issue #72: Now includes userId for multi-user support
  * Story #77: Now includes photoUrl for photo storage
+ * Issue #121: Now includes birthSurname and nickname
  *
  * @param {Object} person - Person record from database
  * @returns {Object} Transformed person object
@@ -37,6 +38,8 @@ export function transformPersonToAPI(person) {
     deathDate: person.deathDate !== undefined ? person.deathDate : null,
     gender: person.gender !== undefined && person.gender !== '' ? person.gender : null,
     photoUrl: person.photoUrl !== undefined ? person.photoUrl : null,
+    birthSurname: person.birthSurname !== undefined ? person.birthSurname : null,
+    nickname: person.nickname !== undefined ? person.nickname : null,
     createdAt: toRFC3339(person.createdAt),
     userId: person.userId
   }
@@ -94,9 +97,44 @@ function isValidDate(dateString) {
 }
 
 /**
+ * Validates a name field (birthSurname or nickname) for allowed characters and length
+ * Issue #121: AC7 validation requirements
+ *
+ * @param {string} value - The name field value
+ * @param {string} fieldName - The field name for error messages
+ * @returns {Object} Validation result { valid: boolean, error: string|null }
+ */
+function validateNameField(value, fieldName) {
+  // Allow null, undefined, or empty string (optional fields)
+  if (value === null || value === undefined || value === '') {
+    return { valid: true, error: null }
+  }
+
+  // Must be a string
+  if (typeof value !== 'string') {
+    return { valid: false, error: `${fieldName} must be a string` }
+  }
+
+  // Check maximum length (255 characters)
+  if (value.length > 255) {
+    return { valid: false, error: `${fieldName} must not exceed 255 characters` }
+  }
+
+  // Check for valid characters: letters, hyphens, apostrophes, spaces, and dots (for nicknames like J.J.)
+  // This regex allows: letters (any language), spaces, hyphens, apostrophes, and dots
+  const validCharPattern = /^[a-zA-ZÀ-ÿ\s\-'.]+$/
+  if (!validCharPattern.test(value)) {
+    return { valid: false, error: `${fieldName} can only contain letters, hyphens, apostrophes, spaces, and dots` }
+  }
+
+  return { valid: true, error: null }
+}
+
+/**
  * Validates person data for create/update operations
  *
  * Story #77: Added photoUrl validation
+ * Issue #121: Added birthSurname and nickname validation with AC7 requirements
  *
  * @param {Object} data - Person data from request body
  * @returns {Object} Validation result { valid: boolean, error: string|null }
@@ -144,6 +182,22 @@ export function validatePersonData(data) {
   if (data.photoUrl !== undefined && data.photoUrl !== null) {
     if (typeof data.photoUrl !== 'string') {
       return { valid: false, error: 'photoUrl must be a string' }
+    }
+  }
+
+  // Validate birthSurname if provided (Issue #121: AC7)
+  if (data.birthSurname !== undefined && data.birthSurname !== null && data.birthSurname !== '') {
+    const birthSurnameValidation = validateNameField(data.birthSurname, 'birthSurname')
+    if (!birthSurnameValidation.valid) {
+      return birthSurnameValidation
+    }
+  }
+
+  // Validate nickname if provided (Issue #121: AC7)
+  if (data.nickname !== undefined && data.nickname !== null && data.nickname !== '') {
+    const nicknameValidation = validateNameField(data.nickname, 'nickname')
+    if (!nicknameValidation.valid) {
+      return nicknameValidation
     }
   }
 
