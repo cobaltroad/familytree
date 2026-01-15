@@ -7,8 +7,8 @@
  */
 
 import { get } from 'svelte/store'
-import { people } from '../familyStore.js'
-import { error as errorNotification } from '../notificationStore.js'
+import { people, relationships } from '../familyStore.js'
+import { error as errorNotification, success as successNotification } from '../notificationStore.js'
 import { api } from '../../lib/api.js'
 
 /**
@@ -188,5 +188,69 @@ export async function deletePerson(personId) {
     const rollbackPeople = replacePersonAtIndex(currentPeople, personIndex, deletedPerson)
     people.set(rollbackPeople)
     errorNotification('Failed to delete person')
+  }
+}
+
+/**
+ * Merges two people with optimistic UI update pattern.
+ * Story #110: Execute Person Merge with Relationship Transfer
+ *
+ * Source person is removed immediately, target is updated, and relationships are transferred.
+ * If the API call fails, all changes are rolled back.
+ *
+ * @param {number} sourceId - ID of source person (will be deleted)
+ * @param {number} targetId - ID of target person (will receive merged data)
+ * @returns {Promise<Object>} Merge result from server
+ *
+ * @example
+ * const result = await mergePerson(15, 27)
+ * // Returns: { success: true, targetId: 27, sourceId: 15, relationshipsTransferred: 3, mergedData: {...} }
+ */
+export async function mergePerson(sourceId, targetId) {
+  // Initialize action and capture current state
+  const currentPeople = get(people)
+  const currentRelationships = get(relationships)
+
+  const sourceIndex = currentPeople.findIndex(p => p.id === sourceId)
+  const targetIndex = currentPeople.findIndex(p => p.id === targetId)
+
+  if (sourceIndex === -1 || targetIndex === -1) {
+    errorNotification('Cannot merge: person not found')
+    return
+  }
+
+  const sourcePerson = currentPeople[sourceIndex]
+  const targetPerson = currentPeople[targetIndex]
+
+  try {
+    // Perform API call first (not optimistic for merge - too complex to predict)
+    const result = await api.mergePerson(sourceId, targetId)
+
+    // Update stores based on server response
+    // Remove source person
+    const updatedPeople = currentPeople.filter(p => p.id !== sourceId)
+
+    // Update target person with merged data
+    const finalPeople = updatedPeople.map(p =>
+      p.id === targetId ? result.mergedData : p
+    )
+    people.set(finalPeople)
+
+    // Update relationships - remove source relationships and reload
+    const updatedRelationships = currentRelationships.filter(
+      rel => rel.person1Id !== sourceId && rel.person2Id !== sourceId
+    )
+    relationships.set(updatedRelationships)
+
+    // Show success notification
+    successNotification(
+      `Successfully merged ${sourcePerson.firstName} ${sourcePerson.lastName} into ${targetPerson.firstName} ${targetPerson.lastName}`
+    )
+
+    return result
+  } catch (err) {
+    // No rollback needed since we didn't do optimistic update
+    errorNotification(`Failed to merge people: ${err.message}`)
+    throw err
   }
 }

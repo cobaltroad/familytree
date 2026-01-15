@@ -37,5 +37,5 @@ Thumbs.db
 backend/
 frontend/
 
-# Scripts
-scripts/
+# Scripts (local/one-off scripts, not tracked)
+scripts/populate_test_data.py

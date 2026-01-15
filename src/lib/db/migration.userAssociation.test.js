@@ -66,7 +66,7 @@ describe('Migration User Association - Data Migration', () => {
       )
     `)
 
-    // Create NEW schema (with user_id and photo_url)
+    // Create NEW schema (with user_id, photo_url, birth_surname, and nickname)
     sqlite.exec(`
       CREATE TABLE people (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,6 +76,8 @@ describe('Migration User Association - Data Migration', () => {
         death_date TEXT,
         gender TEXT,
         photo_url TEXT,
+        birth_surname TEXT,
+        nickname TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
       )

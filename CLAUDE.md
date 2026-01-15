@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **`TESTING_GUIDELINES.md`** - Testing conventions, file naming, and API route testing requirements
 - **`CODING_GUIDELINES.md`** - View component development, API routes, and code style standards
+- **`MIGRATIONS.md`** - Database migration system and schema change workflow
 
 These guidelines ensure consistency and prevent common issues like route mismatches and SvelteKit reserved file name conflicts.
 
@@ -23,11 +24,22 @@ npm run preview      # Preview production build
 
 ### Drizzle ORM (Database Management)
 ```bash
-npm run db:studio      # Open Drizzle Studio (database GUI)
-npx drizzle-kit generate    # Generate migrations from schema
-npx drizzle-kit migrate     # Apply migrations to database
-npx drizzle-kit push        # Push schema directly (development)
+npm run db:studio         # Open Drizzle Studio (database GUI)
+npm run db:generate       # Generate migrations from schema changes
+npm run db:migrate        # Apply pending migrations to database
+npm run db:push           # Push schema directly (development only)
+npm run db:init-migrations  # Initialize migration tracking (one-time setup for existing DB)
 ```
+
+**Migration System (Issue #122 - RESOLVED)**:
+The migration system is fully functional. All migrations are tracked in the `__drizzle_migrations` table and applied using Drizzle's official migrate() function. See **`MIGRATIONS.md`** for complete documentation.
+
+**Common workflow**:
+1. Modify `src/lib/db/schema.js`
+2. Generate migration: `npm run db:generate`
+3. Review generated SQL in `drizzle/XXXX_migration_name.sql`
+4. Apply migration: `npm run db:migrate`
+5. Test changes: `npm test`
 
 ### Testing
 ```bash
