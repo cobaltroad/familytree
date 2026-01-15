@@ -280,6 +280,14 @@ vi.mock('$lib/server/gedcomImporter.js', () => ({
   mapGedcomPersonToSchema: vi.fn()
 }))
 
+vi.mock('$lib/server/userSync.js', () => ({
+  getUserById: vi.fn().mockResolvedValue({
+    id: 1,
+    email: 'test@example.com',
+    name: 'Test User'
+  })
+}))
+
 vi.mock('$lib/db/client.js', () => ({
   db: {
     transaction: vi.fn((callback) => {

@@ -8,7 +8,7 @@
 
 import { json } from '@sveltejs/kit'
 import { db } from '$lib/db/client.js'
-import { people, relationships } from '$lib/db/schema.js'
+import { people, relationships, users } from '$lib/db/schema.js'
 import { eq } from 'drizzle-orm'
 import { getPreviewData, getResolutionDecisions } from '$lib/server/gedcomPreview.js'
 import {
@@ -17,6 +17,7 @@ import {
   mapGedcomPersonToSchema
 } from '$lib/server/gedcomImporter.js'
 import { requireAuth } from '$lib/server/session.js'
+import { getUserById } from '$lib/server/userSync.js'
 
 /**
  * POST /api/gedcom/import/:uploadId
@@ -38,6 +39,31 @@ export async function POST({ request, params, locals, ...event }) {
     // Require authentication (consistent with other API endpoints)
     const session = await requireAuth({ locals, ...event })
     const userId = session.user.id
+
+    // Check if user record exists in database
+    // This handles the chicken-and-egg problem for fresh/empty databases
+    // where the user has authenticated via OAuth but no user record exists yet
+    // (e.g., restore from backup scenario)
+    let user = await getUserById(userId)
+
+    if (!user) {
+      // Auto-create user record from session data
+      // This allows GEDCOM import to proceed without foreign key constraint errors
+      const now = new Date().toISOString()
+      const [createdUser] = await db.insert(users).values({
+        id: userId,
+        email: session.user.email,
+        name: session.user.name || null,
+        avatarUrl: session.user.image || null,
+        provider: session.user.provider || 'unknown',
+        providerUserId: null, // We don't have this in the session
+        emailVerified: true,
+        createdAt: now,
+        lastLoginAt: now
+      }).returning()
+
+      user = createdUser
+    }
 
     // Parse request body
     const body = await request.json()

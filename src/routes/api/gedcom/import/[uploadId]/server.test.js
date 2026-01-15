@@ -694,4 +694,85 @@ describe('POST /api/gedcom/import/:uploadId', () => {
 
     insertedPersonIds = personsInDb.map(p => p.id)
   })
+
+  it('should auto-create user record if session exists but user record is missing', async () => {
+    // This test simulates the chicken-and-egg problem:
+    // User authenticates via OAuth, gets a session with a user ID,
+    // but tries to import GEDCOM into a fresh/empty database where
+    // the user record doesn't exist yet (e.g., restore from backup scenario)
+
+    // Create a session with a user ID that doesn't exist in the database
+    const nonExistentUserId = 999999
+    const userEmail = 'fresh-user@example.com'
+    const userName = 'Fresh User'
+
+    // Verify user doesn't exist
+    const existingUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, nonExistentUserId))
+    expect(existingUsers).toHaveLength(0)
+
+    // Setup preview data
+    const previewData = {
+      individuals: [
+        {
+          id: 'I001',
+          firstName: 'John',
+          lastName: 'Smith',
+          sex: 'M',
+          _original: { children: [] }
+        }
+      ],
+      families: []
+    }
+
+    // Store preview data with the non-existent user ID
+    await storePreviewData(uploadId, nonExistentUserId, previewData, [])
+
+    const request = new Request('http://localhost/api/gedcom/import/' + uploadId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ importAll: true })
+    })
+
+    // Create session with non-existent user ID (OAuth gave us this ID)
+    const session = createMockSession(nonExistentUserId, userEmail, userName)
+    const event = createMockAuthenticatedEvent(db, session, {
+      request,
+      params: { uploadId }
+    })
+
+    const response = await POST(event)
+
+    // Should succeed (not fail with foreign key constraint error)
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+    expect(data.success).toBe(true)
+    expect(data.imported.persons).toBe(1)
+
+    // Verify user record was auto-created
+    const createdUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, nonExistentUserId))
+
+    expect(createdUsers).toHaveLength(1)
+    expect(createdUsers[0].email).toBe(userEmail)
+    expect(createdUsers[0].name).toBe(userName)
+
+    // Verify person was imported with correct user_id
+    const personsInDb = await db
+      .select()
+      .from(people)
+      .where(eq(people.userId, nonExistentUserId))
+
+    expect(personsInDb).toHaveLength(1)
+    expect(personsInDb[0].userId).toBe(nonExistentUserId)
+
+    // Track IDs for cleanup
+    insertedPersonIds = personsInDb.map(p => p.id)
+    testUserId = nonExistentUserId // Cleanup in afterEach
+  })
 })
