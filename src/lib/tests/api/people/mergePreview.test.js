@@ -233,11 +233,12 @@ describe('POST /api/people/merge/preview', () => {
     })
 
     const response = await POST(event)
-    const data = await response.json()
 
-    expect(response.status).toBe(200)
-    expect(data.canMerge).toBe(false)
-    expect(data.validation.errors).toContain('Cannot merge records across different users')
+    // Security fix: Now returns 404 instead of exposing another user's data
+    // This is more secure - we don't reveal that the record exists
+    expect(response.status).toBe(404)
+    const text = await response.text()
+    expect(text).toContain('Target person not found')
   })
 
   it('should detect relationship conflicts', async () => {
@@ -410,5 +411,154 @@ describe('POST /api/people/merge/preview', () => {
 
     expect(response.status).toBe(200)
     expect(endTime - startTime).toBeLessThan(500)
+  })
+
+  describe('Security: userId validation', () => {
+    it('should return 404 when trying to access another users source person', async () => {
+      // Insert source person for user 2
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('John', 'Smith', '1950', 'male', userId2)
+
+      // Insert target person for user 1
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('Jane', 'Doe', '1955', 'female', userId)
+
+      // User 1 tries to access user 2's person as source
+      const session = createMockSession(userId, 'test@example.com', 'Test User')
+      const event = createMockAuthenticatedEvent(db, session, {
+        request: new Request('http://localhost/api/people/merge/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceId: 1, targetId: 2 })
+        })
+      })
+
+      const response = await POST(event)
+
+      expect(response.status).toBe(404)
+      const text = await response.text()
+      expect(text).toContain('Source person not found')
+    })
+
+    it('should return 404 when trying to access another users target person', async () => {
+      // Insert source person for user 1
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('John', 'Smith', '1950', 'male', userId)
+
+      // Insert target person for user 2
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('Jane', 'Doe', '1955', 'female', userId2)
+
+      // User 1 tries to access user 2's person as target
+      const session = createMockSession(userId, 'test@example.com', 'Test User')
+      const event = createMockAuthenticatedEvent(db, session, {
+        request: new Request('http://localhost/api/people/merge/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceId: 1, targetId: 2 })
+        })
+      })
+
+      const response = await POST(event)
+
+      expect(response.status).toBe(404)
+      const text = await response.text()
+      expect(text).toContain('Target person not found')
+    })
+
+    it('should not expose other users relationships in source relationships', async () => {
+      // Insert source person for user 1
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('John', 'Smith', '1950', 'male', userId)
+
+      // Insert target person for user 1
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('John', 'A. Smith', '1950-03-15', 'male', userId)
+
+      // Insert parent for user 2
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, user_id)
+        VALUES (?, ?, ?)
+      `).run('Mary', 'Smith', userId2)
+
+      // Create relationship between user 1's person and user 2's person
+      // This represents a data integrity issue but shouldn't be exposed
+      sqlite.prepare(`
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(3, 1, 'parentOf', 'mother', userId2)
+
+      const session = createMockSession(userId, 'test@example.com', 'Test User')
+      const event = createMockAuthenticatedEvent(db, session, {
+        request: new Request('http://localhost/api/people/merge/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceId: 1, targetId: 2 })
+        })
+      })
+
+      const response = await POST(event)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      // Should not include relationships owned by other users
+      expect(data.relationshipsToTransfer).toHaveLength(0)
+      expect(data.existingRelationships).toHaveLength(0)
+    })
+
+    it('should not expose other users relationships in target relationships', async () => {
+      // Insert source person for user 1
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('John', 'Smith', '1950', 'male', userId)
+
+      // Insert target person for user 1
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run('John', 'A. Smith', '1950-03-15', 'male', userId)
+
+      // Insert parent for user 2
+      sqlite.prepare(`
+        INSERT INTO people (first_name, last_name, user_id)
+        VALUES (?, ?, ?)
+      `).run('Robert', 'Smith', userId2)
+
+      // Create relationship between user 1's target and user 2's person
+      sqlite.prepare(`
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(3, 2, 'parentOf', 'father', userId2)
+
+      const session = createMockSession(userId, 'test@example.com', 'Test User')
+      const event = createMockAuthenticatedEvent(db, session, {
+        request: new Request('http://localhost/api/people/merge/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceId: 1, targetId: 2 })
+        })
+      })
+
+      const response = await POST(event)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      // Should not include relationships owned by other users
+      expect(data.relationshipsToTransfer).toHaveLength(0)
+      expect(data.existingRelationships).toHaveLength(0)
+    })
   })
 })

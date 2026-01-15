@@ -54,11 +54,11 @@ export async function POST({ request, locals, ...event }) {
 
     const db = locals.db
 
-    // Fetch source person
+    // Fetch source person (with userId validation)
     const sourceResults = await db
       .select()
       .from(people)
-      .where(eq(people.id, sourceId))
+      .where(and(eq(people.id, sourceId), eq(people.userId, user.id)))
       .limit(1)
 
     if (sourceResults.length === 0) {
@@ -67,11 +67,11 @@ export async function POST({ request, locals, ...event }) {
 
     const source = sourceResults[0]
 
-    // Fetch target person
+    // Fetch target person (with userId validation)
     const targetResults = await db
       .select()
       .from(people)
-      .where(eq(people.id, targetId))
+      .where(and(eq(people.id, targetId), eq(people.userId, user.id)))
       .limit(1)
 
     if (targetResults.length === 0) {
@@ -89,25 +89,31 @@ export async function POST({ request, locals, ...event }) {
 
     const currentUser = userResults[0]
 
-    // Fetch all relationships for source person
+    // Fetch all relationships for source person (with userId validation)
     const sourceRelationships = await db
       .select()
       .from(relationships)
       .where(
-        or(
-          eq(relationships.person1Id, sourceId),
-          eq(relationships.person2Id, sourceId)
+        and(
+          or(
+            eq(relationships.person1Id, sourceId),
+            eq(relationships.person2Id, sourceId)
+          ),
+          eq(relationships.userId, user.id)
         )
       )
 
-    // Fetch all relationships for target person
+    // Fetch all relationships for target person (with userId validation)
     const targetRelationships = await db
       .select()
       .from(relationships)
       .where(
-        or(
-          eq(relationships.person1Id, targetId),
-          eq(relationships.person2Id, targetId)
+        and(
+          or(
+            eq(relationships.person1Id, targetId),
+            eq(relationships.person2Id, targetId)
+          ),
+          eq(relationships.userId, user.id)
         )
       )
 
