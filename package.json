@@ -12,7 +12,10 @@
     "test:ui": "vitest --ui",
     "db:studio": "drizzle-kit studio",
     "db:introspect": "drizzle-kit introspect",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node scripts/migrate.js",
+    "db:init-migrations": "node scripts/init-migrations.js"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
