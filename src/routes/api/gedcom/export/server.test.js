@@ -5,12 +5,32 @@
  * Tests the GET /api/gedcom/export endpoint
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { GET } from './+server.js'
 import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
 import { people, relationships } from '$lib/db/schema.js'
+
+// Create a stable mock database for the "production scenario" test
+// This avoids race conditions with other tests that modify the singleton db
+// Using vi.hoisted ensures these are available when the mock factory runs
+const { mockSingletonSqlite, mockSingletonDb } = vi.hoisted(() => {
+  const Database = require('better-sqlite3')
+  const { drizzle } = require('drizzle-orm/better-sqlite3')
+  const sqlite = new Database(':memory:')
+  const db = drizzle(sqlite)
+  return { mockSingletonSqlite: sqlite, mockSingletonDb: db }
+})
+
+// Track the user ID for the mock singleton db (set during first beforeEach)
+let mockSingletonUserId = null
+
+vi.mock('$lib/db/client.js', () => ({
+  db: mockSingletonDb,
+  sqlite: mockSingletonSqlite,
+  reconnectDatabase: vi.fn()
+}))
 
 describe('GET /api/gedcom/export', () => {
   let sqlite, db, userId
@@ -19,6 +39,12 @@ describe('GET /api/gedcom/export', () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
     userId = await setupTestDatabase(sqlite, db)
+
+    // Initialize mock singleton db for "production scenario" test
+    // This ensures the mocked singleton db has proper schema
+    if (!mockSingletonUserId) {
+      mockSingletonUserId = await setupTestDatabase(mockSingletonSqlite, mockSingletonDb)
+    }
   })
 
   afterEach(() => {
@@ -367,12 +393,15 @@ describe('GET /api/gedcom/export', () => {
     // This test verifies the fix: endpoint uses "event.locals?.db || db" instead of "event.locals.db"
     // Before fix: TypeError: Cannot read properties of undefined (reading 'select')
     // After fix: Returns valid GEDCOM file (even if empty for the test user)
+    //
+    // NOTE: We use mockSingletonUserId because the endpoint will fall back to the mocked
+    // singleton db, which has this user ID (not the per-test userId)
 
     // Create mock event WITHOUT locals.db (simulating production environment)
     // In production, event.locals only has getSession(), not db
     const mockSession = {
       user: {
-        id: userId,
+        id: mockSingletonUserId, // Must match user in mocked singleton db
         email: 'test@example.com',
         name: 'Test User'
       }
