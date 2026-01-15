@@ -14,6 +14,9 @@ const dbPath = join(__dirname, '../../../familytree.db')
 // Create SQLite connection
 let sqlite = new Database(dbPath)
 
+// Enable foreign key constraints
+sqlite.exec('PRAGMA foreign_keys = ON')
+
 // Create Drizzle ORM instance
 let db = drizzle(sqlite)
 
@@ -33,6 +36,10 @@ export function reconnectDatabase() {
 
   // Create new connection
   sqlite = new Database(dbPath)
+
+  // Enable foreign key constraints
+  sqlite.exec('PRAGMA foreign_keys = ON')
+
   db = drizzle(sqlite)
 }
 

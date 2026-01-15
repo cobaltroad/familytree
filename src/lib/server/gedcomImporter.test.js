@@ -509,6 +509,80 @@ describe('gedcomImporter - Relationship Normalization', () => {
       // Total = 8
       expect(relationships).toHaveLength(8)
     })
+
+    it('should not create relationships with undefined person IDs', () => {
+      // This test reproduces the foreign key constraint error
+      // When a family references individuals not in the mapping,
+      // undefined values should not be used in relationships
+      const families = [
+        {
+          id: 'F001',
+          husband: 'I999', // Not in mapping - will be undefined
+          wife: 'I998',     // Not in mapping - will be undefined
+          children: ['I003']
+        }
+      ]
+
+      const gedcomIdToPersonId = {
+        I003: 103
+        // I999 and I998 are not in the mapping
+      }
+
+      const relationships = buildRelationshipsFromFamilies(families, gedcomIdToPersonId, 1)
+
+      // Should only have relationships with valid person IDs
+      // No spouse relationships should be created (both spouses undefined)
+      // No parent-child relationships should be created (both parents undefined)
+      expect(relationships).toHaveLength(0)
+
+      // Verify no relationship has undefined person IDs
+      for (const rel of relationships) {
+        expect(rel.person1Id).not.toBeUndefined()
+        expect(rel.person2Id).not.toBeUndefined()
+        expect(rel.person1Id).not.toBeNull()
+        expect(rel.person2Id).not.toBeNull()
+      }
+    })
+
+    it('should handle mix of defined and undefined person IDs in families', () => {
+      // Test edge case: husband defined, wife undefined
+      const families = [
+        {
+          id: 'F001',
+          husband: 'I001',  // Defined
+          wife: 'I998',      // Undefined
+          children: ['I003']
+        }
+      ]
+
+      const gedcomIdToPersonId = {
+        I001: 101,
+        I003: 103
+        // I998 not in mapping
+      }
+
+      const relationships = buildRelationshipsFromFamilies(families, gedcomIdToPersonId, 1)
+
+      // Should only have father-child relationship
+      // No spouse relationship (wife undefined)
+      // No mother-child relationship (wife undefined)
+      expect(relationships).toHaveLength(1)
+      expect(relationships[0]).toEqual({
+        person1Id: 101,
+        person2Id: 103,
+        type: 'parentOf',
+        parentRole: 'father',
+        userId: 1
+      })
+
+      // Verify all relationships have valid person IDs
+      for (const rel of relationships) {
+        expect(rel.person1Id).toBeDefined()
+        expect(rel.person2Id).toBeDefined()
+        expect(rel.person1Id).not.toBeNull()
+        expect(rel.person2Id).not.toBeNull()
+      }
+    })
   })
 })
 

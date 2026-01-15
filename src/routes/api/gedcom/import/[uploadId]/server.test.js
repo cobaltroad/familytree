@@ -47,6 +47,74 @@ describe('POST /api/gedcom/import/:uploadId', () => {
     }
   })
 
+  it('should handle families referencing non-existent individuals gracefully', async () => {
+    // This test reproduces the foreign key constraint error
+    // when families reference individuals not in the individuals array
+    const previewData = {
+      individuals: [
+        {
+          id: 'I001',
+          firstName: 'John',
+          lastName: 'Smith',
+          sex: 'M',
+          _original: { children: [] }
+        }
+      ],
+      families: [
+        {
+          id: 'F001',
+          husband: 'I001',
+          wife: 'I999',  // This individual doesn't exist in individuals array!
+          children: []
+        }
+      ]
+    }
+
+    await storePreviewData(uploadId, testUserId, previewData, [])
+
+    const request = new Request('http://localhost/api/gedcom/import/' + uploadId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ importAll: true })
+    })
+
+    const session = createMockSession(testUserId, 'test@example.com', 'Test User')
+    const event = createMockAuthenticatedEvent(db, session, {
+      request,
+      params: { uploadId }
+    })
+
+    const response = await POST(event)
+
+    // Should not fail with foreign key constraint error
+    expect(response.status).toBe(200)
+
+    const data = await response.json()
+    expect(data.success).toBe(true)
+
+    // Should import 1 person
+    expect(data.imported.persons).toBe(1)
+
+    // Should not create spouse relationship (wife doesn't exist)
+    expect(data.imported.relationships).toBe(0)
+
+    // Verify database
+    const personsInDb = await db
+      .select()
+      .from(people)
+      .where(eq(people.userId, testUserId))
+
+    expect(personsInDb).toHaveLength(1)
+    insertedPersonIds = personsInDb.map(p => p.id)
+
+    const relationshipsInDb = await db
+      .select()
+      .from(relationships)
+      .where(eq(relationships.userId, testUserId))
+
+    expect(relationshipsInDb).toHaveLength(0)
+  })
+
   it('should import all individuals when no duplicates exist', async () => {
     // Setup preview data
     const previewData = {

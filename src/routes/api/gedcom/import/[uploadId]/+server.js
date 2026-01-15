@@ -88,7 +88,8 @@ export async function POST({ request, params, locals, ...event }) {
         const personData = importData.personsToInsert[i]
         const individual = importData.individualsToImport[i]
         // gedcomId can be at top level or in _original (depending on preview data structure)
-        const gedcomId = individual?.gedcomId || individual?._original?.gedcomId
+        // Also check for 'id' field which may be used in some contexts
+        const gedcomId = individual?.gedcomId || individual?._original?.gedcomId || individual?.id || individual?._original?.id
 
         const insertedPerson = db
           .insert(people)
