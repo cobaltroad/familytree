@@ -55,6 +55,39 @@ export async function POST({ request, params, locals, ...event }) {
     // Get resolution decisions
     const resolutionDecisions = await getResolutionDecisions(uploadId, userId)
 
+    // Validate that all referenced person IDs in skip/merge decisions exist and belong to this user
+    const referencedPersonIds = resolutionDecisions
+      .filter(d => (d.resolution === 'skip' || d.resolution === 'merge') && d.existingPersonId)
+      .map(d => d.existingPersonId)
+
+    if (referencedPersonIds.length > 0) {
+      // Query database to get all person IDs for this user
+      const userPersons = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.userId, userId))
+
+      const validPersonIds = new Set(userPersons.map(p => p.id))
+
+      // Check for invalid person IDs
+      const invalidPersonIds = referencedPersonIds.filter(id => !validPersonIds.has(id))
+
+      if (invalidPersonIds.length > 0) {
+        return json(
+          {
+            success: false,
+            error: {
+              code: 'INVALID_PERSON_REFERENCE',
+              message: `Cannot import: Some duplicate resolution decisions reference persons that no longer exist (IDs: ${invalidPersonIds.join(', ')}). Please re-upload and resolve duplicates again.`,
+              details: `Invalid person IDs: ${invalidPersonIds.join(', ')}`,
+              canRetry: false
+            }
+          },
+          { status: 400 }
+        )
+      }
+    }
+
     // Prepare import data
     const importData = prepareImportData(
       previewData,
