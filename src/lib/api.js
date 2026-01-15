@@ -431,5 +431,28 @@ export const api = {
     // Cleanup
     window.URL.revokeObjectURL(url)
     document.body.removeChild(a)
+  },
+
+  /**
+   * Merges two people with relationship transfer
+   * Story #110: Execute Person Merge with Relationship Transfer
+   *
+   * @param {number} sourceId - ID of source person (will be deleted)
+   * @param {number} targetId - ID of target person (will receive merged data)
+   * @returns {Promise<Object>} Merge result with success status and details
+   * @throws {Error} If request fails or validation fails
+   *
+   * @example
+   * const result = await api.mergePerson(15, 27)
+   * // Returns: { success: true, targetId: 27, sourceId: 15, relationshipsTransferred: 3, mergedData: {...} }
+   */
+  async mergePerson(sourceId, targetId) {
+    const response = await fetch(`${API_BASE}/people/merge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceId, targetId })
+    })
+    if (!response.ok) throw await createApiError(response, 'Failed to merge people')
+    return response.json()
   }
 }
