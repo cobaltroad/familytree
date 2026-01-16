@@ -49,6 +49,11 @@ export const people = sqliteTable('people', {
  * - user_id: Associates each relationship with a user (multi-user support)
  * - Foreign key to users table with CASCADE DELETE
  * - Index on user_id for performance
+ *
+ * Duplicate Prevention (Duplicate Resolution Fix):
+ * - Unique index on (person1_id, person2_id, type, parent_role)
+ * - Prevents duplicate parent and spouse relationships
+ * - Handles NULL parent_role values (for spouse relationships)
  */
 export const relationships = sqliteTable('relationships', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -66,7 +71,14 @@ export const relationships = sqliteTable('relationships', {
     .references(() => users.id, { onDelete: 'cascade' })
 }, (table) => {
   return {
-    userIdIdx: index('relationships_user_id_idx').on(table.userId)
+    userIdIdx: index('relationships_user_id_idx').on(table.userId),
+    // Prevent duplicate relationships with unique constraint
+    uniqueRelationshipIdx: uniqueIndex('relationships_unique_idx').on(
+      table.person1Id,
+      table.person2Id,
+      table.type,
+      table.parentRole
+    )
   }
 })
 
