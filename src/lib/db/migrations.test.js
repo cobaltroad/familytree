@@ -55,8 +55,8 @@ describe('Drizzle Migration System', () => {
         .prepare('SELECT hash FROM __drizzle_migrations ORDER BY id')
         .all()
 
-      // Should have 3 migrations: initial schema, view_all_records, birth_surname/nickname
-      expect(migrations).toHaveLength(3)
+      // Should have 4 migrations: initial schema, view_all_records, birth_surname/nickname, relationships_unique_idx
+      expect(migrations).toHaveLength(4)
     })
 
     it('should skip already-applied migrations on subsequent runs', async () => {
@@ -97,6 +97,7 @@ describe('Drizzle Migration System', () => {
       const expectedIndexes = [
         'people_user_id_idx',
         'relationships_user_id_idx',
+        'relationships_unique_idx',
         'sessions_user_id_idx',
         'sessions_expires_at_idx',
         'users_email_unique',
@@ -250,7 +251,7 @@ describe('Drizzle Migration System', () => {
       await applyMigrations(sqlite, db)
 
       const status = await getMigrationStatus(sqlite)
-      expect(status).toHaveLength(3)
+      expect(status).toHaveLength(4)
       expect(status[0]).toHaveProperty('hash')
       expect(status[0]).toHaveProperty('created_at')
     })
@@ -268,12 +269,12 @@ describe('Drizzle Migration System', () => {
       await applyMigrations(sqlite, db)
       await applyMigrations(sqlite, db)
 
-      // Should still have exactly 3 migration records
+      // Should still have exactly 4 migration records
       const count = sqlite
         .prepare('SELECT COUNT(*) as count FROM __drizzle_migrations')
         .get().count
 
-      expect(count).toBe(3)
+      expect(count).toBe(4)
 
       // Schema should still be intact
       const tables = sqlite

@@ -10,6 +10,7 @@
   import GedcomParsingResults from './lib/GedcomParsingResults.svelte'
   import GedcomPreview from './lib/GedcomPreview.svelte'
   import GedcomImportProgress from './lib/components/GedcomImportProgress.svelte'
+  import DuplicateDetection from './lib/DuplicateDetection.svelte'
   import ViewSwitcher from './lib/ViewSwitcher.svelte'
   import PersonModal from './lib/PersonModal.svelte'
   import Notification from './lib/components/Notification.svelte'
@@ -82,6 +83,8 @@
     <RadialView />
   {:else if normalizedPath === '/network'}
     <NetworkView />
+  {:else if normalizedPath === '/duplicates'}
+    <DuplicateDetection />
   {:else if normalizedPath === '/import'}
     <ImportView />
   {:else if normalizedPath === '/gedcom/import'}

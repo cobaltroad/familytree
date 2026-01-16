@@ -108,12 +108,42 @@ export function mapGedcomPersonToSchema(gedcomPerson, userId) {
 }
 
 /**
+ * Deduplicates an array of relationships
+ *
+ * SQLite treats NULL values as distinct in unique indexes, so two rows with
+ * (person1_id=1, person2_id=2, type='spouse', parent_role=NULL) are NOT
+ * considered duplicates. This function deduplicates relationships before
+ * insertion to prevent duplicate family records from creating duplicate
+ * relationships.
+ *
+ * @param {Array} relationships - Array of relationship objects
+ * @returns {Array} Array of unique relationships
+ */
+export function deduplicateRelationships(relationships) {
+  const seen = new Set()
+  const unique = []
+
+  for (const rel of relationships) {
+    // Create a unique key for this relationship
+    // Handle NULL parent_role by using empty string in the key
+    const key = `${rel.person1Id}:${rel.person2Id}:${rel.type}:${rel.parentRole || ''}`
+
+    if (!seen.has(key)) {
+      seen.add(key)
+      unique.push(rel)
+    }
+  }
+
+  return unique
+}
+
+/**
  * Builds normalized relationship records from GEDCOM families
  *
  * @param {Array} families - Array of GEDCOM family records
  * @param {Object} gedcomIdToPersonId - Mapping of GEDCOM IDs to database person IDs
  * @param {number} userId - User ID for ownership
- * @returns {Array} Array of relationship records ready for insertion
+ * @returns {Array} Array of relationship records ready for insertion (deduplicated)
  */
 export function buildRelationshipsFromFamilies(families, gedcomIdToPersonId, userId) {
   const relationships = []
@@ -174,7 +204,9 @@ export function buildRelationshipsFromFamilies(families, gedcomIdToPersonId, use
     }
   }
 
-  return relationships
+  // Deduplicate relationships before returning
+  // This handles duplicate family records in GEDCOM files
+  return deduplicateRelationships(relationships)
 }
 
 /**

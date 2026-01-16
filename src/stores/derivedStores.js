@@ -236,16 +236,22 @@ export function createPersonRelationships(personId) {
 
       // Find children
       // Note: API returns denormalized format with type="mother" or type="father"
+      // CRITICAL: Deduplicate children in case duplicate parent relationships exist in database
       const children = []
+      const childIds = new Set()
       rels.forEach(rel => {
         // Check if this person is the parent (person1Id)
         if (rel.person1Id === personId) {
           // Accept both denormalized (type="mother"/"father") and normalized (type="parentOf") formats
           const isParentRelationship = rel.type === 'mother' || rel.type === 'father' || rel.type === 'parentOf'
           if (isParentRelationship) {
-            const child = $peopleById.get(rel.person2Id)
-            if (child) {
-              children.push(child)
+            // Only add each child once (deduplication)
+            if (!childIds.has(rel.person2Id)) {
+              childIds.add(rel.person2Id)
+              const child = $peopleById.get(rel.person2Id)
+              if (child) {
+                children.push(child)
+              }
             }
           }
         }

@@ -829,6 +829,84 @@ describe('derivedStores', () => {
         // CRITICAL: His child Rudy should NOT be a sibling
         expect(aquilinoData.siblings).not.toContainEqual({ id: 281, firstName: 'Rudy', lastName: 'Dollete' })
       })
+
+      it('should deduplicate children when duplicate parent relationships exist in database', () => {
+        // GIVEN a child with duplicate parent relationships (real bug from Issue #XX)
+        // This simulates the database state where person 637 has duplicate parent records
+        createTestFixture({
+          people: [
+            { id: 636, firstName: 'Father', lastName: 'Doe' },
+            { id: 637, firstName: 'Child', lastName: 'Doe' },
+            { id: 654, firstName: 'Mother', lastName: 'Smith' }
+          ],
+          relationships: [
+            // Duplicate father relationships (IDs 425 and 429)
+            { id: 425, person1Id: 636, person2Id: 637, type: 'parentOf', parentRole: 'father' },
+            { id: 429, person1Id: 636, person2Id: 637, type: 'parentOf', parentRole: 'father' },
+            // Duplicate mother relationships (IDs 426 and 430)
+            { id: 426, person1Id: 654, person2Id: 637, type: 'parentOf', parentRole: 'mother' },
+            { id: 430, person1Id: 654, person2Id: 637, type: 'parentOf', parentRole: 'mother' }
+          ]
+        })
+
+        // WHEN I get relationships for the father (636)
+        const fatherRels = createPersonRelationships(636)
+        const fatherData = get(fatherRels)
+
+        // THEN the child should appear exactly once in children array (not duplicated)
+        expect(fatherData.children).toHaveLength(1)
+        expect(fatherData.children).toContainEqual({ id: 637, firstName: 'Child', lastName: 'Doe' })
+
+        // Verify the child appears only once by checking IDs
+        const childIds = fatherData.children.map(c => c.id)
+        const uniqueChildIds = [...new Set(childIds)]
+        expect(childIds.length).toBe(uniqueChildIds.length)
+
+        // WHEN I get relationships for the mother (654)
+        const motherRels = createPersonRelationships(654)
+        const motherData = get(motherRels)
+
+        // THEN the child should also appear exactly once (not duplicated)
+        expect(motherData.children).toHaveLength(1)
+        expect(motherData.children).toContainEqual({ id: 637, firstName: 'Child', lastName: 'Doe' })
+
+        // Verify no duplicates for mother
+        const motherChildIds = motherData.children.map(c => c.id)
+        const uniqueMotherChildIds = [...new Set(motherChildIds)]
+        expect(motherChildIds.length).toBe(uniqueMotherChildIds.length)
+      })
+
+      it('should handle parents correctly even with duplicate parent relationships', () => {
+        // GIVEN a child with duplicate parent relationships
+        createTestFixture({
+          people: [
+            { id: 636, firstName: 'Father', lastName: 'Doe' },
+            { id: 637, firstName: 'Child', lastName: 'Doe' },
+            { id: 654, firstName: 'Mother', lastName: 'Smith' }
+          ],
+          relationships: [
+            // Duplicate father relationships
+            { id: 425, person1Id: 636, person2Id: 637, type: 'parentOf', parentRole: 'father' },
+            { id: 429, person1Id: 636, person2Id: 637, type: 'parentOf', parentRole: 'father' },
+            // Duplicate mother relationships
+            { id: 426, person1Id: 654, person2Id: 637, type: 'parentOf', parentRole: 'mother' },
+            { id: 430, person1Id: 654, person2Id: 637, type: 'parentOf', parentRole: 'mother' }
+          ]
+        })
+
+        // WHEN I get relationships for the child (637)
+        const childRels = createPersonRelationships(637)
+        const childData = get(childRels)
+
+        // THEN the child should have exactly one father and one mother (not null, not undefined)
+        expect(childData.father).toBeTruthy()
+        expect(childData.father).toEqual({ id: 636, firstName: 'Father', lastName: 'Doe' })
+        expect(childData.mother).toBeTruthy()
+        expect(childData.mother).toEqual({ id: 654, firstName: 'Mother', lastName: 'Smith' })
+
+        // Should have no siblings
+        expect(childData.siblings).toHaveLength(0)
+      })
     })
   })
 
