@@ -487,5 +487,33 @@ export const api = {
     const response = await fetch(url)
     if (!response.ok) throw await createApiError(response, 'Failed to fetch duplicates')
     return response.json()
+  },
+  
+  /**
+   * Updates the authenticated user's default person ID
+   * Issue #129: Set Person as My Profile from PersonModal
+   *
+   * @param {number|null} personId - ID of person to set as default, or null to unset
+   * @returns {Promise<Object>} Result with success status and personId
+   * @throws {Error} If request fails or user is not authenticated
+   *
+   * @example
+   * // Set person 5 as default
+   * const result = await api.updateDefaultPerson(5)
+   * // Returns: { success: true, personId: 5 }
+   *
+   * @example
+   * // Unset default person
+   * const result = await api.updateDefaultPerson(null)
+   * // Returns: { success: true, personId: null }
+   */
+  async updateDefaultPerson(personId) {
+    const response = await fetch(`${API_BASE}/user/default-person`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ personId })
+    })
+    if (!response.ok) throw await createApiError(response, 'Failed to update default person')
+    return response.json()
   }
 }

@@ -39,6 +39,12 @@
   // Story #84: Check if current person is the user's profile
   $: isUserProfile = person && defaultPersonId && person.id === defaultPersonId
 
+  // Issue #129: Check if user is authenticated
+  $: isAuthenticated = !!$page?.data?.session?.user
+
+  // Issue #129: Set Profile button state
+  let isSettingProfile = false
+
   // Spouse Panel references (for collapsing after success)
   let spousePanelDesktop = null
   let spousePanelMobile = null
@@ -382,6 +388,36 @@
       errorNotification(error.message || 'Failed to sync Facebook profile')
     } finally {
       isImporting = false
+    }
+  }
+
+  // Issue #129: Set/Unset as My Profile handler
+  async function handleSetProfile() {
+    if (!person) return
+
+    isSettingProfile = true
+
+    try {
+      // If this is already the user's profile, unset it (set to null)
+      // Otherwise, set this person as the user's profile
+      const personIdToSet = isUserProfile ? null : person.id
+
+      await api.updateDefaultPerson(personIdToSet)
+
+      // Show success notification
+      if (isUserProfile) {
+        successNotification('Profile unset successfully')
+      } else {
+        successNotification('Set as your profile successfully')
+      }
+
+      // Reload the page to update the session with new defaultPersonId
+      // This ensures the UI reflects the change immediately
+      window.location.reload()
+    } catch (error) {
+      errorNotification(`Failed to update profile: ${error.message}`)
+    } finally {
+      isSettingProfile = false
     }
   }
 </script>
@@ -820,6 +856,25 @@
             {isImporting ? 'Syncing...' : (person ? 'Re-Sync from Facebook' : 'Import from Facebook')}
           </button>
           {/if}
+          <!-- Issue #129: Set as My Profile button -->
+          {#if person && isAuthenticated}
+            <button
+              type="button"
+              class="set-profile-button"
+              class:set-profile-button-secondary={isUserProfile}
+              data-testid="set-profile-button"
+              on:click={handleSetProfile}
+              disabled={isSettingProfile}
+            >
+              {#if isSettingProfile}
+                Updating...
+              {:else if isUserProfile}
+                Unset as My Profile
+              {:else}
+                Set as My Profile
+              {/if}
+            </button>
+          {/if}
         </div>
         {#if person}
           <button class="delete-button" on:click={handleDelete}>
@@ -971,7 +1026,7 @@
     align-items: center;
   }
 
-  .update-button, .delete-button, .resync-facebook-button {
+  .update-button, .delete-button, .resync-facebook-button, .set-profile-button {
     padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 4px;
@@ -992,6 +1047,43 @@
 
   .update-button:focus {
     outline: 2px solid #4CAF50;
+    outline-offset: 2px;
+  }
+
+  /* Issue #129: Set as My Profile button styling */
+  .set-profile-button {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .set-profile-button:hover:not(:disabled) {
+    background-color: #2563eb;
+  }
+
+  .set-profile-button:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  .set-profile-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Issue #129: Secondary styling for "Unset as My Profile" */
+  .set-profile-button-secondary {
+    background-color: white;
+    color: #6b7280;
+    border: 2px solid #d1d5db;
+  }
+
+  .set-profile-button-secondary:hover:not(:disabled) {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  .set-profile-button-secondary:focus {
+    outline: 2px solid #9ca3af;
     outline-offset: 2px;
   }
 
@@ -1105,7 +1197,7 @@
       gap: 0.75rem;
     }
 
-    .update-button, .delete-button, .resync-facebook-button {
+    .update-button, .delete-button, .resync-facebook-button, .set-profile-button {
       width: 100%;
     }
   }
