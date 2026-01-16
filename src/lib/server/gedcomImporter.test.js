@@ -15,7 +15,8 @@ import {
   applyDuplicateResolutions,
   prepareImportData,
   appendDateModifierToNotes,
-  buildRelationshipsAfterInsertion
+  buildRelationshipsAfterInsertion,
+  deduplicateRelationships
 } from './gedcomImporter.js'
 
 describe('gedcomImporter - Field Mapping', () => {
@@ -280,6 +281,115 @@ describe('gedcomImporter - Field Mapping', () => {
 })
 
 describe('gedcomImporter - Relationship Normalization', () => {
+  describe('deduplicateRelationships', () => {
+    it('should remove exact duplicate relationships', () => {
+      const relationships = [
+        { person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null, userId: 1 },
+        { person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null, userId: 1 }, // Duplicate
+        { person1Id: 2, person2Id: 1, type: 'spouse', parentRole: null, userId: 1 }
+      ]
+
+      const deduplicated = deduplicateRelationships(relationships)
+
+      expect(deduplicated).toHaveLength(2)
+      expect(deduplicated).toContainEqual({
+        person1Id: 1,
+        person2Id: 2,
+        type: 'spouse',
+        parentRole: null,
+        userId: 1
+      })
+      expect(deduplicated).toContainEqual({
+        person1Id: 2,
+        person2Id: 1,
+        type: 'spouse',
+        parentRole: null,
+        userId: 1
+      })
+    })
+
+    it('should handle NULL and non-NULL parent_role as distinct', () => {
+      const relationships = [
+        { person1Id: 1, person2Id: 2, type: 'parentOf', parentRole: null, userId: 1 },
+        { person1Id: 1, person2Id: 2, type: 'parentOf', parentRole: 'father', userId: 1 },
+        { person1Id: 1, person2Id: 2, type: 'parentOf', parentRole: 'mother', userId: 1 }
+      ]
+
+      const deduplicated = deduplicateRelationships(relationships)
+
+      // All should be kept (different parent_role values)
+      expect(deduplicated).toHaveLength(3)
+    })
+
+    it('should handle parent-child relationship duplicates', () => {
+      const relationships = [
+        { person1Id: 10, person2Id: 20, type: 'parentOf', parentRole: 'father', userId: 1 },
+        { person1Id: 10, person2Id: 20, type: 'parentOf', parentRole: 'father', userId: 1 }, // Duplicate
+        { person1Id: 10, person2Id: 20, type: 'parentOf', parentRole: 'father', userId: 1 }, // Duplicate
+        { person1Id: 11, person2Id: 20, type: 'parentOf', parentRole: 'mother', userId: 1 }
+      ]
+
+      const deduplicated = deduplicateRelationships(relationships)
+
+      expect(deduplicated).toHaveLength(2)
+      expect(deduplicated).toContainEqual({
+        person1Id: 10,
+        person2Id: 20,
+        type: 'parentOf',
+        parentRole: 'father',
+        userId: 1
+      })
+      expect(deduplicated).toContainEqual({
+        person1Id: 11,
+        person2Id: 20,
+        type: 'parentOf',
+        parentRole: 'mother',
+        userId: 1
+      })
+    })
+
+    it('should handle empty array', () => {
+      const deduplicated = deduplicateRelationships([])
+      expect(deduplicated).toHaveLength(0)
+    })
+
+    it('should preserve order of first occurrence', () => {
+      const relationships = [
+        { person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null, userId: 1 },
+        { person1Id: 2, person2Id: 3, type: 'spouse', parentRole: null, userId: 1 },
+        { person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null, userId: 1 }, // Duplicate
+        { person1Id: 3, person2Id: 4, type: 'spouse', parentRole: null, userId: 1 }
+      ]
+
+      const deduplicated = deduplicateRelationships(relationships)
+
+      expect(deduplicated).toHaveLength(3)
+      // First occurrence should be preserved
+      expect(deduplicated[0]).toEqual({
+        person1Id: 1,
+        person2Id: 2,
+        type: 'spouse',
+        parentRole: null,
+        userId: 1
+      })
+    })
+
+    it('should handle multiple duplicate sets', () => {
+      const relationships = [
+        { person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null, userId: 1 },
+        { person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null, userId: 1 }, // Dup
+        { person1Id: 3, person2Id: 4, type: 'spouse', parentRole: null, userId: 1 },
+        { person1Id: 3, person2Id: 4, type: 'spouse', parentRole: null, userId: 1 }, // Dup
+        { person1Id: 5, person2Id: 6, type: 'parentOf', parentRole: 'father', userId: 1 },
+        { person1Id: 5, person2Id: 6, type: 'parentOf', parentRole: 'father', userId: 1 } // Dup
+      ]
+
+      const deduplicated = deduplicateRelationships(relationships)
+
+      expect(deduplicated).toHaveLength(3)
+    })
+  })
+
   describe('buildRelationshipsFromFamilies', () => {
     it('should create normalized parent-child relationships', () => {
       const families = [
