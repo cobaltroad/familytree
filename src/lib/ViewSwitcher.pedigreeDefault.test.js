@@ -76,7 +76,7 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBe(6) // Pedigree, Timeline, Radial, Network, Import, Admin
+      expect(viewTabs.length).toBe(7) // Pedigree, Timeline, Radial, Network, Duplicates, Import, Admin
 
       expect(viewTabs[0].textContent).toContain('Pedigree')
       expect(viewTabs[1].textContent).toContain('Timeline')
@@ -170,18 +170,18 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
   })
 
   describe('Component Count', () => {
-    it('should have exactly 3 view tabs (not 4)', () => {
+    it('should have exactly 7 view tabs', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBe(6) // Pedigree, Timeline, Radial, Network, Import, Admin
+      expect(viewTabs.length).toBe(7) // Pedigree, Timeline, Radial, Network, Duplicates, Import, Admin
     })
 
-    it('should have 3 view tabs + 1 add person button = 4 total nav items', () => {
+    it('should have 7 view tabs + 1 add person button = 8 total nav items', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const navItems = container.querySelectorAll('nav > *')
-      expect(navItems.length).toBe(7) // 6 tabs + 1 add person button
+      expect(navItems.length).toBe(8) // 7 tabs + 1 add person button
     })
   })
 })
