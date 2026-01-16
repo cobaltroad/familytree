@@ -8,15 +8,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/svelte'
 import userEvent from '@testing-library/user-event'
-import DuplicateDetection from './DuplicateDetection.svelte'
-import { api } from './api.js'
 
-// Mock the api module
+// Mock the API module BEFORE importing the component
+const mockGetPeopleDuplicates = vi.fn()
 vi.mock('./api.js', () => ({
   api: {
-    getPeopleDuplicates: vi.fn()
+    getPeopleDuplicates: mockGetPeopleDuplicates
   }
 }))
+
+import DuplicateDetection from './DuplicateDetection.svelte'
 
 describe('DuplicateDetection Integration Tests', () => {
   beforeEach(() => {
@@ -40,12 +41,12 @@ describe('DuplicateDetection Integration Tests', () => {
         }
       ]
 
-      api.getPeopleDuplicates.mockResolvedValue(mockDuplicates)
+      mockGetPeopleDuplicates.mockResolvedValue(mockDuplicates)
 
       render(DuplicateDetection)
 
       // API should be called on mount
-      expect(api.getPeopleDuplicates).toHaveBeenCalledTimes(1)
+      expect(mockGetPeopleDuplicates).toHaveBeenCalledTimes(1)
 
       await waitFor(() => {
         expect(screen.getByText('John Smith')).toBeInTheDocument()
@@ -55,7 +56,7 @@ describe('DuplicateDetection Integration Tests', () => {
     it('should handle API errors gracefully', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      api.getPeopleDuplicates.mockRejectedValue(new Error('Server error'))
+      mockGetPeopleDuplicates.mockRejectedValue(new Error('Server error'))
 
       render(DuplicateDetection)
 
@@ -74,7 +75,7 @@ describe('DuplicateDetection Integration Tests', () => {
 
   describe('Navigation', () => {
     it('should navigate to pedigree view from empty state', async () => {
-      api.getPeopleDuplicates.mockResolvedValue([])
+      mockGetPeopleDuplicates.mockResolvedValue([])
 
       render(DuplicateDetection)
 
@@ -98,7 +99,7 @@ describe('DuplicateDetection Integration Tests', () => {
         }
       ]
 
-      api.getPeopleDuplicates.mockResolvedValue(mockDuplicates)
+      mockGetPeopleDuplicates.mockResolvedValue(mockDuplicates)
 
       const { unmount } = render(DuplicateDetection)
 
@@ -113,7 +114,7 @@ describe('DuplicateDetection Integration Tests', () => {
       render(DuplicateDetection)
 
       // Should fetch data again
-      expect(api.getPeopleDuplicates).toHaveBeenCalledTimes(2)
+      expect(mockGetPeopleDuplicates).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -128,7 +129,7 @@ describe('DuplicateDetection Integration Tests', () => {
         }
       ]
 
-      api.getPeopleDuplicates.mockResolvedValue(mockDuplicates)
+      mockGetPeopleDuplicates.mockResolvedValue(mockDuplicates)
 
       // Simulate mobile viewport
       global.innerWidth = 375
@@ -162,7 +163,7 @@ describe('DuplicateDetection Integration Tests', () => {
         }
       ]
 
-      api.getPeopleDuplicates.mockResolvedValue(mockDuplicates)
+      mockGetPeopleDuplicates.mockResolvedValue(mockDuplicates)
 
       // Simulate mobile viewport
       global.innerWidth = 375
@@ -189,7 +190,7 @@ describe('DuplicateDetection Integration Tests', () => {
         }
       ]
 
-      api.getPeopleDuplicates.mockResolvedValue(mockDuplicates)
+      mockGetPeopleDuplicates.mockResolvedValue(mockDuplicates)
 
       render(DuplicateDetection)
 

@@ -454,5 +454,38 @@ export const api = {
     })
     if (!response.ok) throw await createApiError(response, 'Failed to merge people')
     return response.json()
+  },
+
+  /**
+   * Detects duplicate people within user's records
+   * Story #111: Duplicate Detection UI Component
+   *
+   * @param {Object} options - Query options
+   * @param {number} options.threshold - Confidence threshold (0-100, default: 70)
+   * @param {number} options.limit - Maximum number of duplicate pairs to return (optional)
+   * @returns {Promise<Array>} Array of duplicate pairs with confidence scores
+   * @throws {Error} If request fails
+   *
+   * @example
+   * const duplicates = await api.getPeopleDuplicates()
+   * // Returns: [{ person1: {...}, person2: {...}, confidence: 92, matchingFields: ['name', 'birthDate'] }]
+   */
+  async getPeopleDuplicates(options = {}) {
+    const params = new URLSearchParams()
+
+    if (options.threshold !== undefined) {
+      params.append('threshold', options.threshold)
+    }
+
+    if (options.limit !== undefined) {
+      params.append('limit', options.limit)
+    }
+
+    const queryString = params.toString()
+    const url = queryString ? `${API_BASE}/people/duplicates?${queryString}` : `${API_BASE}/people/duplicates`
+
+    const response = await fetch(url)
+    if (!response.ok) throw await createApiError(response, 'Failed to fetch duplicates')
+    return response.json()
   }
 }

@@ -32,7 +32,9 @@ describe('DuplicateCard Component', () => {
 
       expect(screen.getByText('John Smith')).toBeInTheDocument()
       expect(screen.getByText('John Smyth')).toBeInTheDocument()
-      expect(screen.getByText('1980-01-15')).toBeInTheDocument()
+      // Both persons have the same birth date, so we should get all instances
+      const dates = screen.getAllByText('1980-01-15')
+      expect(dates).toHaveLength(2)
     })
 
     it('should display person without birth date', () => {
