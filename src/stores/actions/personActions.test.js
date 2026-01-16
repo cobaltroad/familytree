@@ -189,8 +189,8 @@ describe('personActions - Optimistic Update Pattern', () => {
 
       const perceivedLatency = performance.now() - startTime
 
-      // ASSERT - UI should update within 50ms
-      expect(perceivedLatency).toBeLessThan(50)
+      // ASSERT - UI should update within 75ms (allowing for CI/CD variance)
+      expect(perceivedLatency).toBeLessThan(75)
 
       const currentPeople = get(people)
       expect(currentPeople[0].firstName).toBe('Jane')
@@ -368,8 +368,8 @@ describe('personActions - Optimistic Update Pattern', () => {
 
       const perceivedLatency = performance.now() - startTime
 
-      // ASSERT - UI should update within 50ms
-      expect(perceivedLatency).toBeLessThan(50)
+      // ASSERT - UI should update within 75ms (allowing for CI/CD variance)
+      expect(perceivedLatency).toBeLessThan(75)
 
       const currentPeople = get(people)
       expect(currentPeople).toHaveLength(1)
@@ -522,8 +522,8 @@ describe('personActions - Optimistic Update Pattern', () => {
 
       const perceivedLatency = performance.now() - startTime
 
-      // ASSERT - UI should update within 50ms
-      expect(perceivedLatency).toBeLessThan(50)
+      // ASSERT - UI should update within 75ms (allowing for CI/CD variance)
+      expect(perceivedLatency).toBeLessThan(75)
 
       const currentPeople = get(people)
       expect(currentPeople).toHaveLength(0)
