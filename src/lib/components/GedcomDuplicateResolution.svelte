@@ -32,6 +32,12 @@
   $: canGoPrevious = currentIndex > 0
   $: currentResolution = currentDuplicate ? resolutions[currentDuplicate.gedcomPerson.gedcomId] : null
 
+  // Convert resolutions object to array for the confirmation modal
+  $: resolutionsArray = Object.entries(resolutions).map(([gedcomId, resolution]) => ({
+    gedcomId,
+    resolution
+  }))
+
   // Fetch duplicates data
   async function fetchDuplicates() {
     loading = true
@@ -226,7 +232,7 @@
 
   <!-- Confirmation Modal -->
   <ResolutionConfirmModal
-    {resolutions}
+    resolutions={resolutionsArray}
     show={showConfirmModal}
     on:confirm={saveResolutions}
     on:cancel={() => showConfirmModal = false}
