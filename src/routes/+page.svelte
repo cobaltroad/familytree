@@ -10,6 +10,7 @@
   import NetworkView from '$lib/NetworkView.svelte'
   import ImportView from '$lib/ImportView.svelte'
   import AdminView from '$lib/AdminView.svelte'
+  import DuplicateDetection from '$lib/DuplicateDetection.svelte'
   import GedcomUpload from '$lib/GedcomUpload.svelte'
   import GedcomParsingResults from '$lib/GedcomParsingResults.svelte'
   import GedcomPreview from '$lib/GedcomPreview.svelte'
@@ -108,6 +109,8 @@
     <RadialView />
   {:else if normalizedPath === '/network'}
     <NetworkView />
+  {:else if normalizedPath === '/duplicates'}
+    <DuplicateDetection />
   {:else if normalizedPath === '/import'}
     <ImportView />
   {:else if normalizedPath === '/admin'}
