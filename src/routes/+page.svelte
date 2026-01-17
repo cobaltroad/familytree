@@ -6,6 +6,7 @@
   import { api } from '$lib/api'
   import TimelineView from '$lib/TimelineView.svelte'
   import PedigreeView from '$lib/PedigreeView.svelte'
+  import TreeView from '$lib/TreeView.svelte'
   import RadialView from '$lib/RadialView.svelte'
   import NetworkView from '$lib/NetworkView.svelte'
   import ImportView from '$lib/ImportView.svelte'
@@ -26,8 +27,8 @@
   // This ensures the correct view is shown immediately, not after onMount
   let currentPath = browser ? (window.location.hash.slice(1) || '/') : '/'
 
-  // Normalize path (treat '/', '/tree', and '/list' as '/pedigree')
-  $: normalizedPath = (currentPath === '/' || currentPath === '/tree' || currentPath === '/list') ? '/pedigree' : currentPath
+  // Normalize path (treat '/' and '/list' as '/pedigree')
+  $: normalizedPath = (currentPath === '/' || currentPath === '/list') ? '/pedigree' : currentPath
 
   // Extract uploadId from GEDCOM parsing route
   $: parsingUploadId = normalizedPath.startsWith('/gedcom/parsing/')
@@ -105,6 +106,8 @@
     <TimelineView />
   {:else if normalizedPath === '/pedigree'}
     <PedigreeView />
+  {:else if normalizedPath === '/tree'}
+    <TreeView />
   {:else if normalizedPath === '/radial'}
     <RadialView />
   {:else if normalizedPath === '/network'}

@@ -5,6 +5,7 @@
 
   const views = [
     { path: '/pedigree', label: 'Pedigree', icon: '📊' },
+    { path: '/tree', label: 'Tree', icon: '🌳' },
     { path: '/timeline', label: 'Timeline', icon: '📅' },
     { path: '/radial', label: 'Radial', icon: '⭕' },
     { path: '/network', label: 'Network', icon: '🕸️' },
@@ -14,10 +15,10 @@
   ]
 
   // Normalize current path for comparison
-  // - Treat '/' and '/tree' as '/pedigree'
+  // - Treat '/' as '/pedigree' (default view)
   // - Treat all GEDCOM routes as '/gedcom/import' for tab highlighting
   $: normalizedCurrent = (() => {
-    if (currentPath === '/' || currentPath === '/tree') return '/pedigree'
+    if (currentPath === '/') return '/pedigree'
     if (currentPath.startsWith('/gedcom/')) return '/gedcom/import'
     return currentPath
   })()
