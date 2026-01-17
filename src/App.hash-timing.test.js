@@ -106,18 +106,18 @@ describe('Hash-based Routing Timing (TDD)', () => {
       expect(listContainer).toBeFalsy()
     })
 
-    it('should redirect #/tree to PedigreeView immediately', () => {
+    it('should render TreeView immediately when hash is #/tree', () => {
       window.location.hash = '#/tree'
 
       const { container } = render(App)
 
-      // Should redirect to pedigree view
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
-
-      // Should NOT render tree view
+      // Should render tree view (Story #140 - TreeView re-added)
       const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeFalsy()
+      expect(treeContainer).toBeTruthy()
+
+      // Should NOT render pedigree view
+      const pedigreeContainer = container.querySelector('.pedigree-container')
+      expect(pedigreeContainer).toBeFalsy()
     })
   })
 

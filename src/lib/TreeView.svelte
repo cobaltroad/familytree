@@ -305,7 +305,7 @@
   }
 </script>
 
-<div class="tree-view">
+<div class="tree-container">
   {#if $people.length === 0}
     <div class="empty-state">
       <p>No people in your family tree yet. Add people to see the family tree visualization.</p>
@@ -326,14 +326,14 @@
 
     <div
       bind:this={chartContainer}
-      data-testid="tree-container"
-      class="chart-container"
+      data-testid="chart-wrapper"
+      class="chart-wrapper"
     ></div>
   {/if}
 </div>
 
 <style>
-  .tree-view {
+  .tree-container {
     width: 100%;
     height: calc(100vh - 200px);
     display: flex;
@@ -382,19 +382,19 @@
     min-width: 200px;
   }
 
-  .chart-container {
+  .chart-wrapper {
     flex: 1;
     overflow: hidden;
     position: relative;
     background: white;
   }
 
-  :global(.chart-container svg) {
+  :global(.chart-wrapper svg) {
     width: 100%;
     height: 100%;
   }
 
-  :global(.chart-container .deceased rect) {
+  :global(.chart-wrapper .deceased rect) {
     opacity: 0.7;
   }
 </style>

@@ -180,15 +180,16 @@ describe('ListView Removal (TDD)', () => {
       const listLink = container.querySelector('a[href="#/list"]')
       expect(listLink).toBeFalsy()
 
-      // Verify expected tabs exist: Pedigree, Timeline, Radial, Network, Duplicates, Import, Admin (Add Person is a button)
+      // Verify expected tabs exist: Pedigree, Tree, Timeline, Radial, Network, Duplicates, Import, Admin (Add Person is a button)
       const tabs = container.querySelectorAll('.view-tab')
-      expect(tabs.length).toBe(7) // Pedigree, Timeline, Radial, Network, Duplicates, Import, Admin
+      expect(tabs.length).toBe(8) // Pedigree, Tree, Timeline, Radial, Network, Duplicates, Import, Admin (Story #140)
 
       // Verify tab labels
       const tabLabels = Array.from(tabs).map(tab =>
         tab.querySelector('.label')?.textContent || ''
       )
       expect(tabLabels).toContain('Pedigree')
+      expect(tabLabels).toContain('Tree') // Story #140 - TreeView re-added
       expect(tabLabels).toContain('Timeline')
       expect(tabLabels).toContain('Radial')
       expect(tabLabels).toContain('Network')
