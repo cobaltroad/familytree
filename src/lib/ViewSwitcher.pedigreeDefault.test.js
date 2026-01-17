@@ -1,10 +1,10 @@
 /**
- * TDD Test Suite: ViewSwitcher with Pedigree as Default Tab
+ * Test Suite: ViewSwitcher with Pedigree as Default Tab and Tree Re-added
  *
- * RED PHASE: These tests will fail initially because:
- * - ViewSwitcher still shows Tree tab
- * - Pedigree is not the first tab
- * - Tree tab is still in the views array
+ * Updated for Story #140: Tree tab has been re-added as TreeView component
+ * - Tree tab now exists between Pedigree and Timeline
+ * - Pedigree remains the first tab (default view)
+ * - /tree is now a valid route (no longer redirects to pedigree)
  *
  * @vitest-environment jsdom
  */
@@ -18,32 +18,32 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
     window.location.hash = ''
   })
 
-  describe('Tree Tab Removal', () => {
-    it('should NOT display Tree tab', () => {
+  describe('Tree Tab Presence (Story #140)', () => {
+    it('should display Tree tab', () => {
       render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
-      // Tree tab should not exist
+      // Tree tab should exist
       const treeTab = screen.queryByText('Tree')
-      expect(treeTab).toBeFalsy()
+      expect(treeTab).toBeTruthy()
     })
 
-    it('should NOT have tree icon (🌳)', () => {
+    it('should have tree icon (🌳)', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
-      // Check that tree emoji is not in the component
+      // Check that tree emoji is in the component
       const navContent = container.querySelector('nav').textContent
-      expect(navContent).not.toContain('🌳')
+      expect(navContent).toContain('🌳')
     })
 
-    it('should NOT have /tree in any href', () => {
+    it('should have /tree href on Tree tab', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       // Get all links
       const links = container.querySelectorAll('a.view-tab')
 
-      // None should have href="#/tree"
+      // Should have href="#/tree"
       const treeLinks = Array.from(links).filter(link => link.getAttribute('href') === '#/tree')
-      expect(treeLinks.length).toBe(0)
+      expect(treeLinks.length).toBe(1)
     })
   })
 
@@ -72,25 +72,27 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
   })
 
   describe('Tab Order', () => {
-    it('should have tabs in correct order: Pedigree, Timeline, Radial', () => {
+    it('should have tabs in correct order: Pedigree, Tree, Timeline, Radial', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBe(7) // Pedigree, Timeline, Radial, Network, Duplicates, Import, Admin
+      expect(viewTabs.length).toBe(8) // Pedigree, Tree, Timeline, Radial, Network, Duplicates, Import, Admin
 
       expect(viewTabs[0].textContent).toContain('Pedigree')
-      expect(viewTabs[1].textContent).toContain('Timeline')
-      expect(viewTabs[2].textContent).toContain('Radial')
+      expect(viewTabs[1].textContent).toContain('Tree')
+      expect(viewTabs[2].textContent).toContain('Timeline')
+      expect(viewTabs[3].textContent).toContain('Radial')
     })
 
-    it('should have correct hrefs for remaining tabs', () => {
+    it('should have correct hrefs for first four tabs', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
 
       expect(viewTabs[0].getAttribute('href')).toBe('#/pedigree')
-      expect(viewTabs[1].getAttribute('href')).toBe('#/timeline')
-      expect(viewTabs[2].getAttribute('href')).toBe('#/radial')
+      expect(viewTabs[1].getAttribute('href')).toBe('#/tree')
+      expect(viewTabs[2].getAttribute('href')).toBe('#/timeline')
+      expect(viewTabs[3].getAttribute('href')).toBe('#/radial')
     })
   })
 
@@ -109,24 +111,20 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
       expect(pedigreeTab.classList.contains('active')).toBe(true)
     })
 
-    it('should mark Pedigree tab as active for "/tree" path (redirected)', () => {
+    it('should mark Tree tab as active for "/tree" path', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
-      // When on /tree (which redirects to pedigree), pedigree should be active
-      const pedigreeTab = screen.getByText('Pedigree').closest('a')
-      expect(pedigreeTab.classList.contains('active')).toBe(true)
+      // Tree tab should be active when on /tree route
+      const treeTab = screen.getByText('Tree').closest('a')
+      expect(treeTab.classList.contains('active')).toBe(true)
     })
 
-    it('should NOT mark any tab as active for /tree path if tree is removed', () => {
+    it('should NOT mark Pedigree as active when on /tree path', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
-      // Tree tab should not exist
-      const treeTab = screen.queryByText('Tree')
-      expect(treeTab).toBeFalsy()
-
-      // Pedigree should be active instead (due to redirect)
+      // Pedigree should NOT be active when on /tree
       const pedigreeTab = screen.getByText('Pedigree').closest('a')
-      expect(pedigreeTab.classList.contains('active')).toBe(true)
+      expect(pedigreeTab.classList.contains('active')).toBe(false)
     })
   })
 
@@ -161,27 +159,28 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
       expect(pedigreeTab.classList.contains('active')).toBe(true)
     })
 
-    it('should normalize "/tree" to "/pedigree" for active state', () => {
+    it('should keep "/tree" as "/tree" (no longer redirects to pedigree)', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
-      const pedigreeTab = screen.getByText('Pedigree').closest('a')
-      expect(pedigreeTab.classList.contains('active')).toBe(true)
+      // Tree tab should be active (not normalized to pedigree)
+      const treeTab = screen.getByText('Tree').closest('a')
+      expect(treeTab.classList.contains('active')).toBe(true)
     })
   })
 
   describe('Component Count', () => {
-    it('should have exactly 7 view tabs', () => {
+    it('should have exactly 8 view tabs', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBe(7) // Pedigree, Timeline, Radial, Network, Duplicates, Import, Admin
+      expect(viewTabs.length).toBe(8) // Pedigree, Tree, Timeline, Radial, Network, Duplicates, Import, Admin
     })
 
-    it('should have 7 view tabs + 1 add person button = 8 total nav items', () => {
+    it('should have 8 view tabs + 1 add person button = 9 total nav items', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const navItems = container.querySelectorAll('nav > *')
-      expect(navItems.length).toBe(8) // 7 tabs + 1 add person button
+      expect(navItems.length).toBe(9) // 8 tabs + 1 add person button
     })
   })
 })
