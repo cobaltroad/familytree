@@ -134,6 +134,36 @@ describe('TreeView - Data Transformation', () => {
     expect(johnDoe.data.birthDate).toBe('1950-01-15')
     expect(johnDoe.data.deathDate).toBeNull()
   })
+
+  it('should include originalId for card template reference', async () => {
+    const { component } = render(TreeView)
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const data = component.getTransformedData()
+    const johnDoe = data.find(d => d.id === '1')
+
+    // originalId should be available for card template to use
+    expect(johnDoe.data.originalId).toBe(1)
+  })
+
+  it('should map gender to M/F format for card template colors', async () => {
+    const { component } = render(TreeView)
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const data = component.getTransformedData()
+
+    // John (male) should be 'M'
+    const johnDoe = data.find(d => d.id === '1')
+    expect(johnDoe.data.gender).toBe('M')
+
+    // Jane (female) should be 'F'
+    const janeSmith = data.find(d => d.id === '2')
+    expect(janeSmith.data.gender).toBe('F')
+
+    // Bob (male) should be 'M'
+    const bobDoe = data.find(d => d.id === '3')
+    expect(bobDoe.data.gender).toBe('M')
+  })
 })
 
 describe('TreeView - Chart Initialization', () => {
@@ -236,7 +266,18 @@ describe('TreeView - Person Card Styling', () => {
     relationships.set([])
   })
 
-  it('should render person name in card', async () => {
+  it('should render person name in card body', async () => {
+    const { container } = render(TreeView)
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Cards should display names in SVG text elements
+    const svg = container.querySelector('svg')
+    expect(svg).toBeTruthy()
+    expect(svg.innerHTML).toContain('John Doe')
+    expect(svg.innerHTML).toContain('Jane Smith')
+  })
+
+  it('should render person name in card (textContent fallback)', async () => {
     const { container } = render(TreeView)
     await new Promise(resolve => setTimeout(resolve, 100))
 
@@ -245,7 +286,23 @@ describe('TreeView - Person Card Styling', () => {
     expect(container.textContent).toContain('Jane Smith')
   })
 
-  it('should render lifespan with birth and death dates', async () => {
+  it('should render lifespan with birth and death dates in card', async () => {
+    const { container } = render(TreeView)
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const svg = container.querySelector('svg')
+    expect(svg).toBeTruthy()
+
+    // Should show lifespan for deceased (1950-2020)
+    expect(svg.innerHTML).toContain('1950')
+    expect(svg.innerHTML).toContain('2020')
+
+    // Should show lifespan for living (1955-present)
+    expect(svg.innerHTML).toContain('1955')
+    expect(svg.innerHTML).toContain('present')
+  })
+
+  it('should render lifespan with birth and death dates (textContent fallback)', async () => {
     const { container } = render(TreeView)
     await new Promise(resolve => setTimeout(resolve, 100))
 

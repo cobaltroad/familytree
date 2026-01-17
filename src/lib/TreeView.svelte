@@ -143,8 +143,7 @@
           birthDate: person.birthDate,
           deathDate: person.deathDate,
           // Include original data for reference
-          originalId: person.id,
-          originalGender: person.gender
+          originalId: person.id
         },
         rels: {
           parents: parentsMap.get(personId) || [],
@@ -200,20 +199,15 @@
         const isDeceased = person.deathDate !== null
 
         // Gender-based colors (matching current PedigreeView)
-        // Use originalGender to handle 'other' correctly
-        let fillColor = '#E0E0E0' // Default for 'other'
-        if (person.originalGender) {
-          const genderLower = person.originalGender.toLowerCase()
-          if (genderLower === 'female') {
-            fillColor = '#F8BBD0'
-          } else if (genderLower === 'male') {
-            fillColor = '#AED6F1'
-          }
+        // Female: pink, Male: blue, Other/Unknown: gray
+        let fillColor = '#AED6F1' // Default to male (blue)
+        if (person.gender === 'F') {
+          fillColor = '#F8BBD0' // Female (pink)
+        } else if (person.gender === 'M') {
+          fillColor = '#AED6F1' // Male (blue)
         } else {
-          // No gender specified - use default
-          fillColor = '#E0E0E0'
+          fillColor = '#E0E0E0' // Other/Unknown (gray)
         }
-
         const strokeColor = isDeceased ? '#666' : '#333'
         const strokeDasharray = isDeceased ? '5,3' : 'none'
 
