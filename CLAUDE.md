@@ -202,6 +202,22 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - Preserves zoom/pan state during updates
   - Limited to 4-5 generations for performance
 
+- **TreeView.svelte** (`#/tree`): Alternative ancestor visualization using family-chart library (Story #140)
+  - Built on family-chart library (v0.9.0) for feature-rich tree visualization
+  - Focus person selector (dropdown) with reactive updates
+  - Ancestors displayed above focus person (up to 5 generations)
+  - Gender-based card colors (male=#AED6F1, female=#F8BBD0, other=#E0E0E0)
+  - Deceased indicator (dashed border, reduced opacity)
+  - Person cards display name and lifespan (YYYY-YYYY or YYYY-present)
+  - Built-in zoom and pan controls from family-chart
+  - Click person card to open PersonModal via `modal.open()`
+  - 300ms smooth transitions for data updates
+  - Dynamic updates preserve zoom/pan state
+  - Reuses data transformation from FamilyChartPOC (Story #133)
+  - Performance optimized (<500ms for 100 people)
+  - Empty state with helpful guidance
+  - Alternative to PedigreeView for users who prefer family-chart's rendering style
+
 - **TimelineView.svelte** (`#/timeline`): Chronological lifespan view
   - Horizontal bars showing birth to death (or present)
   - Sort by birth year or generation
@@ -374,14 +390,14 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
 ### Routing
 Hash-based routing in `App.svelte`:
 - `#/` or `#/pedigree`: Default pedigree view (compact ancestor chart with focus person)
-- `#/tree`: Redirects to pedigree view (TreeView removed)
+- `#/tree`: TreeView (family-chart library ancestor visualization) - Story #140
 - `#/list`: Redirects to pedigree view (ListView removed)
 - `#/timeline`: Chronological timeline with lifespan bars
 - `#/radial`: Circular fan chart with concentric generations
 - `#/network`: Force-directed network graph (Story #99)
 - `#/admin`: Admin view for data inspection
 
-ViewSwitcher navigation appears on all views and shows: Pedigree, Timeline, Radial, Network, and Admin tabs.
+ViewSwitcher navigation appears on all views and shows: Pedigree, Tree, Timeline, Radial, Network, Duplicates, Import, and Admin tabs.
 
 ### API Client
 `src/lib/api.js` provides typed API methods for all backend endpoints (both client and server). The backend expects relationships to use:
