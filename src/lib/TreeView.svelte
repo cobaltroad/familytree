@@ -248,7 +248,7 @@
    */
   function formatLifespan(birthDate, deathDate) {
   const birth = birthDate && !isNaN(new Date(birthDate).getTime()) ? new Date(birthDate).getFullYear() : '?'
-    const death = deathDate ? new Date(deathDate).getFullYear() : 'present'
+  const death = deathDate && !isNaN(new Date(deathDate).getTime()) ? new Date(deathDate).getFullYear() : 'present'
     return `${birth}–${death}`
   }
 
