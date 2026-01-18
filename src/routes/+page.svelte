@@ -4,9 +4,8 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import { api } from '$lib/api'
-  import TimelineView from '$lib/TimelineView.svelte'
   import PedigreeView from '$lib/PedigreeView.svelte'
-  import RadialView from '$lib/RadialView.svelte'
+  import TreeView from '$lib/TreeView.svelte'
   import NetworkView from '$lib/NetworkView.svelte'
   import ImportView from '$lib/ImportView.svelte'
   import AdminView from '$lib/AdminView.svelte'
@@ -26,8 +25,8 @@
   // This ensures the correct view is shown immediately, not after onMount
   let currentPath = browser ? (window.location.hash.slice(1) || '/') : '/'
 
-  // Normalize path (treat '/', '/tree', and '/list' as '/pedigree')
-  $: normalizedPath = (currentPath === '/' || currentPath === '/tree' || currentPath === '/list') ? '/pedigree' : currentPath
+  // Normalize path (treat '/', '/list', '/timeline', and '/radial' as '/pedigree')
+  $: normalizedPath = (currentPath === '/' || currentPath === '/list' || currentPath === '/timeline' || currentPath === '/radial') ? '/pedigree' : currentPath
 
   // Extract uploadId from GEDCOM parsing route
   $: parsingUploadId = normalizedPath.startsWith('/gedcom/parsing/')
@@ -101,12 +100,10 @@
 
   <ViewSwitcher currentPath={normalizedPath} />
 
-  {#if normalizedPath === '/timeline'}
-    <TimelineView />
-  {:else if normalizedPath === '/pedigree'}
+  {#if normalizedPath === '/pedigree'}
     <PedigreeView />
-  {:else if normalizedPath === '/radial'}
-    <RadialView />
+  {:else if normalizedPath === '/tree'}
+    <TreeView />
   {:else if normalizedPath === '/network'}
     <NetworkView />
   {:else if normalizedPath === '/duplicates'}

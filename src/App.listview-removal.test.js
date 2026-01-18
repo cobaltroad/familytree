@@ -112,22 +112,28 @@ describe('ListView Removal (TDD)', () => {
       expect(pedigreeContainer).toBeTruthy()
     })
 
-    it('should render TimelineView for #/timeline', () => {
+    it('should redirect #/timeline to PedigreeView (TimelineView removed)', () => {
       window.location.hash = '#/timeline'
 
       const { container } = render(App)
 
+      const pedigreeContainer = container.querySelector('.pedigree-container')
+      expect(pedigreeContainer).toBeTruthy()
+
       const timelineContainer = container.querySelector('.timeline-container')
-      expect(timelineContainer).toBeTruthy()
+      expect(timelineContainer).toBeFalsy()
     })
 
-    it('should render RadialView for #/radial', () => {
+    it('should redirect #/radial to PedigreeView (RadialView removed)', () => {
       window.location.hash = '#/radial'
 
       const { container } = render(App)
 
+      const pedigreeContainer = container.querySelector('.pedigree-container')
+      expect(pedigreeContainer).toBeTruthy()
+
       const radialContainer = container.querySelector('.radial-container')
-      expect(radialContainer).toBeTruthy()
+      expect(radialContainer).toBeFalsy()
     })
 
     it('should render PedigreeView by default (empty hash)', () => {
@@ -150,8 +156,8 @@ describe('ListView Removal (TDD)', () => {
       expect(viewSwitcher).toBeTruthy()
     })
 
-    it('should show ViewSwitcher on Timeline view', () => {
-      window.location.hash = '#/timeline'
+    it('should show ViewSwitcher on Network view', () => {
+      window.location.hash = '#/network'
 
       const { container } = render(App)
 
@@ -159,8 +165,8 @@ describe('ListView Removal (TDD)', () => {
       expect(viewSwitcher).toBeTruthy()
     })
 
-    it('should show ViewSwitcher on Radial view', () => {
-      window.location.hash = '#/radial'
+    it('should show ViewSwitcher on Tree view', () => {
+      window.location.hash = '#/tree'
 
       const { container } = render(App)
 
@@ -180,29 +186,30 @@ describe('ListView Removal (TDD)', () => {
       const listLink = container.querySelector('a[href="#/list"]')
       expect(listLink).toBeFalsy()
 
-      // Verify expected tabs exist: Pedigree, Timeline, Radial, Network, Duplicates, Import, Admin (Add Person is a button)
+      // Verify expected tabs exist: Pedigree, Tree, Network, Duplicates, Import, Admin (Add Person is a button)
       const tabs = container.querySelectorAll('.view-tab')
-      expect(tabs.length).toBe(7) // Pedigree, Timeline, Radial, Network, Duplicates, Import, Admin
+      expect(tabs.length).toBe(6) // Pedigree, Tree, Network, Duplicates, Import, Admin (Timeline and Radial removed)
 
       // Verify tab labels
       const tabLabels = Array.from(tabs).map(tab =>
         tab.querySelector('.label')?.textContent || ''
       )
       expect(tabLabels).toContain('Pedigree')
-      expect(tabLabels).toContain('Timeline')
-      expect(tabLabels).toContain('Radial')
+      expect(tabLabels).toContain('Tree')
       expect(tabLabels).toContain('Network')
       expect(tabLabels).toContain('Duplicates')
       expect(tabLabels).toContain('Import')
       expect(tabLabels).toContain('Admin')
       expect(tabLabels).not.toContain('List')
+      expect(tabLabels).not.toContain('Timeline')
+      expect(tabLabels).not.toContain('Radial')
     })
   })
 
   describe('No Broken Imports', () => {
     it('should render App without errors when navigating between views', async () => {
       // Test multiple route changes to ensure no import errors
-      const routes = ['#/pedigree', '#/timeline', '#/radial', '#/list', '#/']
+      const routes = ['#/pedigree', '#/tree', '#/network', '#/list', '#/timeline', '#/radial', '#/']
 
       for (const route of routes) {
         window.location.hash = route

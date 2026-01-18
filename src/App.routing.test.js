@@ -70,31 +70,30 @@ describe('App.svelte - Pedigree as Default View (TDD)', () => {
     })
   })
 
-  describe('Tree View Removal', () => {
-    it('should NOT render TreeView for #/tree hash', () => {
+  describe('Tree View (Story #140)', () => {
+    it('should render TreeView for #/tree hash', () => {
       window.location.hash = '#/tree'
 
       const { container } = render(App)
 
-      // Should NOT render tree view
+      // Should render tree view (Story #140 - TreeView re-added)
       const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeFalsy()
+      expect(treeContainer).toBeTruthy()
 
-      // Should redirect to pedigree view
+      // Should NOT render pedigree view
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
+      expect(pedigreeContainer).toBeFalsy()
     })
 
-    it('should NOT import TreeView component', () => {
-      // This test verifies that TreeView is not imported in App.svelte
-      // We'll check this by ensuring the component doesn't exist
+    it('should import TreeView component', () => {
+      // This test verifies that TreeView is imported in App.svelte
       window.location.hash = '#/tree'
 
       const { container } = render(App)
 
-      // Tree container should not exist
+      // Tree container should exist
       const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeFalsy()
+      expect(treeContainer).toBeTruthy()
     })
   })
 
@@ -108,46 +107,50 @@ describe('App.svelte - Pedigree as Default View (TDD)', () => {
       expect(pedigreeContainer).toBeTruthy()
     })
 
-    it('should map "/" and "/tree" to pedigree view', () => {
+    it('should map "/" to pedigree view', () => {
       // Test "/" mapping
       window.location.hash = ''
       let { container } = render(App)
       let pedigreeContainer = container.querySelector('.pedigree-container')
       expect(pedigreeContainer).toBeTruthy()
+    })
 
-      // Test "/tree" mapping (should redirect to pedigree)
+    it('should map "/tree" to tree view (Story #140)', () => {
+      // Test "/tree" mapping (no longer redirects to pedigree)
       window.location.hash = '#/tree'
-      const result2 = render(App)
-      pedigreeContainer = result2.container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
+      const { container } = render(App)
+      const treeContainer = container.querySelector('.tree-container')
+      expect(treeContainer).toBeTruthy()
     })
   })
 
-  describe('Other Routes Still Work', () => {
-    it('should render TimelineView for #/timeline', () => {
+  describe('Removed Views Redirect to Pedigree', () => {
+    it('should redirect #/timeline to PedigreeView (TimelineView removed)', () => {
       window.location.hash = '#/timeline'
 
       const { container } = render(App)
 
-      const timelineContainer = container.querySelector('.timeline-container')
-      expect(timelineContainer).toBeTruthy()
-
-      // Should NOT render pedigree
+      // Should redirect to pedigree view
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeFalsy()
+      expect(pedigreeContainer).toBeTruthy()
+
+      // Should NOT render timeline view
+      const timelineContainer = container.querySelector('.timeline-container')
+      expect(timelineContainer).toBeFalsy()
     })
 
-    it('should render RadialView for #/radial', () => {
+    it('should redirect #/radial to PedigreeView (RadialView removed)', () => {
       window.location.hash = '#/radial'
 
       const { container } = render(App)
 
-      const radialContainer = container.querySelector('.radial-container')
-      expect(radialContainer).toBeTruthy()
-
-      // Should NOT render pedigree
+      // Should redirect to pedigree view
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeFalsy()
+      expect(pedigreeContainer).toBeTruthy()
+
+      // Should NOT render radial view
+      const radialContainer = container.querySelector('.radial-container')
+      expect(radialContainer).toBeFalsy()
     })
 
     it('should redirect #/list to PedigreeView (ListView removed)', () => {
