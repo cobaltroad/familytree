@@ -32,36 +32,36 @@ describe('Hash-based Routing Timing (TDD)', () => {
   })
 
   describe('RED Phase - Hash must be read before initial render', () => {
-    it('should render TimelineView immediately when hash is #/timeline', () => {
+    it('should redirect #/timeline to PedigreeView immediately (TimelineView removed)', () => {
       // Set hash BEFORE rendering
       window.location.hash = '#/timeline'
 
       const { container } = render(App)
 
       // The component should read the hash BEFORE initial render
-      // and show TimelineView immediately (not PedigreeView)
-      const timelineContainer = container.querySelector('.timeline-container')
-      expect(timelineContainer).toBeTruthy()
-
-      // Should NOT render pedigree view
+      // and redirect to PedigreeView immediately
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeFalsy()
+      expect(pedigreeContainer).toBeTruthy()
+
+      // Should NOT render timeline view
+      const timelineContainer = container.querySelector('.timeline-container')
+      expect(timelineContainer).toBeFalsy()
     })
 
-    it('should render RadialView immediately when hash is #/radial', () => {
+    it('should redirect #/radial to PedigreeView immediately (RadialView removed)', () => {
       // Set hash BEFORE rendering
       window.location.hash = '#/radial'
 
       const { container } = render(App)
 
       // The component should read the hash BEFORE initial render
-      // and show RadialView immediately (not PedigreeView)
-      const radialContainer = container.querySelector('.radial-container')
-      expect(radialContainer).toBeTruthy()
-
-      // Should NOT render pedigree view
+      // and redirect to PedigreeView immediately
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeFalsy()
+      expect(pedigreeContainer).toBeTruthy()
+
+      // Should NOT render radial view
+      const radialContainer = container.querySelector('.radial-container')
+      expect(radialContainer).toBeFalsy()
     })
 
     it('should render PedigreeView immediately when hash is #/pedigree', () => {
@@ -130,13 +130,13 @@ describe('Hash-based Routing Timing (TDD)', () => {
       // SOLUTION: Initialize currentPath at the top level of the script block,
       // before any rendering happens, by reading window.location.hash directly.
 
-      window.location.hash = '#/timeline'
+      window.location.hash = '#/network'
 
       const { container } = render(App)
 
       // If this fails, it means currentPath was initialized too late (in onMount)
-      const timelineContainer = container.querySelector('.timeline-container')
-      expect(timelineContainer).toBeTruthy()
+      const networkContainer = container.querySelector('.network-view')
+      expect(networkContainer).toBeTruthy()
     })
   })
 })

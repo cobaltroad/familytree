@@ -118,8 +118,8 @@ describe('ViewSwitcher - Add Person Link', () => {
 
       // Check for all view tabs
       expect(screen.getByText('Pedigree')).toBeTruthy()
-      expect(screen.getByText('Timeline')).toBeTruthy()
-      expect(screen.getByText('Radial')).toBeTruthy()
+      expect(screen.getByText('Tree')).toBeTruthy()
+      expect(screen.getByText('Network')).toBeTruthy()
 
       // Check for Add Person link
       expect(screen.getByText(/add person/i)).toBeTruthy()

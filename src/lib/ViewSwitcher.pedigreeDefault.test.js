@@ -72,16 +72,18 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
   })
 
   describe('Tab Order', () => {
-    it('should have tabs in correct order: Pedigree, Tree, Timeline, Radial', () => {
+    it('should have tabs in correct order: Pedigree, Tree, Network, Duplicates, Import, Admin', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBe(8) // Pedigree, Tree, Timeline, Radial, Network, Duplicates, Import, Admin
+      expect(viewTabs.length).toBe(6) // Pedigree, Tree, Network, Duplicates, Import, Admin (Timeline and Radial removed)
 
       expect(viewTabs[0].textContent).toContain('Pedigree')
       expect(viewTabs[1].textContent).toContain('Tree')
-      expect(viewTabs[2].textContent).toContain('Timeline')
-      expect(viewTabs[3].textContent).toContain('Radial')
+      expect(viewTabs[2].textContent).toContain('Network')
+      expect(viewTabs[3].textContent).toContain('Duplicates')
+      expect(viewTabs[4].textContent).toContain('Import')
+      expect(viewTabs[5].textContent).toContain('Admin')
     })
 
     it('should have correct hrefs for first four tabs', () => {
@@ -91,8 +93,8 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
 
       expect(viewTabs[0].getAttribute('href')).toBe('#/pedigree')
       expect(viewTabs[1].getAttribute('href')).toBe('#/tree')
-      expect(viewTabs[2].getAttribute('href')).toBe('#/timeline')
-      expect(viewTabs[3].getAttribute('href')).toBe('#/radial')
+      expect(viewTabs[2].getAttribute('href')).toBe('#/network')
+      expect(viewTabs[3].getAttribute('href')).toBe('#/duplicates')
     })
   })
 
@@ -129,18 +131,18 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
   })
 
   describe('Remaining Tabs Still Work', () => {
-    it('should display Timeline tab', () => {
+    it('should display Network tab', () => {
       render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
-      const timelineTab = screen.getByText('Timeline')
-      expect(timelineTab).toBeTruthy()
+      const networkTab = screen.getByText('Network')
+      expect(networkTab).toBeTruthy()
     })
 
-    it('should display Radial tab', () => {
+    it('should display Duplicates tab', () => {
       render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
-      const radialTab = screen.getByText('Radial')
-      expect(radialTab).toBeTruthy()
+      const duplicatesTab = screen.getByText('Duplicates')
+      expect(duplicatesTab).toBeTruthy()
     })
 
     it('should still show Add Person link', () => {
@@ -169,18 +171,18 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
   })
 
   describe('Component Count', () => {
-    it('should have exactly 8 view tabs', () => {
+    it('should have exactly 6 view tabs', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBe(8) // Pedigree, Tree, Timeline, Radial, Network, Duplicates, Import, Admin
+      expect(viewTabs.length).toBe(6) // Pedigree, Tree, Network, Duplicates, Import, Admin (Timeline and Radial removed)
     })
 
-    it('should have 8 view tabs + 1 add person button = 9 total nav items', () => {
+    it('should have 6 view tabs + 1 add person button = 7 total nav items', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
 
       const navItems = container.querySelectorAll('nav > *')
-      expect(navItems.length).toBe(9) // 8 tabs + 1 add person button
+      expect(navItems.length).toBe(7) // 6 tabs + 1 add person button
     })
   })
 })

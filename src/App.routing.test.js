@@ -124,31 +124,33 @@ describe('App.svelte - Pedigree as Default View (TDD)', () => {
     })
   })
 
-  describe('Other Routes Still Work', () => {
-    it('should render TimelineView for #/timeline', () => {
+  describe('Removed Views Redirect to Pedigree', () => {
+    it('should redirect #/timeline to PedigreeView (TimelineView removed)', () => {
       window.location.hash = '#/timeline'
 
       const { container } = render(App)
 
-      const timelineContainer = container.querySelector('.timeline-container')
-      expect(timelineContainer).toBeTruthy()
-
-      // Should NOT render pedigree
+      // Should redirect to pedigree view
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeFalsy()
+      expect(pedigreeContainer).toBeTruthy()
+
+      // Should NOT render timeline view
+      const timelineContainer = container.querySelector('.timeline-container')
+      expect(timelineContainer).toBeFalsy()
     })
 
-    it('should render RadialView for #/radial', () => {
+    it('should redirect #/radial to PedigreeView (RadialView removed)', () => {
       window.location.hash = '#/radial'
 
       const { container } = render(App)
 
-      const radialContainer = container.querySelector('.radial-container')
-      expect(radialContainer).toBeTruthy()
-
-      // Should NOT render pedigree
+      // Should redirect to pedigree view
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeFalsy()
+      expect(pedigreeContainer).toBeTruthy()
+
+      // Should NOT render radial view
+      const radialContainer = container.querySelector('.radial-container')
+      expect(radialContainer).toBeFalsy()
     })
 
     it('should redirect #/list to PedigreeView (ListView removed)', () => {

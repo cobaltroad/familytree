@@ -6,8 +6,6 @@
   const views = [
     { path: '/pedigree', label: 'Pedigree', icon: '📊' },
     { path: '/tree', label: 'Tree', icon: '🌳' },
-    { path: '/timeline', label: 'Timeline', icon: '📅' },
-    { path: '/radial', label: 'Radial', icon: '⭕' },
     { path: '/network', label: 'Network', icon: '🕸️' },
     { path: '/duplicates', label: 'Duplicates', icon: '🔍' },
     { path: '/gedcom/import', label: 'Import', icon: '📁' },

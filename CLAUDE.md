@@ -218,20 +218,6 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - Empty state with helpful guidance
   - Alternative to PedigreeView for users who prefer family-chart's rendering style
 
-- **TimelineView.svelte** (`#/timeline`): Chronological lifespan view
-  - Horizontal bars showing birth to death (or present)
-  - Sort by birth year or generation
-  - Filters for living/deceased people
-  - Excludes people without birth dates
-
-- **RadialView.svelte** (`#/radial`): Circular fan chart
-  - Focus person at center
-  - Ancestors in concentric rings (generations)
-  - Radial tree layout with smart text rotation
-  - Focus person selector (dropdown)
-  - D3 optimization for smooth updates
-  - Limited to 5 generations
-
 - **NetworkView.svelte** (`#/network`): Force-directed network graph (Story #99, #100, #101)
   - Interactive physics-based layout showing all family members
   - D3 force simulation with multiple forces (charge, link, center, collision, custom spouse force)
@@ -288,7 +274,7 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - `getNodeColor(person)`: Gender-based colors (male=#AED6F1, female=#F8BBD0, other=#E0E0E0)
   - `findRootPeople(people, relationships)`: Find people without parents
   - `buildDescendantTree(person, ...)`: Build tree downward (for future views if needed)
-  - `buildAncestorTree(person, ...)`: Build tree upward (for PedigreeView, RadialView)
+  - `buildAncestorTree(person, ...)`: Build tree upward (for PedigreeView)
   - `findParents(personId, ...)`: Get mother and father
   - `findChildren(personId, ...)`: Get children
   - `assignGenerations(people, ...)`: Compute generation numbers
@@ -298,13 +284,9 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
 - **`frontend/src/lib/d3Helpers.js`**: Reusable D3.js utilities
   - `createZoomBehavior(svg, g, scaleExtent)`: Standard zoom/pan behavior
   - `renderPersonNode(...)`: Consistent node rendering across views
-  - `polarToCartesian(angle, radius)`: Coordinate conversion for radial layout
-  - `renderRadialPersonNode(...)`: Radial-specific node rendering
   - `updateTreeNodes(...)`: Enter/update/exit pattern for tree nodes
   - `updateTreeLinks(...)`: Enter/update/exit pattern for tree links
   - `updatePedigreeNodes(...)`: Optimized updates for pedigree view
-  - `updateRadialNodes(...)`: Optimized updates for radial view
-  - `updateRadialLinks(...)`: Optimized links for radial view
   - **Force Network Functions (Story #99, #100, #101)**:
     - `createForceSimulation(nodes, links, options)`: Configure D3 force simulation with dynamic link parameters (Story #100, #101)
       - Charge, link, center, and collision forces
@@ -392,12 +374,14 @@ Hash-based routing in `App.svelte`:
 - `#/` or `#/pedigree`: Default pedigree view (compact ancestor chart with focus person)
 - `#/tree`: TreeView (family-chart library ancestor visualization) - Story #140
 - `#/list`: Redirects to pedigree view (ListView removed)
-- `#/timeline`: Chronological timeline with lifespan bars
-- `#/radial`: Circular fan chart with concentric generations
+- `#/timeline`: Redirects to pedigree view (TimelineView removed)
+- `#/radial`: Redirects to pedigree view (RadialView removed)
 - `#/network`: Force-directed network graph (Story #99)
+- `#/duplicates`: Duplicate detection view
+- `#/gedcom/import`: GEDCOM import workflow
 - `#/admin`: Admin view for data inspection
 
-ViewSwitcher navigation appears on all views and shows: Pedigree, Tree, Timeline, Radial, Network, Duplicates, Import, and Admin tabs.
+ViewSwitcher navigation appears on all views and shows: Pedigree, Tree, Network, Duplicates, Import, and Admin tabs (6 tabs total).
 
 ### API Client
 `src/lib/api.js` provides typed API methods for all backend endpoints (both client and server). The backend expects relationships to use:
