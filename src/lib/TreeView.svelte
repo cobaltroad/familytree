@@ -290,7 +290,7 @@
   }
 </script>
 
-<div class="tree-container">
+<div class="tree-container" data-testid="tree-container">
   {#if $people.length === 0}
     <div class="empty-state">
       <p>No people in your family tree yet. Add people to see the family tree visualization.</p>
