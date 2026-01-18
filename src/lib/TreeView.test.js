@@ -4,6 +4,13 @@
  * This test suite validates the TreeView component using family-chart library.
  * Tests are written in TDD red-green-refactor style.
  *
+ * NOTE: family-chart is a D3-based library that renders SVG elements. In the JSDOM
+ * test environment, SVG rendering may not work completely, causing some tests to fail
+ * or pass conditionally. Tests that verify data transformation, component structure,
+ * and reactive behavior will pass reliably. Tests that depend on full SVG rendering
+ * (chart initialization, card styling, tooltips) may fail in JSDOM but work correctly
+ * in a real browser environment.
+ *
  * @module TreeView.test
  */
 

@@ -179,44 +179,37 @@
         .setTransitionTime(transitionTime)
         .setAncestryDepth(5)
         .setProgenyDepth(3)
-        .setCardSvg() // Use SVG cards for better performance
-        .updateMainId(mainDatum.id)
 
-      // Customize card appearance
+      // Customize card appearance - use SVG cards
       const cardInstance = chartInstance.setCardSvg()
-      cardInstance.setCardTemplate((d) => {
-        const person = d.data
-        const lifespan = formatLifespan(person.birthDate, person.deathDate)
-        const isDeceased = person.deathDate !== null
 
-        // Gender-based colors (matching current PedigreeView)
-        const fillColor = person.gender === 'F' ? '#F8BBD0' : '#AED6F1'
-        const strokeColor = isDeceased ? '#666' : '#333'
-        const strokeDasharray = isDeceased ? '5,3' : 'none'
+      // Set card dimensions (width, height)
+      cardInstance.setCardDim({ w: 120, h: 60, text_x: 60, text_y: 25, img_w: 0, img_h: 0, img_x: 0, img_y: 0 })
 
-        return {
-          svg: `
-            <g data-person-id="${person.originalId}" class="${isDeceased ? 'deceased' : ''}">
-              <rect x="0" y="0" width="120" height="60"
-                    fill="${fillColor}"
-                    stroke="${strokeColor}"
-                    stroke-width="2"
-                    stroke-dasharray="${strokeDasharray}"
-                    rx="4" />
-              <text x="60" y="25" text-anchor="middle" font-size="14" font-weight="bold">
-                ${person.firstName} ${person.lastName}
-              </text>
-              <text x="60" y="45" text-anchor="middle" font-size="11" fill="#555">
-                ${lifespan}
-              </text>
-            </g>
-          `,
-          click: () => handlePersonClick(person.originalId)
+      // Set card display function (returns array of display functions)
+      // First line: full name, Second line: lifespan
+      cardInstance.setCardDisplay([
+        (data) => `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        (data) => formatLifespan(data.birthDate, data.deathDate)
+      ])
+
+      // Set click handler
+      cardInstance.setOnCardClick((e, d) => {
+        handlePersonClick(d.data.originalId)
+      })
+
+      // Add data-person-id attribute to cards for testing
+      cardInstance.setOnCardUpdate((d) => {
+        const cardElement = chartContainer.querySelector(`g.card[data-id="${d.id}"]`)
+        if (cardElement) {
+          cardElement.setAttribute('data-person-id', d.data.originalId)
         }
       })
 
-      // Initial render
-      chartInstance.updateTree({ initial: true, tree_position: 'main_to_middle' })
+      // Update main person and render
+      chartInstance
+        .updateMainId(mainDatum.id)
+        .updateTree({ initial: true, tree_position: 'main_to_middle' })
 
       // Enable zoom and pan
       enableZoomPan()
@@ -346,6 +339,11 @@
     display: flex;
     flex-direction: column;
     background: #fafafa;
+
+    /* Gender-based card colors (matching PedigreeView) */
+    --male-color: #AED6F1;     /* Blue for male */
+    --female-color: #F8BBD0;   /* Pink for female */
+    --genderless-color: #E0E0E0; /* Gray for other/unknown */
   }
 
   .empty-state {

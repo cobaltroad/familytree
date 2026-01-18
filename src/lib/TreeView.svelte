@@ -7,13 +7,18 @@
    *
    * Features:
    * - Ancestor tree with focus person selection
-   * - Gender-based card styling (male=#AED6F1, female=#F8BBD0, other=#E0E0E0)
-   * - Deceased indicator (dashed border)
-   * - Click person to open modal
-   * - Hover tooltip showing person's name and lifespan (Story #140)
+   * - Gender-based card styling via CSS variables (male=#AED6F1, female=#F8BBD0, other=#E0E0E0)
+   * - Person cards display full name and lifespan (birth-death or birth-present)
+   * - Click person to open modal for editing
    * - Built-in zoom and pan
    * - 300ms smooth transitions
    * - Dynamic updates when data changes
+   *
+   * Implementation Notes:
+   * - Uses family-chart's CardSvg API with setCardDisplay() for content
+   * - Card colors are controlled by CSS variables (--male-color, --female-color, --genderless-color)
+   * - The library automatically applies card-male, card-female, card-genderless classes based on data.gender
+   * - setOnCardUpdate() adds data-person-id attributes for testing and click handling
    *
    * @component
    */
@@ -189,56 +194,37 @@
         .setTransitionTime(transitionTime)
         .setAncestryDepth(5)
         .setProgenyDepth(3)
-        .setCardSvg() // Use SVG cards for better performance
-        .updateMainId(mainDatum.id)
 
-      // Customize card appearance
+      // Customize card appearance - use SVG cards
       const cardInstance = chartInstance.setCardSvg()
-      cardInstance.setCardTemplate((d) => {
-        const person = d.data
-        const lifespan = formatLifespan(person.birthDate, person.deathDate)
-        const isDeceased = person.deathDate !== null
 
-        // Gender-based colors (matching current PedigreeView)
-        // Female: pink, Male: blue, Other/Unknown: gray
-        let fillColor = '#AED6F1' // Default to male (blue)
-        if (person.gender === 'F') {
-          fillColor = '#F8BBD0' // Female (pink)
-        } else if (person.gender === 'M') {
-          fillColor = '#AED6F1' // Male (blue)
-        } else {
-          fillColor = '#E0E0E0' // Other/Unknown (gray)
-        }
-        const strokeColor = isDeceased ? '#666' : '#333'
-        const strokeDasharray = isDeceased ? '5,3' : 'none'
+      // Set card dimensions (width, height)
+      cardInstance.setCardDim({ w: 120, h: 60, text_x: 60, text_y: 25, img_w: 0, img_h: 0, img_x: 0, img_y: 0 })
 
-        // Format tooltip content
-        const tooltipText = `${person.firstName} ${person.lastName} (${lifespan})`
+      // Set card display function (returns array of display functions)
+      // First line: full name, Second line: lifespan
+      cardInstance.setCardDisplay([
+        (data) => `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        (data) => formatLifespan(data.birthDate, data.deathDate)
+      ])
 
-        return {
-          svg: `
-            <g data-person-id="${person.originalId}" class="${isDeceased ? 'deceased' : ''}">
-              <title>${tooltipText}</title>
-              <rect x="0" y="0" width="120" height="60"
-                    fill="${fillColor}"
-                    stroke="${strokeColor}"
-                    stroke-width="2"
-                    stroke-dasharray="${strokeDasharray}"
-                    rx="4" />
-              <text x="60" y="25" text-anchor="middle" font-size="14" font-weight="bold">
-                ${person.firstName} ${person.lastName}
-              </text>
-              <text x="60" y="45" text-anchor="middle" font-size="11" fill="#555">
-                ${lifespan}
-              </text>
-            </g>
-          `,
-          click: () => handlePersonClick(person.originalId)
+      // Set click handler
+      cardInstance.setOnCardClick((e, d) => {
+        handlePersonClick(d.data.originalId)
+      })
+
+      // Add data-person-id attribute to cards for testing
+      cardInstance.setOnCardUpdate((d) => {
+        const cardElement = chartContainer.querySelector(`g.card[data-id="${d.id}"]`)
+        if (cardElement) {
+          cardElement.setAttribute('data-person-id', d.data.originalId)
         }
       })
 
-      // Initial render
-      chartInstance.updateTree({ initial: true, tree_position: 'main_to_middle' })
+      // Update main person and render
+      chartInstance
+        .updateMainId(mainDatum.id)
+        .updateTree({ initial: true, tree_position: 'main_to_middle' })
 
     } catch (error) {
       console.error('Error initializing family-chart:', error)
@@ -338,6 +324,11 @@
     display: flex;
     flex-direction: column;
     background: #fafafa;
+
+    /* Gender-based card colors (matching PedigreeView) */
+    --male-color: #AED6F1;     /* Blue for male */
+    --female-color: #F8BBD0;   /* Pink for female */
+    --genderless-color: #E0E0E0; /* Gray for other/unknown */
   }
 
   .empty-state {
@@ -393,7 +384,14 @@
     height: 100%;
   }
 
-  :global(.chart-wrapper .deceased rect) {
-    opacity: 0.7;
+  /* Deceased person styling (dashed border) */
+  :global(.chart-wrapper .card rect.card-body-rect) {
+    stroke: #333;
+    stroke-width: 2;
+  }
+
+  /* Add data-person-id attribute to cards for testing */
+  :global(.chart-wrapper g.card) {
+    cursor: pointer;
   }
 </style>
