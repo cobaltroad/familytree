@@ -10,6 +10,7 @@
    * - Gender-based card styling (male=#AED6F1, female=#F8BBD0, other=#E0E0E0)
    * - Deceased indicator (dashed border)
    * - Click person to open modal
+   * - Hover tooltip showing person's name and lifespan (Story #140)
    * - Built-in zoom and pan
    * - 300ms smooth transitions
    * - Dynamic updates when data changes
@@ -211,9 +212,13 @@
         const strokeColor = isDeceased ? '#666' : '#333'
         const strokeDasharray = isDeceased ? '5,3' : 'none'
 
+        // Format tooltip content
+        const tooltipText = `${person.firstName} ${person.lastName} (${lifespan})`
+
         return {
           svg: `
             <g data-person-id="${person.originalId}" class="${isDeceased ? 'deceased' : ''}">
+              <title>${tooltipText}</title>
               <rect x="0" y="0" width="120" height="60"
                     fill="${fillColor}"
                     stroke="${strokeColor}"
