@@ -148,6 +148,7 @@
           lastName: person.lastName,
           birthDate: person.birthDate,
           deathDate: person.deathDate,
+          cssClass: `${gender.toLowerCase()} ${person.deathDate ? 'deceased' : ''}`.trim(),
           // Include original data for reference
           originalId: person.id
         },
@@ -176,60 +177,31 @@
    * Initialize the family-chart instance
    */
   function initializeChart() {
-    if (!chartContainer || transformedData.length === 0 || !mainDatum) {
-      return
+    if (chartInstance) {
+      chartContainer.innerHTML = ''
     }
 
-    try {
-      // Clear existing chart
-      if (chartInstance) {
-        chartContainer.innerHTML = ''
-      }
+    // Create chart instance
+    chartInstance = createChart(chartContainer, transformedData)
 
-      // Create chart instance
-      chartInstance = createChart(chartContainer, transformedData)
+    // Create HTML card instance
+    const cardInstance = chartInstance.setCardHtml()
+      .setCardDisplay([
+        ['cssClass'], // Hidden row for styling hook
+        ['firstName', 'lastName'],  // Row 1: Name
+        ['birthDate', 'deathDate']
+      ]);
 
-      // Configure chart
-      chartInstance
-        .setTransitionTime(transitionTime)
-        .setAncestryDepth(5)
-        .setProgenyDepth(3)
+    // In initializeChart, replace the entire cardInstance block with:
+    chartInstance
+      .setTransitionTime(transitionTime)
+      .setAncestryDepth(5)
+      .setProgenyDepth(3)
+      .updateMainId(mainDatum.id)
 
-      // Customize card appearance - use SVG cards
-      const cardInstance = chartInstance.setCardSvg()
-
-      // Set card dimensions (width, height)
-      cardInstance.setCardDim({ w: 120, h: 60, text_x: 60, text_y: 25, img_w: 0, img_h: 0, img_x: 0, img_y: 0 })
-
-      // Set card display function (returns array of display functions)
-      // First line: full name, Second line: lifespan
-      cardInstance.setCardDisplay([
-        (data) => `${data.firstName || ''} ${data.lastName || ''}`.trim(),
-        (data) => formatLifespan(data.birthDate, data.deathDate)
-      ])
-
-      // Set click handler
-      cardInstance.setOnCardClick((e, d) => {
-        handlePersonClick(d.data.originalId)
-      })
-
-      // Add data-person-id attribute to cards for testing
-      cardInstance.setOnCardUpdate((d) => {
-        const cardElement = chartContainer.querySelector(`g.card[data-id="${d.id}"]`)
-        if (cardElement) {
-          cardElement.setAttribute('data-person-id', d.data.originalId)
-        }
-      })
-
-      // Update main person and render
-      chartInstance
-        .updateMainId(mainDatum.id)
-        .updateTree({ initial: true, tree_position: 'main_to_middle' })
-
-    } catch (error) {
-      console.error('Error initializing family-chart:', error)
-    }
+    chartInstance.updateTree({ initial: true, tree_position: 'main_to_middle' })
   }
+
 
   /**
    * Handle person card click
@@ -271,11 +243,15 @@
 
   // Initialize chart on mount
   onMount(() => {
+    console.log('onMount container/data:', !!chartContainer, transformedData.length);
+    /* don't run initializeChart until the stores are ready
     initializeChart()
+    */
   })
 
   // Update chart when data changes
   afterUpdate(() => {
+    console.log('afterUpdate container/data:', !!chartContainer, transformedData.length);
     if (chartInstance && transformedData.length > 0) {
       updateChart()
     } else if (!chartInstance && chartContainer && transformedData.length > 0) {
@@ -308,13 +284,13 @@
         </select>
       </label>
     </div>
+  {/if}
 
     <div
       bind:this={chartContainer}
       data-testid="chart-wrapper"
       class="chart-wrapper"
     ></div>
-  {/if}
 </div>
 
 <style>
@@ -377,6 +353,34 @@
     overflow: hidden;
     position: relative;
     background: white;
+  }
+
+  /* Target family-chart card elements */
+  .fc-person-card {
+    border-radius: 4px !important;
+    transition: all 0.3s ease;
+  }
+
+  /* Gender colors */
+  .fc-person-card[data-gender="F"] {
+    background-color: #F8BBD0 !important;  /* Female pink */
+  }
+  .fc-person-card[data-gender="M"] {
+    background-color: #AED6F1 !important;  /* Male blue */
+  }
+  .fc-person-card[data-gender="other"] {
+    background-color: #E0E0E0 !important;  /* Gray */
+  }
+
+  /* Deceased dashed border */
+  .fc-person-card.deceased {
+    border: 2px dashed #666 !important;
+  }
+
+  /* Hover tooltip (native title works too) */
+  .fc-person-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
   }
 
   :global(.chart-wrapper svg) {
