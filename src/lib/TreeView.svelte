@@ -189,16 +189,47 @@
 
     cardInstance.setCardInnerHtmlCreator((d) => {
       const person = d.data.data;
-      console.log("Inner Html Person", person);
       const lifespan = formatLifespan(person.birthDate, person.deathDate);
       const isDeceased = person.deathDate !== null;
+      // Inline styles override everything
+      const bgColor = person.gender === 'F' ? '#F8BBD0' : '#AED6F1';
+      const borderStyle = isDeceased ? 'dashed 2px #666' : 'solid 2px #333';
 
-      // Pure HTML - no icons, just your rectangle + text
       return `
-        <div class="custom-person-card ${person.gender?.toLowerCase() || ''}${isDeceased ? ' deceased' : ''}"
-             data-person-id="${person.originalId}">
-          <div class="name">${person.firstName} ${person.lastName}</div>
-          <div class="lifespan">${lifespan}</div>
+        <div data-person-id="${person.originalId}"
+           style="
+             width: 120px; height: 60px;
+             background-color: ${bgColor};
+             border: ${borderStyle};
+             border-radius: 4px;
+             padding: 4px 8px;
+             box-sizing: border-box;
+             display: flex;
+             flex-direction: column;
+             justify-content: center;
+             align-items: center;
+             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+             font-size: 12px;
+             cursor: pointer;
+             position: relative;
+             overflow: hidden;
+           "
+           title="${person.firstName} ${person.lastName} (${lifespan})">
+        <div style="
+            font-weight: 600;
+            font-size: 13px;
+            line-height: 1.1;
+            text-align: center;
+            margin-bottom: 1px;
+            word-break: break-word;">
+          ${person.firstName}<br>${person.lastName}
+        </div>
+        <div style="
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+            line-height: 1;">
+          ${lifespan}
         </div>
       `;
     });
@@ -364,57 +395,6 @@
     overflow: hidden;
     position: relative;
     background: white;
-  }
-
-  .custom-person-card {
-    width: 120px;
-    height: 60px;
-    border-radius: 4px;
-    border: 2px solid #333;
-    padding: 8px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  .custom-person-card.m {
-    background-color: #AED6F1;
-  }
-
-  .custom-person-card.f {
-    background-color: #F8BBD0;
-  }
-
-  .custom-person-card.o {
-    background-color: #E0E0E0;
-  }
-
-  .custom-person-card.deceased {
-    border-style: dashed;
-    border-color: #666;
-  }
-
-  .custom-person-card .name {
-    font-weight: bold;
-    font-size: 14px;
-    margin-bottom: 2px;
-    text-align: center;
-  }
-
-  .custom-person-card .lifespan {
-    font-size: 11px;
-    color: #555;
-    text-align: center;
-  }
-
-  .custom-person-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transform: translateY(-2px);
   }
 
   :global(.chart-wrapper svg) {
