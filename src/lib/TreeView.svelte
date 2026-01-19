@@ -111,14 +111,14 @@
       if (rel.type === 'spouse') {
         // Bidirectional
         if (!spousesMap.has(person1Id)) {
-          spousesMap.set(person1Id, [])
+          spousesMap.set(person1Id, new Set())
         }
-        spousesMap.get(person1Id).push(person2Id)
+        spousesMap.get(person1Id).add(person2Id)
 
         if (!spousesMap.has(person2Id)) {
-          spousesMap.set(person2Id, [])
+          spousesMap.set(person2Id, new Set())
         }
-        spousesMap.get(person2Id).push(person1Id)
+        spousesMap.get(person2Id).add(person1Id)
       }
     })
 
@@ -154,7 +154,7 @@
         },
         rels: {
           parents: parentsMap.get(personId) || [],
-          spouses: spousesMap.get(personId) || [],
+          spouses: Array.from(spousesMap.get(personId) || []),
           children: childrenMap.get(personId) || []
         }
       }
@@ -285,7 +285,6 @@
 
   // Initialize chart on mount
   onMount(() => {
-    console.log('onMount container/data:', !!chartContainer, transformedData.length);
     /* don't run initializeChart until the stores are ready
     initializeChart()
     */
@@ -293,7 +292,6 @@
 
   // Update chart when data changes
   afterUpdate(() => {
-    console.log('afterUpdate container/data:', !!chartContainer, transformedData.length);
     if (chartInstance && transformedData.length > 0) {
       updateChart()
     } else if (!chartInstance && chartContainer && transformedData.length > 0) {
@@ -394,7 +392,7 @@
     flex: 1;
     overflow: hidden;
     position: relative;
-    background: white;
+    background: #3a3a3a;
   }
 
   :global(.chart-wrapper svg) {
