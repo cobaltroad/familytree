@@ -148,7 +148,7 @@
           lastName: person.lastName,
           birthDate: person.birthDate,
           deathDate: person.deathDate,
-          cssClass: `${gender.toLowerCase()} ${person.deathDate ? 'deceased' : ''}`.trim(),
+          formattedLifespan: formatLifespan(person.birthDate, person.deathDate),
           // Include original data for reference
           originalId: person.id
         },
@@ -185,12 +185,23 @@
     chartInstance = createChart(chartContainer, transformedData)
 
     // Create HTML card instance
-    const cardInstance = chartInstance.setCardHtml()
-      .setCardDisplay([
-        ['cssClass'], // Hidden row for styling hook
-        ['firstName', 'lastName'],  // Row 1: Name
-        ['birthDate', 'deathDate']
-      ]);
+    const cardInstance = chartInstance.setCardHtml();
+
+    cardInstance.setCardInnerHtmlCreator((d) => {
+      const person = d.data.data;
+      console.log("Inner Html Person", person);
+      const lifespan = formatLifespan(person.birthDate, person.deathDate);
+      const isDeceased = person.deathDate !== null;
+
+      // Pure HTML - no icons, just your rectangle + text
+      return `
+        <div class="custom-person-card ${person.gender?.toLowerCase() || ''}${isDeceased ? ' deceased' : ''}"
+             data-person-id="${person.originalId}">
+          <div class="name">${person.firstName} ${person.lastName}</div>
+          <div class="lifespan">${lifespan}</div>
+        </div>
+      `;
+    });
 
     // In initializeChart, replace the entire cardInstance block with:
     chartInstance
@@ -355,31 +366,54 @@
     background: white;
   }
 
-  /* Target family-chart card elements */
-  .fc-person-card {
-    border-radius: 4px !important;
+  .custom-person-card {
+    width: 120px;
+    height: 60px;
+    border-radius: 4px;
+    border: 2px solid #333;
+    padding: 8px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    cursor: pointer;
     transition: all 0.3s ease;
   }
 
-  /* Gender colors */
-  .fc-person-card[data-gender="F"] {
-    background-color: #F8BBD0 !important;  /* Female pink */
-  }
-  .fc-person-card[data-gender="M"] {
-    background-color: #AED6F1 !important;  /* Male blue */
-  }
-  .fc-person-card[data-gender="other"] {
-    background-color: #E0E0E0 !important;  /* Gray */
+  .custom-person-card.m {
+    background-color: #AED6F1;
   }
 
-  /* Deceased dashed border */
-  .fc-person-card.deceased {
-    border: 2px dashed #666 !important;
+  .custom-person-card.f {
+    background-color: #F8BBD0;
   }
 
-  /* Hover tooltip (native title works too) */
-  .fc-person-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  .custom-person-card.o {
+    background-color: #E0E0E0;
+  }
+
+  .custom-person-card.deceased {
+    border-style: dashed;
+    border-color: #666;
+  }
+
+  .custom-person-card .name {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 2px;
+    text-align: center;
+  }
+
+  .custom-person-card .lifespan {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+  }
+
+  .custom-person-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     transform: translateY(-2px);
   }
 
