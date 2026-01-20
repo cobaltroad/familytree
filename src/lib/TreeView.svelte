@@ -149,6 +149,7 @@
           birthDate: person.birthDate,
           deathDate: person.deathDate,
           formattedLifespan: formatLifespan(person.birthDate, person.deathDate),
+          isDeceased: person.deathDate !== null,
           // Include original data for reference
           originalId: person.id
         },
@@ -188,48 +189,69 @@
     const cardInstance = chartInstance.setCardHtml();
 
     cardInstance.setCardInnerHtmlCreator((d) => {
+      console.log("d.data", d.data);
       const person = d.data.data;
-      const lifespan = formatLifespan(person.birthDate, person.deathDate);
-      const isDeceased = person.deathDate !== null;
+      const formattedLifespan = !d.data.to_add ? person.formattedLifespan : '';
+      const isDeceased = person.isDeceased;
       // Inline styles override everything
       const bgColor = person.gender === 'F' ? '#F8BBD0' : '#AED6F1';
       const borderStyle = isDeceased ? 'dashed 2px #666' : 'solid 2px #333';
+      const displayPencil = !d.data.to_add ? 'flex' : 'none';
 
       return `
-        <div data-person-id="${person.originalId}"
-           style="
-             width: 120px; height: 60px;
-             background-color: ${bgColor};
-             border: ${borderStyle};
-             border-radius: 4px;
-             padding: 4px 8px;
-             box-sizing: border-box;
-             display: flex;
-             flex-direction: column;
-             justify-content: center;
-             align-items: center;
-             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-             font-size: 12px;
-             cursor: pointer;
-             position: relative;
-             overflow: hidden;
-           "
-           title="${person.firstName} ${person.lastName} (${lifespan})">
-        <div style="
-            font-weight: 600;
-            font-size: 13px;
-            line-height: 1.1;
-            text-align: center;
-            margin-bottom: 1px;
-            word-break: break-word;">
-          ${person.firstName}<br>${person.lastName}
-        </div>
-        <div style="
-            font-size: 10px;
-            color: #666;
-            text-align: center;
-            line-height: 1;">
-          ${lifespan}
+        <div class="custom-person-card"
+            data-person-id="${person.originalId}"
+            style="
+              position: relative;
+              width: 120px;
+              height: 60px;
+              border-radius: 4px;
+              border: ${borderStyle};
+              background-color: ${bgColor};
+              padding: 4px 6px;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              overflow: hidden;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              font-size: 13px;">
+          <div style="
+                font-weight: 600;
+                line-height: 1.1;
+                text-align: center;
+                margin-bottom: 1px;
+                word-break: break-word;">
+            ${person.firstName ?? ''}<br>${person.lastName ?? ''}
+          </div>
+          <div style="font-size: 10px; color: #555; text-align: center;">
+            ${formattedLifespan}
+          </div>
+
+          <!-- Pencil icon in top-right corner -->
+          <button
+            class="card-edit-button"
+            data-person-id="${person.originalId}"
+            style="
+              position: absolute;
+              top: 2px;
+              right: 2px;
+              width: 14px;
+              height: 14px;
+              border: none;
+              padding: 0;
+              margin: 0;
+              background: transparent;
+              cursor: pointer;
+              display: ${displayPencil};
+              align-items: center;
+              justify-content: center;
+            "
+            title="Edit person"
+          >
+            ✏️
+          </button>
         </div>
       `;
     });
