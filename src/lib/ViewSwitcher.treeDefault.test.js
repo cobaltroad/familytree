@@ -13,14 +13,14 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/svelte'
 import ViewSwitcher from './ViewSwitcher.svelte'
 
-describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
+describe('ViewSwitcher - Tree as Default Tab (TDD)', () => {
   beforeEach(() => {
     window.location.hash = ''
   })
 
   describe('Tree Tab Presence (Story #140)', () => {
     it('should display Tree tab', () => {
-      render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       // Tree tab should exist
       const treeTab = screen.queryByText('Tree')
@@ -28,7 +28,7 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
     })
 
     it('should have tree icon (🌳)', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       // Check that tree emoji is in the component
       const navContent = container.querySelector('nav').textContent
@@ -36,7 +36,7 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
     })
 
     it('should have /tree href on Tree tab', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       // Get all links
       const links = container.querySelectorAll('a.view-tab')
@@ -47,39 +47,15 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
     })
   })
 
-  describe('Pedigree as First Tab', () => {
-    it('should display Pedigree as the first tab', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
-
-      const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBeGreaterThan(0)
-
-      // First tab should be Pedigree
-      const firstTab = viewTabs[0]
-      expect(firstTab.textContent).toContain('Pedigree')
-    })
-
-    it('should have pedigree icon (📊) as first icon', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
-
-      const icons = container.querySelectorAll('a.view-tab .icon')
-      expect(icons.length).toBeGreaterThan(0)
-
-      // First icon should be pedigree emoji
-      const firstIcon = icons[0]
-      expect(firstIcon.textContent).toBe('📊')
-    })
-  })
-
   describe('Tab Order', () => {
     it('should have tabs in correct order: Pedigree, Tree, Network, Duplicates, Import, Admin', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
       expect(viewTabs.length).toBe(6) // Pedigree, Tree, Network, Duplicates, Import, Admin (Timeline and Radial removed)
 
-      expect(viewTabs[0].textContent).toContain('Pedigree')
-      expect(viewTabs[1].textContent).toContain('Tree')
+      expect(viewTabs[0].textContent).toContain('Tree')
+      expect(viewTabs[1].textContent).toContain('Pedigree')
       expect(viewTabs[2].textContent).toContain('Network')
       expect(viewTabs[3].textContent).toContain('Duplicates')
       expect(viewTabs[4].textContent).toContain('Import')
@@ -87,30 +63,31 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
     })
 
     it('should have correct hrefs for first four tabs', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
 
-      expect(viewTabs[0].getAttribute('href')).toBe('#/pedigree')
-      expect(viewTabs[1].getAttribute('href')).toBe('#/tree')
+      expect(viewTabs[0].getAttribute('href')).toBe('#/tree')
+      expect(viewTabs[1].getAttribute('href')).toBe('#/pedigree')
       expect(viewTabs[2].getAttribute('href')).toBe('#/network')
       expect(viewTabs[3].getAttribute('href')).toBe('#/duplicates')
     })
+
+    it('should have 6 view tabs + 1 add person button = 7 total nav items', () => {
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
+
+      const navItems = container.querySelectorAll('nav > *')
+      expect(navItems.length).toBe(7) // 6 tabs + 1 add person button
+    })
+
   })
 
   describe('Active Tab Highlighting', () => {
-    it('should mark Pedigree tab as active for "/" path', () => {
+    it('should mark Tree tab as active for "/" path', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/' } })
 
-      const pedigreeTab = screen.getByText('Pedigree').closest('a')
-      expect(pedigreeTab.classList.contains('active')).toBe(true)
-    })
-
-    it('should mark Pedigree tab as active for "/pedigree" path', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
-
-      const pedigreeTab = screen.getByText('Pedigree').closest('a')
-      expect(pedigreeTab.classList.contains('active')).toBe(true)
+      const treeTab = screen.getByText('Tree').closest('a')
+      expect(treeTab.classList.contains('active')).toBe(true)
     })
 
     it('should mark Tree tab as active for "/tree" path', () => {
@@ -128,25 +105,33 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
       const pedigreeTab = screen.getByText('Pedigree').closest('a')
       expect(pedigreeTab.classList.contains('active')).toBe(false)
     })
+
+    it('should mark Pedigree tab as active for "/pedigree" path', () => {
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+
+      const pedigreeTab = screen.getByText('Pedigree').closest('a')
+      expect(pedigreeTab.classList.contains('active')).toBe(true)
+    })
+
   })
 
   describe('Remaining Tabs Still Work', () => {
     it('should display Network tab', () => {
-      render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const networkTab = screen.getByText('Network')
       expect(networkTab).toBeTruthy()
     })
 
     it('should display Duplicates tab', () => {
-      render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const duplicatesTab = screen.getByText('Duplicates')
       expect(duplicatesTab).toBeTruthy()
     })
 
     it('should still show Add Person link', () => {
-      render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const addPersonLink = screen.getByText(/add person/i)
       expect(addPersonLink).toBeTruthy()
@@ -154,17 +139,9 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
   })
 
   describe('Path Normalization', () => {
-    it('should normalize "/" to "/pedigree" for active state', () => {
+    it('should normalize "/" to "/tree" for active state', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/' } })
 
-      const pedigreeTab = screen.getByText('Pedigree').closest('a')
-      expect(pedigreeTab.classList.contains('active')).toBe(true)
-    })
-
-    it('should keep "/tree" as "/tree" (no longer redirects to pedigree)', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
-
-      // Tree tab should be active (not normalized to pedigree)
       const treeTab = screen.getByText('Tree').closest('a')
       expect(treeTab.classList.contains('active')).toBe(true)
     })
@@ -172,17 +149,11 @@ describe('ViewSwitcher - Pedigree as Default Tab (TDD)', () => {
 
   describe('Component Count', () => {
     it('should have exactly 6 view tabs', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
       expect(viewTabs.length).toBe(6) // Pedigree, Tree, Network, Duplicates, Import, Admin (Timeline and Radial removed)
     })
 
-    it('should have 6 view tabs + 1 add person button = 7 total nav items', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
-
-      const navItems = container.querySelectorAll('nav > *')
-      expect(navItems.length).toBe(7) // 6 tabs + 1 add person button
-    })
   })
 })
