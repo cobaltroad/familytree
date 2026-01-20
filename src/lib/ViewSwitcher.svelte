@@ -4,8 +4,8 @@
   export let currentPath = '/'
 
   const views = [
-    { path: '/pedigree', label: 'Pedigree', icon: '📊' },
     { path: '/tree', label: 'Tree', icon: '🌳' },
+    { path: '/pedigree', label: 'Pedigree', icon: '📊' },
     { path: '/network', label: 'Network', icon: '🕸️' },
     { path: '/duplicates', label: 'Duplicates', icon: '🔍' },
     { path: '/gedcom/import', label: 'Import', icon: '📁' },
@@ -13,10 +13,10 @@
   ]
 
   // Normalize current path for comparison
-  // - Treat '/' as '/pedigree' (default view)
+  // - Treat '/' as '/tree' (default view)
   // - Treat all GEDCOM routes as '/gedcom/import' for tab highlighting
   $: normalizedCurrent = (() => {
-    if (currentPath === '/') return '/pedigree'
+    if (currentPath === '/') return '/tree'
     if (currentPath.startsWith('/gedcom/')) return '/gedcom/import'
     return currentPath
   })()

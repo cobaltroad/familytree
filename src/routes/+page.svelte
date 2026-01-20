@@ -25,8 +25,8 @@
   // This ensures the correct view is shown immediately, not after onMount
   let currentPath = browser ? (window.location.hash.slice(1) || '/') : '/'
 
-  // Normalize path (treat '/', '/list', '/timeline', and '/radial' as '/pedigree')
-  $: normalizedPath = (currentPath === '/' || currentPath === '/list' || currentPath === '/timeline' || currentPath === '/radial') ? '/pedigree' : currentPath
+  // Normalize path (treat '/', '/list', '/timeline', and '/radial' as '/tree')
+  $: normalizedPath = (currentPath === '/' || currentPath === '/list' || currentPath === '/timeline' || currentPath === '/radial') ? '/tree' : currentPath
 
   // Extract uploadId from GEDCOM parsing route
   $: parsingUploadId = normalizedPath.startsWith('/gedcom/parsing/')
@@ -96,14 +96,12 @@
 </script>
 
 <main>
-  <h1>Family Tree</h1>
-
   <ViewSwitcher currentPath={normalizedPath} />
 
-  {#if normalizedPath === '/pedigree'}
-    <PedigreeView />
-  {:else if normalizedPath === '/tree'}
+  {#if normalizedPath === '/tree'}
     <TreeView />
+  {:else if normalizedPath === '/pedigree'}
+    <PedigreeView />
   {:else if normalizedPath === '/network'}
     <NetworkView />
   {:else if normalizedPath === '/duplicates'}
@@ -121,7 +119,7 @@
   {:else if normalizedPath.startsWith('/gedcom/import-progress/')}
     <GedcomImportProgress uploadId={importUploadId} />
   {:else}
-    <PedigreeView />
+    <TreeView />
   {/if}
 
   <PersonModal />
