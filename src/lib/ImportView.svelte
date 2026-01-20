@@ -9,29 +9,15 @@
   const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
   function handleFileSelect(event) {
-    console.log('[ImportView] handleFileSelect called')
-    console.log('[ImportView] event.target.files:', event.target.files)
     const file = event.target.files[0]
-    console.log('[ImportView] Selected file:', file ? {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: new Date(file.lastModified)
-    } : 'null')
     validateAndSelectFile(file)
   }
 
   function handleDrop(event) {
-    console.log('[ImportView] handleDrop called')
     event.preventDefault()
     dragActive = false
 
     const file = event.dataTransfer.files[0]
-    console.log('[ImportView] Dropped file:', file ? {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    } : 'null')
     validateAndSelectFile(file)
   }
 
@@ -45,125 +31,76 @@
   }
 
   function validateAndSelectFile(file) {
-    console.log('[ImportView] validateAndSelectFile called with file:', file)
-
     if (!file) {
-      console.log('[ImportView] No file provided to validate')
       return
     }
-
-    console.log('[ImportView] Validating file:', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      maxAllowed: MAX_FILE_SIZE
-    })
 
     // Validate file type
     if (!file.name.toLowerCase().endsWith('.ged')) {
-      console.error('[ImportView] File type validation failed:', file.name)
       error('Only .ged files are supported')
       return
     }
-    console.log('[ImportView] File type validation passed')
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      console.error('[ImportView] File size validation failed:', file.size, '>', MAX_FILE_SIZE)
       error('File size exceeds 10MB limit')
       return
     }
-    console.log('[ImportView] File size validation passed')
 
     if (file.size === 0) {
-      console.error('[ImportView] File is empty')
       error('File is empty')
       return
     }
 
-    console.log('[ImportView] All validations passed, file selected')
     selectedFile = file
   }
 
   async function handleUpload() {
-    console.log('[ImportView] handleUpload called')
-    console.log('[ImportView] selectedFile:', selectedFile)
-
     if (!selectedFile) {
-      console.error('[ImportView] No file selected for upload')
       error('Please select a file first')
       return
     }
 
-    console.log('[ImportView] Starting upload process for:', selectedFile.name)
     uploading = true
     uploadProgress = 0
 
     try {
-      console.log('[ImportView] Creating FormData')
       const formData = new FormData()
       formData.append('file', selectedFile)
-      console.log('[ImportView] FormData created, file appended')
 
       // Simulate progress (real implementation would use XMLHttpRequest for progress)
       uploadProgress = 30
-      console.log('[ImportView] Progress: 30%')
 
-      console.log('[ImportView] Sending POST request to /api/gedcom/upload')
       const response = await fetch('/api/gedcom/upload', {
         method: 'POST',
         body: formData
       })
-      console.log('[ImportView] Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
-      })
 
       uploadProgress = 100
-      console.log('[ImportView] Progress: 100%')
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('[ImportView] Upload failed with error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorText
-        })
         throw new Error(errorText || 'Upload failed')
       }
 
-      console.log('[ImportView] Parsing response JSON')
       const result = await response.json()
-      console.log('[ImportView] Upload successful, result:', result)
       success(`File uploaded successfully: ${result.fileName}`)
 
       // Reset form
       selectedFile = null
       uploadProgress = 0
-      console.log('[ImportView] Form reset')
 
       // Redirect to parsing results page
-      console.log('[ImportView] Redirecting to parsing results for uploadId:', result.uploadId)
       window.location.hash = `#/gedcom/parsing/${result.uploadId}`
     } catch (uploadError) {
-      console.error('[ImportView] Upload error caught:', uploadError)
-      console.error('[ImportView] Error details:', {
-        name: uploadError.name,
-        message: uploadError.message,
-        stack: uploadError.stack
-      })
       error(`Upload failed: ${uploadError.message}`)
       uploadProgress = 0
     } finally {
       uploading = false
-      console.log('[ImportView] Upload process complete, uploading flag reset')
     }
   }
 
   function clearSelection() {
-    console.log('[ImportView] clearSelection called, clearing selectedFile')
     selectedFile = null
   }
 

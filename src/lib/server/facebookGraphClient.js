@@ -244,28 +244,17 @@ export async function fetchFacebookProfile(accessToken) {
  * // profile.picture is always available
  */
 export async function fetchFacebookUserProfile(accessToken, userIdentifier) {
-  console.log('[FB-IMPORT] Graph Client: fetchFacebookUserProfile called')
-  console.log('[FB-IMPORT] Graph Client: User identifier:', userIdentifier)
-  console.log('[FB-IMPORT] Graph Client: Access token check:', {
-    hasToken: !!accessToken,
-    tokenPrefix: accessToken ? accessToken.substring(0, 10) + '...' : 'N/A',
-    tokenLength: accessToken ? accessToken.length : 0
-  })
-
   if (!accessToken || typeof accessToken !== 'string' || accessToken.trim() === '') {
-    console.error('[FB-IMPORT] Graph Client: Access token is missing or invalid')
     throw new Error('Access token is required')
   }
 
   if (!userIdentifier || typeof userIdentifier !== 'string' || userIdentifier.trim() === '') {
-    console.error('[FB-IMPORT] Graph Client: User identifier is missing or invalid')
     throw new Error('User identifier is required')
   }
 
   // Get API version from config
   const config = getAuthConfig()
   const apiVersion = config.facebook.apiVersion || 'v19.0'
-  console.log('[FB-IMPORT] Graph Client: API version:', apiVersion)
 
   // Build Graph API URL with fields
   // Note: picture.type(large) requests a higher resolution profile picture
@@ -278,37 +267,21 @@ export async function fetchFacebookUserProfile(accessToken, userIdentifier) {
     'picture.type(large)' // Profile pictures are always public
   ].join(',')
 
-  console.log('[FB-IMPORT] Graph Client: Fields requested:', fields)
-
   const url = `https://graph.facebook.com/${apiVersion}/${userIdentifier}?fields=${fields}&access_token=${accessToken}`
 
   // Log URL without access token for security
   const urlWithoutToken = `https://graph.facebook.com/${apiVersion}/${userIdentifier}?fields=${fields}&access_token=***`
-  console.log('[FB-IMPORT] Graph Client: Graph API URL (token hidden):', urlWithoutToken)
 
   try {
-    console.log('[FB-IMPORT] Graph Client: Making fetch request to Facebook Graph API...')
     const response = await fetch(url)
 
-    console.log('[FB-IMPORT] Graph Client: Response received:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      headers: {
-        contentType: response.headers.get('content-type')
-      }
-    })
-
     if (!response.ok) {
-      console.error('[FB-IMPORT] Graph Client: Response not OK')
 
       // Try to get error details from response body
       let errorBody
       try {
         errorBody = await response.json()
-        console.error('[FB-IMPORT] Graph Client: Facebook error response body:', errorBody)
       } catch (e) {
-        console.error('[FB-IMPORT] Graph Client: Could not parse error response as JSON')
         // If we can't parse the error, throw a generic error with status
         throw new Error(
           `Facebook Graph API error: ${response.status} ${response.statusText}`
@@ -320,8 +293,6 @@ export async function fetchFacebookUserProfile(accessToken, userIdentifier) {
         const fbError = errorBody.error
         const errorCode = fbError.code
         const errorSubcode = fbError.error_subcode
-
-        console.log('[FB-IMPORT] Graph Client: Facebook error code:', errorCode, 'subcode:', errorSubcode)
 
         // Error code 100: Various permission and access issues
         if (errorCode === 100) {
@@ -354,7 +325,6 @@ export async function fetchFacebookUserProfile(accessToken, userIdentifier) {
     }
 
     const profile = await response.json()
-    console.log('[FB-IMPORT] Graph Client: Profile data received:', profile)
     return profile
   } catch (error) {
     // If the error is already one of our custom errors, re-throw it
@@ -366,9 +336,6 @@ export async function fetchFacebookUserProfile(accessToken, userIdentifier) {
     }
 
     // Wrap network or other errors with a consistent message
-    console.error('[FB-IMPORT] Graph Client: Error in fetch:', error)
-    console.error('[FB-IMPORT] Graph Client: Error message:', error.message)
-    console.error('[FB-IMPORT] Graph Client: Error stack:', error.stack)
     throw new Error(`Failed to fetch Facebook profile: ${error.message}`)
   }
 }

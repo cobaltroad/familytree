@@ -15,7 +15,7 @@ import { get } from 'svelte/store'
 import App from './routes/+page.svelte'
 import { people, relationships } from './stores/familyStore.js'
 
-describe('App.svelte - Pedigree as Default View (TDD)', () => {
+describe('App.svelte - Tree as Default View (TDD)', () => {
   beforeEach(() => {
     // Reset stores
     people.set([])
@@ -30,43 +30,33 @@ describe('App.svelte - Pedigree as Default View (TDD)', () => {
     relationships.set([])
   })
 
-  describe('Default Route - Pedigree View', () => {
-    it('should render PedigreeView by default (empty hash)', () => {
+  describe('Default Route - Tree View', () => {
+    it('should render TreeView by default (empty hash)', () => {
       window.location.hash = ''
 
       const { container } = render(App)
 
-      // Should render pedigree view (has pedigree-container class)
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
-
-      // Should NOT render tree view
+      // Should render tree view (has tree-container class)
       const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeFalsy()
+      expect(treeContainer).toBeTruthy()
+
+      // Should NOT render pedigree view
+      const pedigreeContainer = container.querySelector('.pedigree-container')
+      expect(pedigreeContainer).toBeFalsy()
     })
 
-    it('should render PedigreeView for #/ hash', () => {
+    it('should render TreeView for #/ hash', () => {
       window.location.hash = '#/'
 
       const { container } = render(App)
 
-      // Should render pedigree view
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
-
-      // Should NOT render tree view
+      // Should render tree view (has tree-container class)
       const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeFalsy()
-    })
+      expect(treeContainer).toBeTruthy()
 
-    it('should normalize "/" path to pedigree view', () => {
-      window.location.hash = ''
-
-      const { container } = render(App)
-
-      // Normalized path should be '/pedigree'
+      // Should NOT render pedigree view
       const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
+      expect(pedigreeContainer).toBeFalsy()
     })
   })
 
@@ -85,16 +75,6 @@ describe('App.svelte - Pedigree as Default View (TDD)', () => {
       expect(pedigreeContainer).toBeFalsy()
     })
 
-    it('should import TreeView component', () => {
-      // This test verifies that TreeView is imported in App.svelte
-      window.location.hash = '#/tree'
-
-      const { container } = render(App)
-
-      // Tree container should exist
-      const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeTruthy()
-    })
   })
 
   describe('Pedigree Route Mapping', () => {
@@ -106,61 +86,45 @@ describe('App.svelte - Pedigree as Default View (TDD)', () => {
       const pedigreeContainer = container.querySelector('.pedigree-container')
       expect(pedigreeContainer).toBeTruthy()
     })
-
-    it('should map "/" to pedigree view', () => {
-      // Test "/" mapping
-      window.location.hash = ''
-      let { container } = render(App)
-      let pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
-    })
-
-    it('should map "/tree" to tree view (Story #140)', () => {
-      // Test "/tree" mapping (no longer redirects to pedigree)
-      window.location.hash = '#/tree'
-      const { container } = render(App)
-      const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeTruthy()
-    })
   })
 
-  describe('Removed Views Redirect to Pedigree', () => {
-    it('should redirect #/timeline to PedigreeView (TimelineView removed)', () => {
+  describe('Removed Views Redirect to Tree', () => {
+    it('should redirect #/timeline to TreeView (TimelineView removed)', () => {
       window.location.hash = '#/timeline'
 
       const { container } = render(App)
 
-      // Should redirect to pedigree view
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
+      // Should redirect to tree view
+      const treeContainer = container.querySelector('.tree-container')
+      expect(treeContainer).toBeTruthy()
 
       // Should NOT render timeline view
       const timelineContainer = container.querySelector('.timeline-container')
       expect(timelineContainer).toBeFalsy()
     })
 
-    it('should redirect #/radial to PedigreeView (RadialView removed)', () => {
+    it('should redirect #/radial to TreeView (RadialView removed)', () => {
       window.location.hash = '#/radial'
 
       const { container } = render(App)
 
-      // Should redirect to pedigree view
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
+      // Should redirect to tree view
+      const treeContainer = container.querySelector('.tree-container')
+      expect(treeContainer).toBeTruthy()
 
       // Should NOT render radial view
       const radialContainer = container.querySelector('.radial-container')
       expect(radialContainer).toBeFalsy()
     })
 
-    it('should redirect #/list to PedigreeView (ListView removed)', () => {
+    it('should redirect #/list to TreeView (ListView removed)', () => {
       window.location.hash = '#/list'
 
       const { container } = render(App)
 
-      // Should redirect to pedigree view
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
+      // Should redirect to tree view
+      const treeContainer = container.querySelector('.tree-container')
+      expect(treeContainer).toBeTruthy()
 
       // Should NOT render list view
       const listContainer = container.querySelector('.list-container')
@@ -169,18 +133,14 @@ describe('App.svelte - Pedigree as Default View (TDD)', () => {
   })
 
   describe('Unknown Routes', () => {
-    it('should render PedigreeView for unknown routes', () => {
+    it('should render TreeView for unknown routes', () => {
       window.location.hash = '#/unknown'
 
       const { container } = render(App)
 
-      // Should fallback to pedigree view
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
-
-      // Should NOT render tree view
+      // Should fallback to tree view
       const treeContainer = container.querySelector('.tree-container')
-      expect(treeContainer).toBeFalsy()
+      expect(treeContainer).toBeTruthy()
     })
   })
 

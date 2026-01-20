@@ -269,8 +269,8 @@ describe('App.svelte - GEDCOM Route Integration (TDD)', () => {
 
       const { container } = render(App)
 
-      // Should fallback to default view (pedigree)
-      expect(container.querySelector('.pedigree-container')).toBeTruthy()
+      // Should fallback to default view (tree)
+      expect(container.querySelector('.tree-container')).toBeTruthy()
     })
 
     it('should not match routes with extra path segments', () => {

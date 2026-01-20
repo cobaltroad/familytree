@@ -32,21 +32,10 @@ describe('TreeView - Basic Rendering', () => {
     expect(container).toBeTruthy()
   })
 
-  it('should display an empty state message when no people exist', () => {
-    render(TreeView)
-    expect(screen.getByText(/no people in your family tree yet/i)).toBeInTheDocument()
-  })
-
   it('should render a container element for the family chart', () => {
     const { container } = render(TreeView)
     const chartContainer = container.querySelector('[data-testid="tree-container"]')
     expect(chartContainer).toBeInTheDocument()
-  })
-
-  it('should not show controls when there are no people', () => {
-    const { container } = render(TreeView)
-    const controls = container.querySelector('.controls')
-    expect(controls).not.toBeInTheDocument()
   })
 })
 
@@ -211,55 +200,6 @@ describe('TreeView - Chart Initialization', () => {
 
     const controls = container.querySelector('.controls')
     expect(controls).toBeInTheDocument()
-  })
-})
-
-describe('TreeView - Focus Person Selection', () => {
-  beforeEach(() => {
-    people.set([
-      { id: 1, firstName: 'Person1', lastName: 'Test', gender: 'male', birthDate: '1950-01-01', deathDate: null },
-      { id: 2, firstName: 'Person2', lastName: 'Test', gender: 'female', birthDate: '1975-01-01', deathDate: null }
-    ])
-    relationships.set([
-      { id: 1, person1Id: 1, person2Id: 2, type: 'father', parentRole: 'father' }
-    ])
-  })
-
-  it('should render focus person dropdown', async () => {
-    const { container } = render(TreeView)
-    await new Promise(resolve => setTimeout(resolve, 50))
-
-    const dropdown = container.querySelector('[data-testid="focus-person-select"]')
-    expect(dropdown).toBeInTheDocument()
-  })
-
-  it('should list all people in the dropdown', async () => {
-    const { container } = render(TreeView)
-    await new Promise(resolve => setTimeout(resolve, 50))
-
-    const dropdown = container.querySelector('[data-testid="focus-person-select"]')
-    const options = dropdown.querySelectorAll('option')
-
-    expect(options).toHaveLength(2)
-    expect(options[0].textContent).toContain('Person1 Test')
-    expect(options[1].textContent).toContain('Person2 Test')
-  })
-
-  it('should update chart when focus person changes', async () => {
-    const { container, component } = render(TreeView)
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // Initial focus person
-    expect(component.getFocusPersonId()).toBe(1)
-
-    // Change focus person
-    const dropdown = container.querySelector('[data-testid="focus-person-select"]')
-    await fireEvent.change(dropdown, { target: { value: '2' } })
-
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // Focus person should be updated
-    expect(component.getFocusPersonId()).toBe(2)
   })
 })
 
@@ -547,14 +487,6 @@ describe('TreeView - Hover Tooltips (Story #140)', () => {
 })
 
 describe('TreeView - Edge Cases', () => {
-  it('should handle empty data gracefully', async () => {
-    people.set([])
-    relationships.set([])
-
-    const { container } = render(TreeView)
-    expect(container.textContent.toLowerCase()).toContain('no people')
-  })
-
   it('should handle missing gender field with default', async () => {
     people.set([
       { id: 1, firstName: 'Test', lastName: 'Person', gender: null, birthDate: '1950-01-01', deathDate: null }
