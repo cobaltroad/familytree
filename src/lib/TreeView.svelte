@@ -307,30 +307,10 @@
 </script>
 
 <div class="tree-container" data-testid="tree-container">
-  {#if $people.length === 0}
-    <div class="empty-state">
-      <p>No people in your family tree yet. Add people to see the family tree visualization.</p>
-    </div>
-  {:else}
-    <div class="controls">
-      <label class="control-group">
-        <span>Focus Person:</span>
-        <select bind:value={focusPersonId} data-testid="focus-person-select">
-          {#each $people as person}
-            <option value={person.id}>
-              {person.firstName} {person.lastName}
-            </option>
-          {/each}
-        </select>
-      </label>
-    </div>
-  {/if}
-
-    <div
-      bind:this={chartContainer}
-      data-testid="chart-wrapper"
-      class="chart-wrapper"
-    ></div>
+  <div bind:this={chartContainer}
+       data-testid="chart-wrapper"
+       class="chart-wrapper">
+  </div>
 </div>
 
 <style>
@@ -345,47 +325,6 @@
     --male-color: #AED6F1;     /* Blue for male */
     --female-color: #F8BBD0;   /* Pink for female */
     --genderless-color: #E0E0E0; /* Gray for other/unknown */
-  }
-
-  .empty-state {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #666;
-    font-size: 16px;
-    text-align: center;
-    padding: 2rem;
-  }
-
-  .controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px;
-    background: white;
-    border-bottom: 1px solid #ddd;
-    gap: 16px;
-  }
-
-  .control-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-  }
-
-  .control-group span {
-    font-weight: 500;
-    color: #333;
-  }
-
-  .control-group select {
-    padding: 6px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-    min-width: 200px;
   }
 
   .chart-wrapper {
