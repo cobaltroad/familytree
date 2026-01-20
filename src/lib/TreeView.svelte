@@ -182,14 +182,16 @@
       chartContainer.innerHTML = ''
     }
 
+    chartContainer.addEventListener('click', handlePencilClick)
+
     // Create chart instance
     chartInstance = createChart(chartContainer, transformedData)
 
     // Create HTML card instance
-    const cardInstance = chartInstance.setCardHtml();
+    const cardInstance = chartInstance.setCardHtml()
 
     cardInstance.setCardInnerHtmlCreator((d) => {
-      console.log("d.data", d.data);
+      // console.log("d.data", d.data);
       const person = d.data.data;
       const formattedLifespan = !d.data.to_add ? person.formattedLifespan : '';
       const isDeceased = person.isDeceased;
@@ -268,15 +270,16 @@
 
 
   /**
-   * Handle person card click
+   * Handle pencil click
    */
-  function handlePersonClick(personId) {
-    if (onPersonClick) {
-      onPersonClick(personId)
-    } else {
-      // Default behavior: open modal
-      modal.open(personId, 'edit')
-    }
+  function handlePencilClick(event) {
+    const editButton = event.target.closest('.card-edit-button')
+    if (!editButton) return
+
+    event.stopPropagation()
+    console.log("Pencil clicked", editButton.dataset)
+    const personId = parseInt(editButton.dataset.personId, 10);
+    modal.open(personId, 'edit')
   }
 
   /**
