@@ -180,22 +180,13 @@ export function normalizeDate(gedcomDate) {
  * @returns {Promise<Object>} Parsed data with individuals, families, errors, etc.
  */
 export async function parseGedcom(content) {
-  console.log('[GEDCOM Parser] parseGedcom called')
-  console.log('[GEDCOM Parser] Content length:', content ? content.length : 0)
-  console.log('[GEDCOM Parser] Content preview (first 200 chars):', content ? content.substring(0, 200) : 'null')
-
   try {
     // Detect version
-    console.log('[GEDCOM Parser] Detecting GEDCOM version')
     const version = detectGedcomVersion(content)
-    console.log('[GEDCOM Parser] Detected version:', version)
 
-    console.log('[GEDCOM Parser] Validating GEDCOM version')
     const versionValidation = validateGedcomVersion(version)
-    console.log('[GEDCOM Parser] Version validation result:', versionValidation)
 
     if (!versionValidation.valid) {
-      console.error('[GEDCOM Parser] Version validation failed:', versionValidation.error)
       return {
         success: false,
         error: versionValidation.error
@@ -203,12 +194,7 @@ export async function parseGedcom(content) {
     }
 
     // Parse using library
-    console.log('[GEDCOM Parser] Parsing with parse-gedcom library')
     const parsed = parseGedcomLib.parse(content)
-    console.log('[GEDCOM Parser] Library parse result:', {
-      hasChildren: !!(parsed && parsed.children),
-      childrenCount: parsed && parsed.children ? parsed.children.length : 0
-    })
 
     const individuals = []
     const families = []
@@ -216,7 +202,6 @@ export async function parseGedcom(content) {
 
     // Process records - parse-gedcom returns root object with children array
     const records = parsed.children || []
-    console.log('[GEDCOM Parser] Processing', records.length, 'records')
 
     for (const record of records) {
       if (record.type === 'INDI') {
@@ -228,16 +213,6 @@ export async function parseGedcom(content) {
       }
     }
 
-    console.log('[GEDCOM Parser] Parsing complete:', {
-      individualsCount: individuals.length,
-      familiesCount: families.length,
-      errorsCount: errors.length
-    })
-    console.log('[GEDCOM Parser] First few individuals:', individuals.slice(0, 3).map(i => ({
-      id: i.id,
-      name: i.name
-    })))
-
     return {
       success: true,
       version,
@@ -246,12 +221,6 @@ export async function parseGedcom(content) {
       errors
     }
   } catch (error) {
-    console.error('[GEDCOM Parser] Error caught in parseGedcom:', error)
-    console.error('[GEDCOM Parser] Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    })
     return {
       success: false,
       error: `Failed to parse GEDCOM file: ${error.message}`

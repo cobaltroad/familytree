@@ -127,7 +127,7 @@
 
   // Navigate to family tree
   function handleViewTree() {
-    window.location.hash = '/pedigree'
+    window.location.hash = '/tree'
     // Reload data to show new imports
     window.location.reload()
   }
@@ -138,7 +138,7 @@
   }
 
   function handleClose() {
-    window.location.hash = '/pedigree'
+    window.location.hash = '/tree'
   }
 </script>
 

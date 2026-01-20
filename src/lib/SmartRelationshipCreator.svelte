@@ -154,14 +154,9 @@
   async function handleImportPreview() {
     if (!isUrlValid) return
 
-    console.log('[FB-IMPORT] SmartRelationshipCreator: Starting import')
-    console.log('[FB-IMPORT] SmartRelationshipCreator: Facebook URL submitted:', facebookUrl)
-
     isImporting = true
     try {
-      console.log('[FB-IMPORT] SmartRelationshipCreator: Calling api.fetchFacebookProfile...')
       const data = await api.fetchFacebookProfile(facebookUrl)
-      console.log('[FB-IMPORT] SmartRelationshipCreator: Success! Received data:', data)
       importedData = data
 
       // Populate editable fields with imported data
@@ -171,23 +166,11 @@
       editableBirthDate = data.birthDate || ''
       editablePhotoUrl = data.photoUrl || ''
 
-      console.log('[FB-IMPORT] SmartRelationshipCreator: Populated editable fields:', {
-        firstName: editableFirstName,
-        lastName: editableLastName,
-        gender: editableGender,
-        birthDate: editableBirthDate,
-        photoUrl: editablePhotoUrl
-      })
     } catch (err) {
-      console.error('[FB-IMPORT] SmartRelationshipCreator: ERROR:', err)
-      console.error('[FB-IMPORT] SmartRelationshipCreator: Error message:', err.message)
-      console.error('[FB-IMPORT] SmartRelationshipCreator: Error stack:', err.stack)
-
       // Issue #87: Activate fallback mode for manual entry
       activateFallbackMode(err.message)
     } finally {
       isImporting = false
-      console.log('[FB-IMPORT] SmartRelationshipCreator: Import process completed')
     }
   }
 

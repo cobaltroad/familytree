@@ -46,20 +46,11 @@ import { fetchFacebookUserProfile, extractPersonDataFromProfile } from '$lib/ser
  * @returns {Promise<Response>} JSON response with person data or error
  */
 export async function POST(event) {
-  console.log('[FB-IMPORT] API Endpoint: POST /api/facebook/profile received')
-
   try {
     // Check authentication
     const session = await event.locals.getSession()
-    console.log('[FB-IMPORT] API Endpoint: Session retrieved:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      userName: session?.user?.name
-    })
 
     if (!session || !session.user) {
-      console.error('[FB-IMPORT] API Endpoint: No session or user')
       return json({ error: 'Authentication required' }, { status: 401 })
     }
 
@@ -67,28 +58,21 @@ export async function POST(event) {
     let requestData
     try {
       requestData = await event.request.json()
-      console.log('[FB-IMPORT] API Endpoint: Request body parsed:', requestData)
     } catch (error) {
-      console.error('[FB-IMPORT] API Endpoint: Failed to parse request body:', error)
       return json({ error: 'Invalid request body' }, { status: 400 })
     }
 
     const { facebookUrl } = requestData
-    console.log('[FB-IMPORT] API Endpoint: Facebook URL from request:', facebookUrl)
 
     // Validate input
     if (!facebookUrl || typeof facebookUrl !== 'string' || facebookUrl.trim() === '') {
-      console.error('[FB-IMPORT] API Endpoint: Invalid facebookUrl:', { facebookUrl, type: typeof facebookUrl })
       return json({ error: 'facebookUrl must be a valid string' }, { status: 400 })
     }
 
     // Extract user ID or username from URL
-    console.log('[FB-IMPORT] API Endpoint: Parsing Facebook URL...')
     const userIdentifier = parseFacebookProfileUrl(facebookUrl)
-    console.log('[FB-IMPORT] API Endpoint: Parsed user identifier:', userIdentifier)
 
     if (!userIdentifier) {
-      console.error('[FB-IMPORT] API Endpoint: Failed to parse user identifier from URL')
       return json(
         { error: 'Invalid Facebook profile URL. Please provide a valid Facebook profile URL, user ID, or username.' },
         { status: 400 }
@@ -99,14 +83,8 @@ export async function POST(event) {
     // The user must be authenticated via Facebook OAuth to use this endpoint
     // We use their access token to make Graph API calls on their behalf
     const userAccessToken = session.user.accessToken
-    console.log('[FB-IMPORT] API Endpoint: Access token check:', {
-      hasAccessToken: !!userAccessToken,
-      tokenPrefix: userAccessToken ? userAccessToken.substring(0, 10) + '...' : 'N/A',
-      tokenLength: userAccessToken ? userAccessToken.length : 0
-    })
 
     if (!userAccessToken) {
-      console.error('[FB-IMPORT] API Endpoint: No access token in session')
       return json(
         { error: 'Facebook authentication required. Please sign in with Facebook to import profiles.' },
         { status: 401 }
@@ -114,16 +92,10 @@ export async function POST(event) {
     }
 
     // Fetch Facebook profile
-    console.log('[FB-IMPORT] API Endpoint: Calling fetchFacebookUserProfile...')
     let facebookProfile
     try {
       facebookProfile = await fetchFacebookUserProfile(userAccessToken, userIdentifier)
-      console.log('[FB-IMPORT] API Endpoint: Facebook profile fetched successfully:', facebookProfile)
     } catch (error) {
-      console.error('[FB-IMPORT] API Endpoint: Error fetching Facebook profile:', error)
-      console.error('[FB-IMPORT] API Endpoint: Error message:', error.message)
-      console.error('[FB-IMPORT] API Endpoint: Error stack:', error.stack)
-
       // Handle specific error messages from facebookGraphClient
       if (error.message.includes('Facebook profile not found or inaccessible')) {
         return json(
@@ -175,19 +147,12 @@ export async function POST(event) {
     }
 
     // Extract person data from Facebook profile
-    console.log('[FB-IMPORT] API Endpoint: Extracting person data from profile...')
     const personData = extractPersonDataFromProfile(facebookProfile)
-    console.log('[FB-IMPORT] API Endpoint: Extracted person data:', personData)
 
     // Return person data
-    console.log('[FB-IMPORT] API Endpoint: Returning success response')
     return json({ personData }, { status: 200 })
   } catch (error) {
     // Catch-all error handler
-    console.error('[FB-IMPORT] API Endpoint: Catch-all error handler triggered')
-    console.error('[FB-IMPORT] API Endpoint: Error:', error)
-    console.error('[FB-IMPORT] API Endpoint: Error message:', error.message)
-    console.error('[FB-IMPORT] API Endpoint: Error stack:', error.stack)
     return json(
       { error: 'Internal server error' },
       { status: 500 }
