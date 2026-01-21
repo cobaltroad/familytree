@@ -14,7 +14,6 @@
   import LinkExistingParent from './LinkExistingParent.svelte'
   import LinkExistingSpouse from './LinkExistingSpouse.svelte'
   import LinkExistingChildren from './LinkExistingChildren.svelte'
-  import SmartRelationshipCreator from './SmartRelationshipCreator.svelte'
   import { modal } from '../stores/modalStore.js'
   import { peopleById, createPersonRelationships, relationshipsByPerson } from '../stores/derivedStores.js'
   import { createPerson, updatePerson, deletePerson } from '../stores/actions/personActions.js'
@@ -28,10 +27,6 @@
   import { openPanels } from '../stores/panelStore.js'
 
   const dispatch = createEventDispatcher()
-
-  // Facebook import state
-  let facebookUrl = ''
-  let isImporting = false
 
   // Story #84: Get user's defaultPersonId from session
   $: defaultPersonId = $page?.data?.session?.user?.defaultPersonId
@@ -58,10 +53,6 @@
   let pendingDeleteRelationship = null
   let pendingDeletePerson = null
   let pendingDeleteType = null
-
-  // SmartRelationshipCreator modal state
-  let isSmartRelationshipCreatorOpen = false
-  let smartRelationshipFocusPersonId = null
 
   // Responsive breakpoint detection
   let windowWidth = 0
@@ -316,81 +307,6 @@
     pendingDeleteType = null
   }
 
-  // SmartRelationshipCreator handlers
-  function openSmartRelationshipCreator() {
-    if (person) {
-      smartRelationshipFocusPersonId = person.id
-      isSmartRelationshipCreatorOpen = true
-    }
-  }
-
-  function closeSmartRelationshipCreator() {
-    isSmartRelationshipCreatorOpen = false
-    smartRelationshipFocusPersonId = null
-  }
-
-  // Facebook Re-Sync/Import handler
-  async function handleFacebookSync() {
-    // Prompt user for Facebook URL
-    const url = prompt('Enter Facebook profile URL, username, or user ID:')
-
-    if (!url || !url.trim()) {
-      return // User canceled or entered empty string
-    }
-
-    facebookUrl = url.trim()
-    isImporting = true
-
-    try {
-      const personData = await api.fetchFacebookProfile(facebookUrl)
-
-      // Update the person object with Facebook data
-      // We need to get a reference to the PersonFormFields component
-      // For now, we'll dispatch an event that PersonFormFields can listen to
-      // Actually, we'll directly update the person data in the modal
-
-      // Pre-populate form fields with Facebook data
-      if (person) {
-        // Update existing person
-        const updates = {}
-        if (personData.firstName) updates.firstName = personData.firstName
-        if (personData.lastName) updates.lastName = personData.lastName
-        if (personData.birthDate) updates.birthDate = personData.birthDate
-        if (personData.gender) updates.gender = personData.gender
-        if (personData.photoUrl) updates.photoUrl = personData.photoUrl
-
-        // Optimistically update the person
-        await updatePerson(person.id, { ...person, ...updates })
-      } else {
-        // For new person, we need to communicate with PersonFormFields
-        // This is tricky - let's dispatch a custom event that PersonFormFields can listen to
-        dispatch('facebookDataFetched', personData)
-      }
-
-      // Build success message
-      const importedFields = []
-      if (personData.firstName || personData.lastName) importedFields.push('name')
-      if (personData.birthDate) importedFields.push('birth date')
-      if (personData.gender) importedFields.push('gender')
-      if (personData.photoUrl) importedFields.push('photo')
-
-      if (importedFields.length > 0) {
-        successNotification(
-          `${person ? 'Re-synced' : 'Imported'} ${importedFields.join(', ')} from Facebook profile`
-        )
-      } else {
-        errorNotification('Profile found but no additional data available (check privacy settings)')
-      }
-
-      // Clear Facebook URL
-      facebookUrl = ''
-    } catch (error) {
-      errorNotification(error.message || 'Failed to sync Facebook profile')
-    } finally {
-      isImporting = false
-    }
-  }
-
   // Issue #129: Set/Unset as My Profile handler
   async function handleSetProfile() {
     if (!person) return
@@ -613,22 +529,6 @@
                 </div>
               </CollapsibleActionPanel>
 
-              <!-- Add from Facebook button -->
-              <!-- TEMPORARILY HIDDEN: Facebook integration features disabled for now -->
-              <!-- TODO: Re-enable by changing {#if false} to {#if true} -->
-              {#if false}
-              <div class="add-from-facebook-section">
-                <button
-                  class="add-from-facebook-button"
-                  data-testid="add-from-facebook-button"
-                  aria-label="Add family member from Facebook profile"
-                  on:click={openSmartRelationshipCreator}
-                  type="button"
-                >
-                  Add from Facebook
-                </button>
-              </div>
-              {/if}
             {:else}
               <div class="empty-relationships">
                 <p>Add person details to view relationships</p>
@@ -819,22 +719,6 @@
             </CollapsibleActionPanel>
           </CollapsibleSection>
 
-          <!-- Add from Facebook button (Mobile) -->
-          <!-- TEMPORARILY HIDDEN: Facebook integration features disabled for now -->
-          <!-- TODO: Re-enable by changing {#if false} to {#if true} -->
-          {#if false}
-          <div class="add-from-facebook-section mobile">
-            <button
-              class="add-from-facebook-button"
-              data-testid="add-from-facebook-button"
-              aria-label="Add family member from Facebook profile"
-              on:click={openSmartRelationshipCreator}
-              type="button"
-            >
-              Add from Facebook
-            </button>
-          </div>
-          {/if}
         {/if}
       {/if}
 
@@ -843,19 +727,6 @@
           <button type="submit" form="person-form" class="update-button">
             {person ? 'Update' : 'Add'} Person
           </button>
-          <!-- TEMPORARILY HIDDEN: Facebook integration features disabled for now -->
-          <!-- TODO: Re-enable by changing {#if false} to {#if true} -->
-          {#if false}
-          <button
-            type="button"
-            class="resync-facebook-button"
-            data-testid="resync-facebook"
-            on:click={handleFacebookSync}
-            disabled={isImporting}
-          >
-            {isImporting ? 'Syncing...' : (person ? 'Re-Sync from Facebook' : 'Import from Facebook')}
-          </button>
-          {/if}
           <!-- Issue #129: Set as My Profile button -->
           {#if person && isAuthenticated}
             <button
@@ -885,13 +756,6 @@
     </div>
   </div>
 {/if}
-
-<!-- SmartRelationshipCreator Modal -->
-<SmartRelationshipCreator
-  isOpen={isSmartRelationshipCreatorOpen}
-  focusPersonId={smartRelationshipFocusPersonId}
-  on:close={closeSmartRelationshipCreator}
-/>
 
 <!-- Confirmation Dialog for Relationship Deletion -->
 <ConfirmationDialog
@@ -1087,34 +951,6 @@
     outline-offset: 2px;
   }
 
-  .resync-facebook-button {
-    background-color: white;
-    color: #1877f2;
-    border: 2px solid #1877f2;
-  }
-
-  .resync-facebook-button:hover:not(:disabled) {
-    background-color: #f0f7ff;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(24, 119, 242, 0.2);
-  }
-
-  .resync-facebook-button:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  .resync-facebook-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    border-color: #ccc;
-    color: #999;
-  }
-
-  .resync-facebook-button:focus {
-    outline: 2px solid #1877f2;
-    outline-offset: 2px;
-  }
-
   .delete-button {
     background-color: #f44336;
     color: white;
@@ -1126,46 +962,6 @@
 
   .delete-button:focus {
     outline: 2px solid #f44336;
-    outline-offset: 2px;
-  }
-
-  .add-from-facebook-section {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 2px solid #e0e0e0;
-  }
-
-  .add-from-facebook-section.mobile {
-    margin: 1rem;
-    padding: 1rem 0;
-  }
-
-  .add-from-facebook-button {
-    width: 100%;
-    padding: 0.875rem 1.5rem;
-    background-color: #1877f2;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(24, 119, 242, 0.2);
-  }
-
-  .add-from-facebook-button:hover {
-    background-color: #166fe5;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(24, 119, 242, 0.3);
-  }
-
-  .add-from-facebook-button:active {
-    transform: translateY(0);
-  }
-
-  .add-from-facebook-button:focus {
-    outline: 2px solid #1877f2;
     outline-offset: 2px;
   }
 
