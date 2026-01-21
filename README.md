@@ -13,14 +13,6 @@ A modern family tree management application with multiple visualization modes. B
 - **Profile Indicators** - Visual "Your Profile" badges help you find yourself in the tree
 - **Deletion Protection** - Cannot delete your own profile record (data integrity)
 
-### 🌳 Multiple Visualization Views
-
-Explore your family tree data from different perspectives:
-
-- **Pedigree View** - Compact ancestor chart focusing on a selected person's lineage (default, auto-focuses on your profile)
-- **Timeline View** - Chronological lifespan visualization with sortable horizontal bars
-- **Radial View** - Circular fan chart with ancestors in concentric generational rings (auto-focuses on your profile)
-
 ### 👥 Family Management
 
 - Add, edit, and delete family members with detailed information
@@ -34,9 +26,6 @@ Explore your family tree data from different perspectives:
 
 - Click any person in any view to edit their information
 - Zoom and pan controls on tree visualizations
-- Focus person selector for Pedigree and Radial views
-- Filter controls (show/hide living/deceased in Timeline)
-- Sort by birth year or generation in Timeline view
 - Responsive hybrid modal design (desktop/tablet/mobile)
 - Quick Add workflows for adding related people
 - Optimistic updates for instant UI feedback
@@ -118,9 +107,7 @@ npx drizzle-kit push
 ### Navigation
 
 Once running, access different views:
-- **Pedigree View**: http://localhost:5173/ or http://localhost:5173/#/pedigree (default)
-- **Timeline View**: http://localhost:5173/#/timeline
-- **Radial View**: http://localhost:5173/#/radial
+- **Pedigree View**: http://localhost:5173/ or http://localhost:5173/#/tree (default)
 
 ## Tech Stack
 
