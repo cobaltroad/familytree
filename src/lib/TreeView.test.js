@@ -294,27 +294,12 @@ describe('TreeView - Modal Integration', () => {
     const { container } = render(TreeView)
     await new Promise(resolve => setTimeout(resolve, 100))
 
-    // Find and click person card
-    const personCard = container.querySelector('[data-person-id="1"]')
-    expect(personCard).toBeTruthy()
-
-    // Simulate click
-    await fireEvent.click(personCard)
+    // Find and click pencil on the person card
+    const pencil = container.querySelector('[data-person-id="1"] .card-edit-button')
+    await fireEvent.click(pencil)
 
     // Modal should be opened with correct person ID
     expect(modalSpy).toHaveBeenCalledWith(1, 'edit')
-  })
-
-  it('should allow custom onPersonClick handler via props', async () => {
-    const clickHandler = vi.fn()
-    const { container } = render(TreeView, { props: { onPersonClick: clickHandler } })
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // Click on a person card
-    const personCard = container.querySelector('[data-person-id="1"]')
-    await fireEvent.click(personCard)
-
-    expect(clickHandler).toHaveBeenCalledWith(1)
   })
 })
 

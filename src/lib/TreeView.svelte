@@ -36,9 +36,6 @@
   let transformedData = []
   let transitionTime = 300
 
-  // Props for testing and customization
-  export let onPersonClick = null
-
   // Expose state for testing via getters
   export function getTransformedData() {
     return transformedData
@@ -274,7 +271,6 @@
     if (!editButton) return
 
     event.stopPropagation()
-    console.log("Pencil clicked", editButton.dataset)
     const personId = parseInt(editButton.dataset.personId, 10);
     modal.open(personId, 'edit')
   }
@@ -369,9 +365,6 @@
     overflow: hidden;
     position: relative;
     background: #3a3a3a;
-  }
-
-  .card-edit-button {
   }
 
   :global(.chart-wrapper svg) {

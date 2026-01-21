@@ -108,36 +108,6 @@ describe('TreeView - Modal Store Integration', () => {
     relationships.set([])
     vi.clearAllMocks()
   })
-
-  it('should call modal.open() when person card is clicked', async () => {
-    const modalSpy = vi.spyOn(modal, 'open')
-    const { component, container } = render(TreeView)
-    await new Promise(resolve => setTimeout(resolve, 100))
-    await tick()
-
-    console.log("Container", container.innerHTML)
-    console.log("Data", component.getTransformedData())
-    const personCard = container.querySelector('[data-person-id="1"]')
-    await fireEvent.click(personCard)
-
-    expect(modalSpy).toHaveBeenCalledTimes(1)
-    expect(modalSpy).toHaveBeenCalledWith(1, 'edit')
-  })
-
-  it('should not call modal.open() if custom onPersonClick handler is provided', async () => {
-    const modalSpy = vi.spyOn(modal, 'open')
-    const customHandler = vi.fn()
-
-    const { container } = render(TreeView, { props: { onPersonClick: customHandler } })
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    const personCard = container.querySelector('[data-person-id="1"]')
-    await fireEvent.click(personCard)
-
-    // Custom handler called instead of modal
-    expect(customHandler).toHaveBeenCalledWith(1)
-    expect(modalSpy).not.toHaveBeenCalled()
-  })
 })
 
 describe('TreeView - Complex Family Structures', () => {
