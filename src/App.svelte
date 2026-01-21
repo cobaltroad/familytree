@@ -1,10 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { api } from './lib/api'
-  import TimelineView from './lib/TimelineView.svelte'
-  import PedigreeView from './lib/PedigreeView.svelte'
-  import RadialView from './lib/RadialView.svelte'
-  import NetworkView from './lib/NetworkView.svelte'
+  import TreeView from './lib/TreeView.svelte'
   import ImportView from './lib/ImportView.svelte'
   import GedcomUpload from './lib/GedcomUpload.svelte'
   import GedcomParsingResults from './lib/GedcomParsingResults.svelte'
@@ -75,14 +72,8 @@
 
   <ViewSwitcher currentPath={normalizedPath} />
 
-  {#if normalizedPath === '/timeline'}
-    <TimelineView />
-  {:else if normalizedPath === '/pedigree'}
-    <PedigreeView />
-  {:else if normalizedPath === '/radial'}
-    <RadialView />
-  {:else if normalizedPath === '/network'}
-    <NetworkView />
+  {#if normalizedPath === '/tree'}
+    <TreeView />
   {:else if normalizedPath === '/duplicates'}
     <DuplicateDetection />
   {:else if normalizedPath === '/import'}
@@ -96,7 +87,7 @@
   {:else if normalizedPath.startsWith('/gedcom/import-progress/')}
     <GedcomImportProgress uploadId={importUploadId} />
   {:else}
-    <PedigreeView />
+    <TreeView />
   {/if}
 
   <PersonModal />
