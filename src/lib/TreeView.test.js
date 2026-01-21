@@ -331,7 +331,7 @@ describe('TreeView - Dynamic Updates', () => {
     ])
 
     await new Promise(resolve => setTimeout(resolve, 100))
-    expect(container.textContent).toContain('John Doe')
+    expect(container.textContent).toContain('JohnDoe')
 
     // Update person
     people.set([
@@ -339,9 +339,59 @@ describe('TreeView - Dynamic Updates', () => {
     ])
 
     await new Promise(resolve => setTimeout(resolve, 100))
-    expect(container.textContent).toContain('John Smith')
+    expect(container.textContent).toContain('JohnSmith')
   })
 
+  it('should update chart when a person is removed', async () => {
+    // Initial state
+    people.set([
+      { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: null, deathDate: '2020-12-31', isDeceased: true },
+      { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'female', birthDate: '1950-01-01', deathDate: null, isDeceased: false }
+    ])
+    relationships.set([
+      { id: 1, person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null }
+    ])
+
+    const { component } = render(TreeView)
+    await tick()
+
+    expect(component.getTransformedData()).toHaveLength(2)
+
+    // Update person
+    people.set([
+      { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: null, deathDate: '2020-12-31', isDeceased: true },
+    ])
+    relationships.set([])
+    await tick()
+
+    expect(component.getTransformedData()).toHaveLength(1)
+  })
+
+  it('should update chart when relationship data changes', async () => {
+    // Initial state
+    people.set([
+      { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: null, deathDate: '2020-12-31', isDeceased: true },
+      { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'female', birthDate: '1950-01-01', deathDate: null, isDeceased: false }
+    ])
+    
+    const { container } = render(TreeView)    
+    await tick()
+    
+    const johnCard = container.querySelector('[data-person-id="1"]')
+    expect(johnCard).toBeTruthy()
+    const janeCard = container.querySelector('[data-person-id="2"]')
+    expect(janeCard).toBeFalsy()
+
+    // Update relationship
+    relationships.set([
+      { id: 1, person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null }
+    ])
+    await tick()
+    
+    const updatedJaneCard = container.querySelector('[data-person-id="2"]')
+    expect(updatedJaneCard).toBeTruthy()
+  })
+  
   it('should animate smoothly during updates (300ms transition)', async () => {
     const { component } = render(TreeView)
 
@@ -353,6 +403,99 @@ describe('TreeView - Dynamic Updates', () => {
 
     // Transition time should be set to 300ms
     expect(component.getTransitionTime()).toBe(300)
+  })
+})
+
+describe('TreeView - Complex Family Structures', () => {
+  it('should handle multi-generational family tree (3 generations)', async () => {
+    people.set([
+      { id: 1, firstName: 'Grandpa', lastName: 'Smith', gender: 'male', birthDate: '1920-01-01', deathDate: '2000-01-01' },
+      { id: 2, firstName: 'Grandma', lastName: 'Smith', gender: 'female', birthDate: '1922-01-01', deathDate: '2005-01-01' },
+      { id: 3, firstName: 'Parent', lastName: 'Smith', gender: 'male', birthDate: '1950-01-01', deathDate: null },
+      { id: 4, firstName: 'Child', lastName: 'Smith', gender: 'female', birthDate: '1980-01-01', deathDate: null }
+    ])
+
+    relationships.set([
+      { id: 1, person1Id: 1, person2Id: 3, type: 'father', parentRole: 'father' },
+      { id: 2, person1Id: 2, person2Id: 3, type: 'mother', parentRole: 'mother' },
+      { id: 3, person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null },
+      { id: 4, person1Id: 3, person2Id: 4, type: 'father', parentRole: 'father' }
+    ])
+
+    const { container, component } = render(TreeView)
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // All people should be in transformed data
+    const data = component.getTransformedData()
+    // unknown mother to Child4 should be in the data
+    expect(data).toHaveLength(5)
+
+    // Child should have correct parent relationships
+    const child = data.find(d => d.id === '4')
+    expect(child.rels.parents).toContain('3')
+
+    // Parent should have correct relationships
+    const parent = data.find(d => d.id === '3')
+    expect(parent.rels.parents).toHaveLength(2)
+    expect(parent.rels.children).toContain('4')
+
+    // All names should be visible
+    expect(container.textContent).toContain('Grandpa')
+    expect(container.textContent).toContain('Grandma')
+    expect(container.textContent).toContain('Parent')
+    expect(container.textContent).toContain('Child')
+  })
+
+  it('should handle multiple spouses', async () => {
+    people.set([
+      { id: 1, firstName: 'Person', lastName: 'Test', gender: 'male', birthDate: '1950-01-01', deathDate: null },
+      { id: 2, firstName: 'Spouse1', lastName: 'Test', gender: 'female', birthDate: '1952-01-01', deathDate: '2000-01-01' },
+      { id: 3, firstName: 'Spouse2', lastName: 'Test', gender: 'female', birthDate: '1955-01-01', deathDate: null }
+    ])
+
+    relationships.set([
+      { id: 1, person1Id: 1, person2Id: 2, type: 'spouse', parentRole: null },
+      { id: 2, person1Id: 1, person2Id: 3, type: 'spouse', parentRole: null }
+    ])
+
+    const { component } = render(TreeView)
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const data = component.getTransformedData()
+    const person = data.find(d => d.id === '1')
+
+    // Should have both spouses
+    expect(person.rels.spouses).toHaveLength(2)
+    expect(person.rels.spouses).toContain('2')
+    expect(person.rels.spouses).toContain('3')
+  })
+
+  it('should handle half-siblings (shared single parent)', async () => {
+    people.set([
+      { id: 1, firstName: 'Parent', lastName: 'Test', gender: 'male', birthDate: '1950-01-01', deathDate: null },
+      { id: 2, firstName: 'Child1', lastName: 'Test', gender: 'male', birthDate: '1975-01-01', deathDate: null },
+      { id: 3, firstName: 'Child2', lastName: 'Test', gender: 'female', birthDate: '1980-01-01', deathDate: null }
+    ])
+
+    relationships.set([
+      { id: 1, person1Id: 1, person2Id: 2, type: 'father', parentRole: 'father' },
+      { id: 2, person1Id: 1, person2Id: 3, type: 'father', parentRole: 'father' }
+    ])
+
+    const { container, component } = render(TreeView)
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const data = component.getTransformedData()
+    const parent = data.find(d => d.id === '1')
+
+    // Parent should have both children
+    expect(parent.rels.children).toHaveLength(2)
+    expect(parent.rels.children).toContain('2')
+    expect(parent.rels.children).toContain('3')
+
+    // Both children should appear in the tree
+    expect(container.textContent).toContain('Child1')
+    expect(container.textContent).toContain('Child2')
   })
 })
 
