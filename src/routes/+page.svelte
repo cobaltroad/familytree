@@ -4,9 +4,7 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import { api } from '$lib/api'
-  import PedigreeView from '$lib/PedigreeView.svelte'
   import TreeView from '$lib/TreeView.svelte'
-  import NetworkView from '$lib/NetworkView.svelte'
   import ImportView from '$lib/ImportView.svelte'
   import AdminView from '$lib/AdminView.svelte'
   import DuplicateDetection from '$lib/DuplicateDetection.svelte'
@@ -100,10 +98,6 @@
 
   {#if normalizedPath === '/tree'}
     <TreeView />
-  {:else if normalizedPath === '/pedigree'}
-    <PedigreeView />
-  {:else if normalizedPath === '/network'}
-    <NetworkView />
   {:else if normalizedPath === '/duplicates'}
     <DuplicateDetection />
   {:else if normalizedPath === '/import'}

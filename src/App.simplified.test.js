@@ -53,16 +53,6 @@ describe('App.svelte - Simplified (No Prop Drilling)', () => {
       const treeContainer = container.querySelector('.tree-container')
       expect(treeContainer).toBeTruthy()
     })
-
-    it('should render PedigreeView for #/pedigree', () => {
-      window.location.hash = '#/pedigree'
-
-      const { container } = render(App)
-
-      // Should render pedigree view
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
-    })
   })
 
   describe('No Event Handlers', () => {

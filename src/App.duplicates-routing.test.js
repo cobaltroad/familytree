@@ -38,9 +38,9 @@ describe('App.svelte - Duplicates Route (TDD)', () => {
       const duplicateContainer = container.querySelector('.duplicate-detection')
       expect(duplicateContainer).toBeTruthy()
 
-      // Should NOT render pedigree view
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeFalsy()
+      // Should NOT render tree view
+      const treeContainer = container.querySelector('.tree-container')
+      expect(treeContainer).toBeFalsy()
     })
 
     it('should not render DuplicateDetection for other routes', () => {
@@ -53,8 +53,8 @@ describe('App.svelte - Duplicates Route (TDD)', () => {
       expect(duplicateContainer).toBeFalsy()
 
       // Should render pedigree view instead
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
+      const treeContainer = container.querySelector('.tree-container')
+      expect(treeContainer).toBeTruthy()
     })
 
     it('should show loading state when DuplicateDetection is mounted', () => {
@@ -98,7 +98,7 @@ describe('App.svelte - Duplicates Route (TDD)', () => {
     })
 
     it('should have correct href for Duplicates tab', () => {
-      window.location.hash = '#/pedigree'
+      window.location.hash = '#/tree'
 
       const { container } = render(App)
 
