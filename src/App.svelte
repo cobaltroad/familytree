@@ -15,8 +15,8 @@
 
   let currentPath = window.location.hash.slice(1) || '/'
 
-  // Normalize path (treat '/', '/tree', and '/list' as '/pedigree')
-  $: normalizedPath = (currentPath === '/' || currentPath === '/tree' || currentPath === '/list') ? '/pedigree' : currentPath
+  // Normalize path (treat '/', '/tree'  as '/tree')
+  $: normalizedPath = (currentPath === '/' || currentPath === '/tree') ? '/tree' : currentPath
 
   // Extract uploadId from GEDCOM parsing route
   $: parsingUploadId = normalizedPath.startsWith('/gedcom/parsing/')
