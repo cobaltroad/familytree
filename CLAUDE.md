@@ -194,15 +194,7 @@ See `frontend/src/stores/actions/README.md` for detailed optimistic update docum
 #### Visualization Views
 All views access stores directly (no prop drilling) and support clicking nodes/bars to open PersonModal via `modal.open()`. The "Add Person" link in the ViewSwitcher navigation (top right) opens a modal to add new people via `modal.openNew()`.
 
-- **PedigreeView.svelte** (`#/` or `#/pedigree`): Default compact ancestor chart
-  - Focus person selector (dropdown)
-  - Ancestors expand upward in compact boxes (80x40)
-  - Generation labels (G0=focus, G1=parents, G2=grandparents, etc.)
-  - Uses D3 enter/update/exit for incremental updates
-  - Preserves zoom/pan state during updates
-  - Limited to 4-5 generations for performance
-
-- **TreeView.svelte** (`#/tree`): Alternative ancestor visualization using family-chart library (Story #140)
+- **TreeView.svelte** (`#/` or `#/tree`): Default ancestor visualization using family-chart library (Story #140)
   - Built on family-chart library (v0.9.0) for feature-rich tree visualization
   - Focus person selector (dropdown) with reactive updates
   - Ancestors displayed above focus person (up to 5 generations)
@@ -217,36 +209,6 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - Performance optimized (<500ms for 100 people)
   - Empty state with helpful guidance
   - Alternative to PedigreeView for users who prefer family-chart's rendering style
-
-- **NetworkView.svelte** (`#/network`): Force-directed network graph (Story #99, #100, #101)
-  - Interactive physics-based layout showing all family members
-  - D3 force simulation with multiple forces (charge, link, center, collision, custom spouse force)
-  - Displays all relationships simultaneously (parent-child, spouse, sibling)
-  - **Spouse Proximity Enhancement** (Story #100):
-    - Custom spouse force positions married/partnered couples close together (60-80px apart)
-    - Adjusted link parameters for spouse relationships (60px distance, 1.5x strength)
-    - Enhanced hover highlighting: spouse nodes and links highlighted with purple border/brighter color
-    - Handles multiple spouses per person, pinned nodes, and edge cases gracefully
-    - Performance optimized for <5s settle time with 50 spouse pairs
-  - **Children Display and Grouping** (Story #101):
-    - Parent-child links configured with shorter distance (75px) to keep families closer
-    - Stronger link pull (1.2x strength) for parent-child relationships
-    - Children positioned within 120px of parents after simulation settles
-    - Siblings naturally cluster together near shared parents (within 110px)
-    - Collision force prevents overlap even with 10+ children per parent
-    - Performance validated: <5s settle time with 20 children
-  - Drag nodes to reposition (pinned until double-click to release)
-  - Zoom/pan controls (0.1x to 10x scale)
-  - Hover effects with tooltips showing name, lifespan, and relationship count
-  - Connected node highlighting on hover
-  - Distinct visual styles for relationship types:
-    - Parent-child: Solid lines with arrows (mother=pink, father=blue) - 75px distance, 1.2x strength
-    - Spouse: Purple dashed lines - 60px distance, 1.5x strength
-    - Sibling: Gray dotted lines (computed dynamically) - 100px distance, 1.0x strength
-  - Reset view and reheat simulation controls
-  - Performance warning for datasets >500 people
-  - Responsive to window resize
-  - Empty state guidance for adding people/relationships
 
 ### Key UI Patterns
 - Clicking a tree node calls `modal.open(personId, 'edit')` to open **PersonModal**
@@ -371,12 +333,7 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
 
 ### Routing
 Hash-based routing in `App.svelte`:
-- `#/` or `#/pedigree`: Default pedigree view (compact ancestor chart with focus person)
-- `#/tree`: TreeView (family-chart library ancestor visualization) - Story #140
-- `#/list`: Redirects to pedigree view (ListView removed)
-- `#/timeline`: Redirects to pedigree view (TimelineView removed)
-- `#/radial`: Redirects to pedigree view (RadialView removed)
-- `#/network`: Force-directed network graph (Story #99)
+- `#/` or `#/tree`: Default TreeView (family-chart library ancestor visualization) - Story #140
 - `#/duplicates`: Duplicate detection view
 - `#/gedcom/import`: GEDCOM import workflow
 - `#/admin`: Admin view for data inspection
