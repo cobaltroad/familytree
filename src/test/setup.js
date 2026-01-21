@@ -8,7 +8,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 // Load environment variables from .env file for testing
-loadEnv();
+loadEnv({ quiet: true });
 
 // Ensure database schema is up-to-date before running tests
 // This fixes issue #122 where tests fail due to missing birth_surname/nickname columns
