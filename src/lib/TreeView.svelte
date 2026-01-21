@@ -203,6 +203,8 @@
       return `
         <div class="custom-person-card"
             data-person-id="${person.originalId}"
+            data-border="${borderStyle}"
+            data-background-color="${bgColor}"
             style="
               position: relative;
               width: 120px;
@@ -227,14 +229,11 @@
                 word-break: break-word;">
             ${person.firstName ?? ''}<br>${person.lastName ?? ''}
           </div>
-          <div style="font-size: 10px; color: #555; text-align: center;">
+          <div class="card-lifespan" style="font-size: 10px; color: #555; text-align: center;">
             ${formattedLifespan}
           </div>
 
-          <!-- Pencil icon in top-right corner -->
-          <button
-            class="card-edit-button"
-            data-person-id="${person.originalId}"
+          <button class="card-edit-button" data-person-id="${person.originalId}"
             style="
               position: absolute;
               top: 2px;
@@ -248,10 +247,8 @@
               cursor: pointer;
               display: ${displayPencil};
               align-items: center;
-              justify-content: center;
-            "
-            title="Edit person"
-          >
+              justify-content: center;"
+            title="Edit person">
             ✏️
           </button>
         </div>
@@ -283,12 +280,26 @@
   }
 
   /**
+   * Format year
+   */
+  function formatYear(dateString, falseString) {
+    // no need to adjust for UTC, just checking for a valid date string
+    const validString = dateString && !isNaN(new Date(dateString).getTime())
+    if (!validString) return falseString
+
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+
+    return `${date.getFullYear()}`
+  }
+
+  /**
    * Format lifespan string
    */
   function formatLifespan(birthDate, deathDate) {
-  const birth = birthDate && !isNaN(new Date(birthDate).getTime()) ? new Date(birthDate).getFullYear() : '?'
-  const death = deathDate && !isNaN(new Date(deathDate).getTime()) ? new Date(deathDate).getFullYear() : 'present'
-    return `${birth}–${death}`
+    const birthYear = formatYear(birthDate, '?')
+    const deathYear = formatYear(deathDate, 'present')
+    return `${birthYear}–${deathYear}`
   }
 
   /**
@@ -308,18 +319,19 @@
     }
   }
 
-  // Initialize chart on mount
+  // Don't do anything yet
   onMount(() => {
-    /* don't run initializeChart until the stores are ready
-    initializeChart()
-    */
+    // console.log("On Mount: doing nothing yet...")
   })
 
   // Update chart when data changes
   afterUpdate(() => {
     if (chartInstance && transformedData.length > 0) {
+      // console.log("After Update: calling updateChart")
       updateChart()
+    /* don't run initializeChart until the stores are ready */
     } else if (!chartInstance && chartContainer && transformedData.length > 0) {
+      // console.log("After Update: calling initializeChart")
       initializeChart()
     }
   })
@@ -357,6 +369,9 @@
     overflow: hidden;
     position: relative;
     background: #3a3a3a;
+  }
+
+  .card-edit-button {
   }
 
   :global(.chart-wrapper svg) {

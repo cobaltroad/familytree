@@ -16,7 +16,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup } from '@testing-library/svelte'
 import PedigreeView from './PedigreeView.svelte'
-import RadialView from './RadialView.svelte'
 import { resetStores, createTestFixture } from '../test/storeTestUtils.js'
 import { people, relationships } from '../stores/familyStore.js'
 
@@ -160,61 +159,6 @@ describe('D3 Views - Performance Tests with Large Datasets', () => {
 
       // THEN update should be efficient
       console.log(`PedigreeView add ancestor time: ${updateTime.toFixed(2)}ms`)
-      expect(updateTime).toBeLessThan(600)
-    })
-  })
-
-  describe('Scenario 2: RadialView Performance with 200+ People', () => {
-    it('should handle initial render of radial tree with large dataset', async () => {
-      // GIVEN a large family tree
-      const largeTree = generateLargeFamilyTree(5, 4)
-      createTestFixture({
-        people: largeTree.people,
-        relationships: largeTree.relationships
-      })
-
-      // WHEN rendering RadialView
-      const startTime = performance.now()
-      const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 100))
-      const endTime = performance.now()
-
-      const renderTime = endTime - startTime
-
-      // THEN render should complete
-      console.log(`RadialView initial render time (${largeTree.people.length} people total): ${renderTime.toFixed(2)}ms`)
-      expect(container.querySelector('svg')).toBeTruthy()
-    })
-
-    it('should update efficiently when adding ancestor in radial layout', async () => {
-      // GIVEN a large tree
-      const largeTree = generateLargeFamilyTree(5, 4)
-      createTestFixture({
-        people: largeTree.people,
-        relationships: largeTree.relationships
-      })
-
-      const { container } = render(RadialView)
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // WHEN adding an ancestor
-      const newAncestor = {
-        id: largeTree.people.length + 1,
-        firstName: 'NewAncestor',
-        lastName: 'Added',
-        birthDate: '1875-01-01',
-        gender: 'male'
-      }
-
-      const startTime = performance.now()
-      people.set([...largeTree.people, newAncestor])
-      await new Promise(resolve => setTimeout(resolve, 400))
-      const endTime = performance.now()
-
-      const updateTime = endTime - startTime
-
-      // THEN update should be efficient
-      console.log(`RadialView add ancestor time: ${updateTime.toFixed(2)}ms`)
       expect(updateTime).toBeLessThan(600)
     })
   })
