@@ -114,12 +114,14 @@ describe('ViewSwitcher - Add Person Link', () => {
 
   describe('ViewSwitcher Layout', () => {
     it('should display all view tabs and Add Person link', () => {
-      render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       // Check for all view tabs
-      expect(screen.getByText('Pedigree')).toBeTruthy()
       expect(screen.getByText('Tree')).toBeTruthy()
-      expect(screen.getByText('Network')).toBeTruthy()
+      expect(screen.getByText('Duplicates')).toBeTruthy()
+      expect(screen.getByText('Import')).toBeTruthy()
+      expect(screen.getByText('Admin')).toBeTruthy()
+
 
       // Check for Add Person link
       expect(screen.getByText(/add person/i)).toBeTruthy()
@@ -157,9 +159,9 @@ describe('ViewSwitcher - Add Person Link', () => {
 
   describe('Styling Consistency', () => {
     it('should style Add Person link consistently with view tabs', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
-      const viewTab = screen.getByText('Pedigree').closest('a')
+      const viewTab = screen.getByText('Tree').closest('a')
       const addPersonElement = screen.getByText(/add person/i).closest('a') || screen.getByText(/add person/i).closest('button')
 
       // Both should be within the same navigation

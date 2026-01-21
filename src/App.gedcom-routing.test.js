@@ -83,12 +83,12 @@ describe('App.svelte - GEDCOM Route Integration (TDD)', () => {
     })
 
     it('should NOT render GedcomUpload for other routes', () => {
-      window.location.hash = '#/pedigree'
+      window.location.hash = '#/tree'
 
       const { container } = render(App)
 
       // Should render pedigree view instead
-      expect(container.querySelector('.pedigree-container')).toBeTruthy()
+      expect(container.querySelector('.tree-container')).toBeTruthy()
     })
   })
 

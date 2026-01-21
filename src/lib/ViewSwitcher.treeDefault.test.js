@@ -52,14 +52,12 @@ describe('ViewSwitcher - Tree as Default Tab (TDD)', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBe(6) // Pedigree, Tree, Network, Duplicates, Import, Admin (Timeline and Radial removed)
+      expect(viewTabs.length).toBe(4) // Tree, Duplicates, Import, Admin
 
       expect(viewTabs[0].textContent).toContain('Tree')
-      expect(viewTabs[1].textContent).toContain('Pedigree')
-      expect(viewTabs[2].textContent).toContain('Network')
-      expect(viewTabs[3].textContent).toContain('Duplicates')
-      expect(viewTabs[4].textContent).toContain('Import')
-      expect(viewTabs[5].textContent).toContain('Admin')
+      expect(viewTabs[1].textContent).toContain('Duplicates')
+      expect(viewTabs[2].textContent).toContain('Import')
+      expect(viewTabs[3].textContent).toContain('Admin')
     })
 
     it('should have correct hrefs for first four tabs', () => {
@@ -68,16 +66,16 @@ describe('ViewSwitcher - Tree as Default Tab (TDD)', () => {
       const viewTabs = container.querySelectorAll('a.view-tab')
 
       expect(viewTabs[0].getAttribute('href')).toBe('#/tree')
-      expect(viewTabs[1].getAttribute('href')).toBe('#/pedigree')
-      expect(viewTabs[2].getAttribute('href')).toBe('#/network')
-      expect(viewTabs[3].getAttribute('href')).toBe('#/duplicates')
+      expect(viewTabs[1].getAttribute('href')).toBe('#/duplicates')
+      expect(viewTabs[2].getAttribute('href')).toBe('#/gedcom/import')
+      expect(viewTabs[3].getAttribute('href')).toBe('#/admin')
     })
 
     it('should have 6 view tabs + 1 add person button = 7 total nav items', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const navItems = container.querySelectorAll('nav > *')
-      expect(navItems.length).toBe(7) // 6 tabs + 1 add person button
+      expect(navItems.length).toBe(5) // 4 tabs + 1 add person button
     })
 
   })
@@ -98,29 +96,29 @@ describe('ViewSwitcher - Tree as Default Tab (TDD)', () => {
       expect(treeTab.classList.contains('active')).toBe(true)
     })
 
-    it('should NOT mark Pedigree as active when on /tree path', () => {
+    it('should NOT mark Duplicates as active when on /tree path', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
-      // Pedigree should NOT be active when on /tree
-      const pedigreeTab = screen.getByText('Pedigree').closest('a')
-      expect(pedigreeTab.classList.contains('active')).toBe(false)
+      // Duplicates should NOT be active when on /tree
+      const duplicatesTab = screen.getByText('Duplicates').closest('a')
+      expect(duplicatesTab.classList.contains('active')).toBe(false)
     })
 
-    it('should mark Pedigree tab as active for "/pedigree" path', () => {
-      const { container } = render(ViewSwitcher, { props: { currentPath: '/pedigree' } })
+    it('should mark Duplicates tab as active for "/duplicates" path', () => {
+      const { container } = render(ViewSwitcher, { props: { currentPath: '/duplicates' } })
 
-      const pedigreeTab = screen.getByText('Pedigree').closest('a')
-      expect(pedigreeTab.classList.contains('active')).toBe(true)
+      const duplicatesTab = screen.getByText('Duplicates').closest('a')
+      expect(duplicatesTab.classList.contains('active')).toBe(true)
     })
 
   })
 
   describe('Remaining Tabs Still Work', () => {
-    it('should display Network tab', () => {
+    it('should display Import tab', () => {
       render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
-      const networkTab = screen.getByText('Network')
-      expect(networkTab).toBeTruthy()
+      const importTab = screen.getByText('Import')
+      expect(importTab).toBeTruthy()
     })
 
     it('should display Duplicates tab', () => {
@@ -152,7 +150,7 @@ describe('ViewSwitcher - Tree as Default Tab (TDD)', () => {
       const { container } = render(ViewSwitcher, { props: { currentPath: '/tree' } })
 
       const viewTabs = container.querySelectorAll('a.view-tab')
-      expect(viewTabs.length).toBe(6) // Pedigree, Tree, Network, Duplicates, Import, Admin (Timeline and Radial removed)
+      expect(viewTabs.length).toBe(4) // Tree, Duplicates, Import, Admin
     })
 
   })

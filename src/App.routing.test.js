@@ -77,17 +77,6 @@ describe('App.svelte - Tree as Default View (TDD)', () => {
 
   })
 
-  describe('Pedigree Route Mapping', () => {
-    it('should render PedigreeView for #/pedigree', () => {
-      window.location.hash = '#/pedigree'
-
-      const { container } = render(App)
-
-      const pedigreeContainer = container.querySelector('.pedigree-container')
-      expect(pedigreeContainer).toBeTruthy()
-    })
-  })
-
   describe('Removed Views Redirect to Tree', () => {
     it('should redirect #/timeline to TreeView (TimelineView removed)', () => {
       window.location.hash = '#/timeline'
