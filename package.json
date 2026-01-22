@@ -15,7 +15,8 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.js",
-    "db:init-migrations": "node scripts/init-migrations.js"
+    "db:init-migrations": "node scripts/init-migrations.js",
+    "export-data": "node scripts/export-data.js"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
