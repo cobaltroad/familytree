@@ -42,11 +42,11 @@ Create your view component in `src/lib/` following the naming convention `<ViewN
 ```
 
 **View naming conventions:**
-- ✅ `TimelineView.svelte`
-- ✅ `PedigreeView.svelte`
-- ✅ `NetworkView.svelte`
+- ✅ `TreeView.svelte`
+- ✅ `AdminView.svelte`
+- ✅ `ImportView.svelte`
 - ✅ `MyNewView.svelte`
-- ❌ `Timeline.svelte` (missing "View" suffix)
+- ❌ `Tree.svelte` (missing "View" suffix)
 - ❌ `mynewview.svelte` (not PascalCase)
 
 ##### 2. Import the View in App.svelte
@@ -59,11 +59,11 @@ import MyNewView from './lib/MyNewView.svelte'
 
 **Current imports example:**
 ```javascript
-import TimelineView from './lib/TimelineView.svelte'
-import PedigreeView from './lib/PedigreeView.svelte'
-import RadialView from './lib/RadialView.svelte'
-import NetworkView from './lib/NetworkView.svelte'
-import MyNewView from './lib/MyNewView.svelte'  // ← Add your new view
+import TreeView from '$lib/TreeView.svelte'
+import DuplicateDetection from '$lib/DuplicateDetection.svelte'
+import ImportView from '$lib/ImportView.svelte'
+import AdminView from '$lib/AdminView.svelte'
+import MyNewView from '$lib/MyNewView.svelte'  // ← Add your new view
 ```
 
 ##### 3. Add Route Handling in App.svelte
@@ -71,18 +71,18 @@ import MyNewView from './lib/MyNewView.svelte'  // ← Add your new view
 Update the route handling logic in `src/App.svelte` to include your new view:
 
 ```svelte
-{#if normalizedPath === '/timeline'}
-  <TimelineView />
-{:else if normalizedPath === '/pedigree'}
-  <PedigreeView />
-{:else if normalizedPath === '/radial'}
-  <RadialView />
-{:else if normalizedPath === '/network'}
-  <NetworkView />
+{#if normalizedPath === '/tree'}
+  <TreeView />
+{:else if normalizedPath === '/duplicates'}
+  <DuplicateDetection />
+{:else if normalizedPath === '/import'}
+  <ImportView />
+{:else if normalizedPath === '/admin'}
+  <AdminView />
 {:else if normalizedPath === '/mynew'}
   <MyNewView />  <!-- ← Add your route condition -->
 {:else}
-  <PedigreeView />
+  <TreeView />  <!-- Default view -->
 {/if}
 ```
 
@@ -97,13 +97,25 @@ Update the route handling logic in `src/App.svelte` to include your new view:
 If your view should appear in the main navigation, update `src/lib/ViewSwitcher.svelte`:
 
 ```svelte
-<nav>
-  <a href="#/pedigree">Pedigree</a>
-  <a href="#/timeline">Timeline</a>
-  <a href="#/radial">Radial</a>
-  <a href="#/network">Network</a>
-  <a href="#/mynew">My New View</a>  <!-- ← Add navigation link -->
+<nav class="view-switcher">
+  {#each views as view}
+    <a href="#{view.path}" class="view-tab">
+      <span class="icon">{view.icon}</span>
+      <span class="label">{view.label}</span>
+    </a>
+  {/each}
 </nav>
+```
+
+Update the `views` array:
+```javascript
+const views = [
+  { path: '/tree', label: 'Tree', icon: '🌳' },
+  { path: '/duplicates', label: 'Duplicates', icon: '🔍' },
+  { path: '/gedcom/import', label: 'Import', icon: '📁' },
+  { path: '/admin', label: 'Admin', icon: '🔧' },
+  { path: '/mynew', label: 'My New View', icon: '🆕' }  // ← Add your view
+]
 ```
 
 **Navigation guidelines:**
@@ -454,16 +466,16 @@ src/lib/
 │   ├── Button.svelte
 │   ├── Modal.svelte
 │   └── Card.svelte
-├── TimelineView.svelte   # View components
-├── PedigreeView.svelte
+├── TreeView.svelte       # View components
+├── AdminView.svelte
+├── ImportView.svelte
 └── utils/                # Utility functions
-    ├── treeHelpers.js
-    └── d3Helpers.js
+    └── treeHelpers.js
 ```
 
 ### Component Naming Conventions
 
-- **View components**: `<Name>View.svelte` (e.g., `TimelineView.svelte`)
+- **View components**: `<Name>View.svelte` (e.g., `TreeView.svelte`, `AdminView.svelte`)
 - **UI components**: `<Name>.svelte` (e.g., `Button.svelte`, `PersonCard.svelte`)
 - **Utility modules**: `<name>Helpers.js` or `<name>Utils.js`
 

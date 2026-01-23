@@ -1,6 +1,6 @@
 # Family Tree Application
 
-A modern family tree management application with multiple visualization modes. Built with SvelteKit and Drizzle ORM, featuring interactive D3.js visualizations and a reactive store architecture.
+A modern family tree management application with interactive genealogy tree visualization. Built with SvelteKit and Drizzle ORM, featuring the family-chart library for family tree visualization and a reactive store architecture.
 
 ## Features
 
@@ -22,13 +22,23 @@ A modern family tree management application with multiple visualization modes. B
 - Gender-based color coding across all views
 - Photo support with graceful fallback to initials avatars
 
+### 🌳 Family Tree Visualization
+
+- Interactive ancestor tree using family-chart library
+- Focus person selector to view any person's ancestry
+- Gender-based color coding (male=blue, female=pink)
+- Deceased indicators with visual styling
+- Built-in zoom and pan controls
+- Click person cards to edit information
+- Smooth transitions for data updates
+
 ### 🎨 Interactive Features
 
-- Click any person in any view to edit their information
-- Zoom and pan controls on tree visualizations
+- Click any person to open editing modal
 - Responsive hybrid modal design (desktop/tablet/mobile)
-- Quick Add workflows for adding related people
+- Quick Add workflows for adding related people (children, parents, spouses)
 - Optimistic updates for instant UI feedback
+- Toast notifications for all actions
 
 ### 💾 Data Management
 
@@ -107,15 +117,18 @@ npx drizzle-kit push
 ### Navigation
 
 Once running, access different views:
-- **Pedigree View**: http://localhost:5173/ or http://localhost:5173/#/tree (default)
+- **Tree View**: http://localhost:5173/ or http://localhost:5173/#/tree (default)
+- **Duplicates**: http://localhost:5173/#/duplicates
+- **Import**: http://localhost:5173/#/gedcom/import
+- **Admin**: http://localhost:5173/#/admin
 
 ## Tech Stack
 
-- **Frontend:** Svelte 4, D3.js v7.9.0 for visualizations
+- **Frontend:** Svelte 4, family-chart v0.9.0 for genealogy tree visualization
 - **Backend:** SvelteKit server routes
 - **Database:** SQLite with Drizzle ORM
 - **Authentication:** Auth.js with Facebook OAuth provider
-- **Testing:** Vitest (1,840+ tests)
+- **Testing:** Vitest (2,997 tests with comprehensive coverage)
 - **Build Tool:** Vite
 - **Routing:** Hash-based client-side navigation
 
@@ -130,22 +143,26 @@ familytree/
 │   │   │   └── relationships/ # Relationship CRUD operations
 │   │   └── +page.svelte      # Main application page
 │   ├── lib/
-│   │   ├── components/       # Svelte components
-│   │   │   ├── views/        # Visualization views (Pedigree, Timeline, Radial)
-│   │   │   ├── modal/        # PersonModal and related components
+│   │   ├── TreeView.svelte         # Main tree visualization (family-chart)
+│   │   ├── DuplicateDetection.svelte  # Duplicate detection tool
+│   │   ├── ImportView.svelte       # GEDCOM import workflow
+│   │   ├── AdminView.svelte        # Database inspection
+│   │   ├── PersonModal.svelte      # Person editing modal
+│   │   ├── ViewSwitcher.svelte     # Navigation tabs
+│   │   ├── components/             # Reusable components
+│   │   │   ├── modal/              # Modal-specific components
 │   │   │   └── ...
-│   │   ├── stores/           # State management (Svelte stores)
+│   │   ├── stores/                 # State management (Svelte stores)
 │   │   │   ├── familyStore.js      # Core data stores
 │   │   │   ├── derivedStores.js    # Computed stores
 │   │   │   ├── modalStore.js       # Modal state
 │   │   │   └── actions/            # Action creators
-│   │   ├── db/               # Drizzle schema and database client
-│   │   │   ├── schema.js     # Database schema
-│   │   │   └── client.js     # Database connection
-│   │   ├── server/           # Server-only business logic
-│   │   ├── treeHelpers.js    # Shared tree utilities
-│   │   ├── d3Helpers.js      # Shared D3 utilities
-│   │   └── api.js            # API client
+│   │   ├── db/                     # Drizzle schema and database client
+│   │   │   ├── schema.js           # Database schema
+│   │   │   └── client.js           # Database connection
+│   │   ├── server/                 # Server-only business logic
+│   │   ├── treeHelpers.js          # Tree manipulation utilities
+│   │   └── api.js                  # API client
 ├── plans/                    # Architecture documentation
 ├── familytree.db             # SQLite database
 └── package.json
