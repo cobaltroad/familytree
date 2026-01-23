@@ -1,0 +1,14 @@
+# Static Data Directory
+
+This directory contains static JSON files for viewer mode deployment.
+
+Files:
+- `people.json` - Person records exported from the database
+- `relationships.json` - Relationship records exported from the database
+
+To generate these files, run:
+```bash
+npm run export-data
+```
+
+This directory is used when the application is built with `VITE_VIEWER_MODE=true`.

@@ -1,6 +1,50 @@
 const API_BASE = '/api'
 
 /**
+ * Checks if the application is running in viewer mode (static site)
+ * Story #148: Static Data Loader
+ *
+ * @returns {boolean} True if viewer mode is enabled
+ */
+function isViewerMode() {
+  return import.meta.env.VITE_VIEWER_MODE === 'true'
+}
+
+/**
+ * Loads data from static JSON file
+ * Story #148: Static Data Loader
+ *
+ * @param {string} filename - Name of JSON file (e.g., 'people.json')
+ * @returns {Promise<Array>} Parsed JSON data
+ * @throws {Error} If file not found, invalid JSON, or network error
+ */
+async function loadStaticData(filename) {
+  try {
+    const response = await fetch(`/data/${filename}`)
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Failed to load static data: ${filename} not found`)
+      }
+      throw new Error(`Failed to load static data: ${filename}`)
+    }
+
+    try {
+      return await response.json()
+    } catch (jsonError) {
+      throw new Error(`Invalid JSON format in ${filename}`)
+    }
+  } catch (error) {
+    // Re-throw our custom errors
+    if (error.message.includes('Failed to load') || error.message.includes('Invalid JSON')) {
+      throw error
+    }
+    // Wrap network errors with context
+    throw new Error(`Failed to fetch ${filename}: ${error.message}`)
+  }
+}
+
+/**
  * Creates an error object with HTTP status code attached
  * This allows the UI to handle different error types appropriately
  *
@@ -27,6 +71,11 @@ async function createApiError(response, defaultMessage) {
 
 export const api = {
   async getAllPeople() {
+    // Story #148: Load from static JSON in viewer mode
+    if (isViewerMode()) {
+      return loadStaticData('people.json')
+    }
+
     const response = await fetch(`${API_BASE}/people`)
     if (!response.ok) throw await createApiError(response, 'Failed to fetch people')
     return response.json()
@@ -39,6 +88,11 @@ export const api = {
   },
 
   async createPerson(person) {
+    // Story #148: Block write operations in viewer mode
+    if (isViewerMode()) {
+      throw new Error('Cannot create person in viewer mode (read-only)')
+    }
+
     const response = await fetch(`${API_BASE}/people`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -49,6 +103,11 @@ export const api = {
   },
 
   async updatePerson(id, person) {
+    // Story #148: Block write operations in viewer mode
+    if (isViewerMode()) {
+      throw new Error('Cannot update person in viewer mode (read-only)')
+    }
+
     const response = await fetch(`${API_BASE}/people/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -59,6 +118,11 @@ export const api = {
   },
 
   async deletePerson(id) {
+    // Story #148: Block write operations in viewer mode
+    if (isViewerMode()) {
+      throw new Error('Cannot delete person in viewer mode (read-only)')
+    }
+
     const response = await fetch(`${API_BASE}/people/${id}`, {
       method: 'DELETE'
     })
@@ -66,12 +130,22 @@ export const api = {
   },
 
   async getAllRelationships() {
+    // Story #148: Load from static JSON in viewer mode
+    if (isViewerMode()) {
+      return loadStaticData('relationships.json')
+    }
+
     const response = await fetch(`${API_BASE}/relationships`)
     if (!response.ok) throw await createApiError(response, 'Failed to fetch relationships')
     return response.json()
   },
 
   async createRelationship(relationship) {
+    // Story #148: Block write operations in viewer mode
+    if (isViewerMode()) {
+      throw new Error('Cannot create relationship in viewer mode (read-only)')
+    }
+
     const response = await fetch(`${API_BASE}/relationships`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -82,6 +156,11 @@ export const api = {
   },
 
   async deleteRelationship(id) {
+    // Story #148: Block write operations in viewer mode
+    if (isViewerMode()) {
+      throw new Error('Cannot delete relationship in viewer mode (read-only)')
+    }
+
     const response = await fetch(`${API_BASE}/relationships/${id}`, {
       method: 'DELETE'
     })
