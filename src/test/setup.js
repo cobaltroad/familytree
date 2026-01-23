@@ -1,7 +1,6 @@
 import { vi } from 'vitest';
 import { expect } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
-import { testConfig } from '../lib/d3Helpers.js';
 import { config as loadEnv } from 'dotenv';
 import Database from 'better-sqlite3';
 import { join, dirname } from 'path';
@@ -61,10 +60,6 @@ try {
 
 // Extend Vitest's expect with @testing-library/jest-dom matchers
 expect.extend(matchers);
-
-// Enable D3 test mode globally to disable transitions in JSDOM
-// This prevents "Cannot read properties of undefined (reading 'baseVal')" errors
-testConfig.enabled = true;
 
 // Mock SvelteKit modules for testing
 vi.mock('$app/environment', () => ({

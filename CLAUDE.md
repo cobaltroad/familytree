@@ -53,7 +53,6 @@ npm run test:ui       # Open Vitest UI for interactive testing
 **Test Suite Status**: Comprehensive test coverage with 2,997 total tests (2,820 passing as of v2.2.1). The test suite includes:
 - Server route integration tests with Drizzle ORM
 - Component tests with @testing-library/svelte
-- D3.js visualization optimization tests
 - Routing and navigation tests
 - Performance benchmarks
 - End-to-end acceptance tests
@@ -129,8 +128,8 @@ The relationship system has evolved and uses a normalized storage approach:
 - **Svelte 4** with Vite build system
 - **Hash-based routing**: Multiple visualization views with shared navigation
 - **State management**: Reactive Svelte stores for all application state (people, relationships, modal, notifications)
-- **D3.js v7.9.0** for all tree visualizations with optimized enter/update/exit pattern and zoom/pan preservation
-- **Shared utilities**: `treeHelpers.js` and `d3Helpers.js` provide reusable functions across all views
+- **family-chart v0.9.0** library for tree visualizations (replaced custom D3.js implementation in v2.3.0)
+- **Shared utilities**: `treeHelpers.js` provides reusable tree manipulation functions
 
 ### State Management with Svelte Stores
 
@@ -205,10 +204,8 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
   - Click person card to open PersonModal via `modal.open()`
   - 300ms smooth transitions for data updates
   - Dynamic updates preserve zoom/pan state
-  - Reuses data transformation from FamilyChartPOC (Story #133)
   - Performance optimized (<500ms for 100 people)
   - Empty state with helpful guidance
-  - Alternative to PedigreeView for users who prefer family-chart's rendering style
 
 ### Key UI Patterns
 - Clicking a tree node calls `modal.open(personId, 'edit')` to open **PersonModal**
@@ -232,46 +229,13 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
 
 ### Shared Utilities
 
-- **`frontend/src/lib/treeHelpers.js`**: Common tree manipulation functions
+- **`src/lib/treeHelpers.js`**: Common tree manipulation functions
+  - `isParentChildRelationship(rel)`: Check if relationship is parent-child type
   - `getNodeColor(person)`: Gender-based colors (male=#AED6F1, female=#F8BBD0, other=#E0E0E0)
   - `findRootPeople(people, relationships)`: Find people without parents
-  - `buildDescendantTree(person, ...)`: Build tree downward (for future views if needed)
-  - `buildAncestorTree(person, ...)`: Build tree upward (for PedigreeView)
-  - `findParents(personId, ...)`: Get mother and father
-  - `findChildren(personId, ...)`: Get children
-  - `assignGenerations(people, ...)`: Compute generation numbers
-  - `formatLifespan(birthDate, deathDate)`: Format as "YYYY–YYYY" or "YYYY–present"
-  - `computeSiblingLinks(people, relationships)`: Generate bidirectional sibling links from shared parents (Story #99)
+  - `buildDescendantTree(person, ...)`: Build tree structure with person, spouse, and children
 
-- **`frontend/src/lib/d3Helpers.js`**: Reusable D3.js utilities
-  - `createZoomBehavior(svg, g, scaleExtent)`: Standard zoom/pan behavior
-  - `renderPersonNode(...)`: Consistent node rendering across views
-  - `updateTreeNodes(...)`: Enter/update/exit pattern for tree nodes
-  - `updateTreeLinks(...)`: Enter/update/exit pattern for tree links
-  - `updatePedigreeNodes(...)`: Optimized updates for pedigree view
-  - **Force Network Functions (Story #99, #100, #101)**:
-    - `createForceSimulation(nodes, links, options)`: Configure D3 force simulation with dynamic link parameters (Story #100, #101)
-      - Charge, link, center, and collision forces
-      - Dynamic link distance based on relationship type:
-        - Spouse: 60px (Story #100)
-        - Parent-child (mother/father): 75px (Story #101)
-        - Sibling: 100px (default)
-      - Dynamic link strength based on relationship type:
-        - Spouse: 1.5x (Story #100)
-        - Parent-child (mother/father): 1.2x (Story #101)
-        - Sibling: 1.0x (default)
-      - Handles undefined/null links gracefully
-    - `createSpouseForce(spousePairs, targetDistance)`: Custom force that pulls spouse pairs together (Story #100)
-      - Positions spouses 60-80px apart (configurable)
-      - Respects pinned nodes (fx/fy attributes)
-      - Handles multiple spouses per person
-      - Scales force strength based on alpha parameter for smooth settling
-      - Gracefully handles edge cases (missing nodes, distance=0, invalid pairs)
-    - `updateNetworkNodes(g, nodes, getColor, onClick)`: Render network nodes with enter/update/exit pattern
-    - `updateNetworkLinks(g, links)`: Render relationship links with type-specific styling
-    - `applyNodeDrag(simulation)`: Drag behavior for pinning/unpinning nodes
-    - `createNetworkTooltip()`: Tooltip with show/hide/move methods
-    - `highlightConnectedNodes(g, node, links, highlight)`: Highlight connected nodes and links on hover
+Note: After v2.3.0 (PR #144), custom D3.js visualization code was removed in favor of the family-chart library for TreeView. The `d3Helpers.js` file was deleted along with deprecated helper functions from `treeHelpers.js`.
 
 ### Data Flow
 
@@ -309,8 +273,9 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
    - `familyTree`: Pre-computed tree structure
    - `createPersonRelationships()`: Reactive relationship data
 
-5. **Tree Building**: Tree views use shared helpers with derived store data
-   - PedigreeView/RadialView: Uses `buildAncestorTree()` with `$rootPeople`
+5. **Tree Building**: TreeView uses family-chart library with data transformation
+   - Converts Person/Relationship data to family-chart Datum format
+   - Uses `buildDescendantTree()` from treeHelpers for familyTree store
 
 6. **Modal Interactions**: Components call modal store methods directly
    ```javascript
@@ -326,10 +291,10 @@ All views access stores directly (no prop drilling) and support clicking nodes/b
    notifications.error('Failed to update person')
    ```
 
-8. **D3 Updates**: Views use enter/update/exit pattern for incremental rendering
-   - Only changed nodes update (not entire tree)
-   - Zoom/pan state preserved
+8. **Visualization Updates**: TreeView uses family-chart library for rendering
    - Smooth 300ms transitions
+   - Zoom/pan state preserved
+   - Dynamic updates via family-chart's updateTree() method
 
 ### Routing
 Hash-based routing in `App.svelte`:
@@ -425,19 +390,18 @@ For detailed information about the reactive architecture migration:
 - **`frontend/src/stores/actions/README.md`**: Optimistic update pattern documentation
 - **`plans/PHASE_1_1_IMPLEMENTATION_SUMMARY.md`**: Phase 1.1 implementation details
 
-The application has evolved through a 6-phase reactive architecture migration (Issues #26-34):
-- **Phase 1**: Core Svelte stores foundation
-- **Phase 2**: Derived stores and O(1) performance optimizations
-- **Phase 3**: Optimistic updates and toast notifications
-- **Phase 4**: Modal state refactoring (eliminated modalKey workaround)
-- **Phase 5**: Removed prop drilling (App.svelte simplified from 253 to 81 LOC)
-- **Phase 6**: D3.js optimization with enter/update/exit pattern
+The application has evolved through major architecture improvements:
+- **Phase 1-2 (Issues #26-27)**: Core Svelte stores and derived stores with O(1) lookups
+- **Phase 3 (Issue #28)**: Optimistic updates and toast notifications
+- **Phase 4 (Issue #29)**: Modal state refactoring (eliminated modalKey workaround)
+- **Phase 5 (Issue #30)**: Removed prop drilling (App.svelte simplified from 253 to 81 LOC)
+- **v2.3.0 (PR #144)**: Migrated from custom D3.js to family-chart library, removed PedigreeView and NetworkView
 
 **Performance Improvements:**
 - Person lookups: O(n) → O(1) via derived stores
 - CRUD operations: 300ms perceived latency → <50ms with optimistic updates
-- Tree re-renders: Full destroy/rebuild → Incremental updates (83-97% faster)
 - App.svelte: 253 LOC → 81 LOC (68% reduction)
+- Bundle size: Reduced via D3 dependency removal (family-chart has its own D3 dependency)
 
 ### Known Issues
 See GitHub issues for resolved and current bugs
