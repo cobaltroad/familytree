@@ -1,12 +1,12 @@
 /**
  * Page Configuration
  *
- * This page requires authentication. SSR is disabled to ensure
- * client-side rendering with session data from the layout.
+ * Static site configuration with client-side rendering and prerendering.
+ * This enables the page to be generated as a static HTML file during build.
  */
 
-// Disable server-side rendering (client-side only with session data from layout)
+// Disable server-side rendering (client-side only)
 export const ssr = false
 
-// Cannot prerender authenticated pages
-export const prerender = false
+// Enable prerendering for static site generation
+export const prerender = true

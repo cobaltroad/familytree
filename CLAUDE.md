@@ -18,9 +18,20 @@ These guidelines ensure consistency and prevent common issues like route mismatc
 ```bash
 npm install           # Install dependencies (first time only)
 npm run dev          # Start dev server on http://localhost:5173
-npm run build        # Build for production
-npm run preview      # Preview production build
+npm run build        # Build static site for production
+npm run preview      # Preview production build locally
+npm run export-data  # Export database to static JSON files
 ```
+
+**Static Site Generation (Story #147 - IMPLEMENTED)**:
+The application is configured to build as a static site using `@sveltejs/adapter-static`. The build process:
+1. Generates static HTML, CSS, and JavaScript files in the `build/` directory
+2. Includes all assets and libraries (family-chart, etc.)
+3. Copies static data files from `static/` directory
+4. Creates a fallback `index.html` for client-side routing
+5. Produces a fully self-contained site ready for static hosting (GitHub Pages, Netlify, Vercel, etc.)
+
+**Note**: The static build does NOT include server-side API routes or authentication. For full functionality with database and authentication, use the development server (`npm run dev`).
 
 ### Drizzle ORM (Database Management)
 ```bash
