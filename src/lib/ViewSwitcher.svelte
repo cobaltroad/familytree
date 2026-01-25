@@ -1,14 +1,21 @@
 <script>
   import { modal } from '../stores/modalStore.js'
+  import { isViewerMode } from '../stores/viewerModeStore.js'
 
   export let currentPath = '/'
 
-  const views = [
-    { path: '/tree', label: 'Tree', icon: '🌳' },
-    { path: '/duplicates', label: 'Duplicates', icon: '🔍' },
-    { path: '/gedcom/import', label: 'Import', icon: '📁' },
-    { path: '/admin', label: 'Admin', icon: '🔧' }
+  // Define all views (will be filtered based on viewer mode)
+  const allViews = [
+    { path: '/tree', label: 'Tree', icon: '🌳', viewerCompatible: true },
+    { path: '/duplicates', label: 'Duplicates', icon: '🔍', viewerCompatible: false },
+    { path: '/gedcom/import', label: 'Import', icon: '📁', viewerCompatible: false },
+    { path: '/admin', label: 'Admin', icon: '🔧', viewerCompatible: false }
   ]
+
+  // Filter views based on viewer mode
+  $: views = $isViewerMode
+    ? allViews.filter(view => view.viewerCompatible)
+    : allViews
 
   // Normalize current path for comparison
   // - Treat '/' as '/tree' (default view)
@@ -32,15 +39,17 @@
       <span class="label">{view.label}</span>
     </a>
   {/each}
-  <button
-    type="button"
-    class="add-person-link"
-    on:click={() => modal.openNew()}
-    aria-label="Add a new person to the family tree"
-  >
-    <span class="icon">+</span>
-    <span class="label">Add Person</span>
-  </button>
+  {#if !$isViewerMode}
+    <button
+      type="button"
+      class="add-person-link"
+      on:click={() => modal.openNew()}
+      aria-label="Add a new person to the family tree"
+    >
+      <span class="icon">+</span>
+      <span class="label">Add Person</span>
+    </button>
+  {/if}
 </nav>
 
 <style>
