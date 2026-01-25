@@ -24,10 +24,11 @@ The application is configured for automatic deployment to GitHub Pages via GitHu
 1. Checkout code
 2. Setup Node.js (v20)
 3. Install dependencies (`npm ci`)
-4. Export static data (`npm run export-data`)
-5. Build application (`npm run build` with `VITE_VIEWER_MODE=true` and `GITHUB_PAGES=true`)
-6. Upload build artifacts
-7. Deploy to GitHub Pages
+4. Build application (`npm run build` with `VITE_VIEWER_MODE=true` and `GITHUB_PAGES=true`)
+5. Upload build artifacts
+6. Deploy to GitHub Pages
+
+**Note**: The workflow does NOT export data from a database. Static data files (`static/data/people.json` and `static/data/relationships.json`) must be exported locally and committed to the repository before deployment. See "Data Updates" section below for the correct workflow.
 
 **Deployment Time**: Typically completes in under 5 minutes.
 
@@ -95,7 +96,7 @@ For manual deployment or troubleshooting, follow these steps:
    npm ci
    ```
 
-3. **Export Static Data**:
+3. **Export Static Data** (if needed):
    ```bash
    npm run export-data
    ```
@@ -103,6 +104,8 @@ For manual deployment or troubleshooting, follow these steps:
    This creates JSON files in `static/data/`:
    - `people.json` - All person records
    - `relationships.json` - All relationship records
+
+   **Note**: This step requires access to `familytree.db`. If the data files already exist in the repository, you can skip this step.
 
 4. **Build Application**:
    ```bash
@@ -127,30 +130,30 @@ For manual deployment or troubleshooting, follow these steps:
 
 To update the family tree data after deployment:
 
-### Option 1: GitHub Actions (Recommended)
+### Correct Workflow (Required)
 
-1. Update the database locally (`familytree.db`)
-2. Commit and push to `main` branch
-3. Workflow automatically exports data and rebuilds site
+The GitHub Actions workflow has NO access to the database. You MUST export data locally and commit the files:
 
-### Option 2: Manual Export
+1. **Update the database locally**: Modify `familytree.db` using the development server (`npm run dev`)
+2. **Export data locally**: Run `npm run export-data` to generate JSON files
+3. **Commit the exported files**:
+   ```bash
+   git add static/data/people.json static/data/relationships.json
+   git commit -m "chore: update family tree data"
+   ```
+4. **Push to main**:
+   ```bash
+   git push origin main
+   ```
+5. **Automatic deployment**: GitHub Actions builds and deploys using the committed JSON files
 
-1. Update database locally
-2. Run `npm run export-data`
-3. Commit `static/data/people.json` and `static/data/relationships.json`
-4. Push to `main` branch
-5. Workflow rebuilds site with new data
+**Why this workflow?**
+- GitHub Actions CI environment has no database file (`familytree.db`)
+- Attempting to run `npm run export-data` in CI will fail
+- Static data files must be version-controlled in the repository
+- The build process uses the committed JSON files from `static/data/`
 
-### Option 3: Direct Database Update
-
-If you need to update the database without full rebuild:
-
-1. Connect to production database (if applicable)
-2. Make changes via Admin interface
-3. Export data: `npm run export-data`
-4. Rebuild and redeploy
-
-**Note**: In viewer mode (production), editing is disabled. Data must be updated via database and re-exported.
+**Note**: In viewer mode (production), editing is disabled. All data updates must follow the workflow above.
 
 ## Rollback
 
@@ -208,10 +211,13 @@ To rollback to a previous deployment:
 
 **Solutions**:
 1. Check workflow logs in Actions tab for specific error
-2. Verify `package.json` scripts are correct (`build`, `export-data`)
-3. Ensure `static/data/` directory exists with valid JSON files
+2. Verify `static/data/people.json` and `static/data/relationships.json` exist and are committed
+3. Ensure JSON files contain valid data (not empty)
 4. Check Node.js version matches workflow (v20)
-5. Try running build locally: `npm ci && npm run export-data && npm run build`
+5. Try running build locally: `npm ci && npm run build`
+6. If data files are missing, export locally: `npm run export-data` and commit the files
+
+**Common Error**: "Cannot find module './static/data/people.json'" means data files are not committed to the repository. Run `npm run export-data` locally and commit the generated files.
 
 ### Site Doesn't Load
 
@@ -288,11 +294,13 @@ To rollback to a previous deployment:
 
 1. **Connect Repository**:
    - New site from Git > Select repository
-   - Build command: `npm run export-data && npm run build`
+   - Build command: `npm run build`
    - Publish directory: `build`
    - Environment variables:
      - `VITE_VIEWER_MODE=true`
      - (No GITHUB_PAGES needed - Netlify serves from root)
+
+   **Important**: Ensure `static/data/people.json` and `static/data/relationships.json` are committed to the repository. The build command does NOT export data (no database access in CI).
 
 2. **Deploy**:
    - Auto-deploys on push to `main`
@@ -307,9 +315,11 @@ To rollback to a previous deployment:
 1. **Import Repository**:
    - New Project > Import Git Repository
    - Framework Preset: SvelteKit
-   - Build Command: `npm run export-data && npm run build`
+   - Build Command: `npm run build`
    - Output Directory: `build`
    - Install Command: `npm ci`
+
+   **Important**: Ensure `static/data/people.json` and `static/data/relationships.json` are committed to the repository. The build command does NOT export data (no database access in CI).
 
 2. **Environment Variables**:
    - Settings > Environment Variables

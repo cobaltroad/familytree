@@ -35,8 +35,15 @@ describe('GitHub Pages Deployment Configuration', () => {
       expect(workflowContent).toContain('actions/checkout@v4')
       expect(workflowContent).toContain('actions/setup-node@v4')
       expect(workflowContent).toContain('npm ci')
-      expect(workflowContent).toContain('npm run export-data')
       expect(workflowContent).toContain('npm run build')
+    })
+
+    test('workflow does not export data in CI (no database access)', () => {
+      const workflowPath = join(projectRoot, '.github', 'workflows', 'deploy-static-site.yml')
+      const workflowContent = readFileSync(workflowPath, 'utf-8')
+
+      // CI environment has no database - data must be exported locally and committed
+      expect(workflowContent).not.toContain('npm run export-data')
     })
 
     test('workflow sets VITE_VIEWER_MODE environment variable', () => {
