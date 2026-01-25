@@ -39,7 +39,4 @@ function detectViewerMode() {
  * Readable store that exposes the viewer mode state
  * This store cannot be modified (read-only) since it's determined by environment
  */
-export const isViewerMode = readable(detectViewerMode(), () => {
-  // No cleanup needed for this store
-  return () => {}
-})
+export const isViewerMode = readable(detectViewerMode())
