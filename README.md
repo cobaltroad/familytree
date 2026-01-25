@@ -98,6 +98,29 @@ FACEBOOK_APP_SECRET=your_app_secret_here
 AUTH_SECRET=your_generated_secret_here
 ```
 
+### Static Site Deployment (Viewer Mode)
+
+Deploy as a read-only static site to GitHub Pages, Netlify, or Vercel:
+
+```bash
+# Export data from database to static JSON files
+npm run export-data
+
+# Build with viewer mode enabled (hides all edit controls)
+VITE_VIEWER_MODE=true npm run build
+
+# Preview the static build locally
+npm run preview
+```
+
+**Viewer Mode** disables all editing features for static deployments:
+- Hides Add Person button, Quick Add controls, delete buttons
+- Prevents modal from opening for editing
+- Filters navigation to only viewer-compatible tabs (Tree view only)
+- Preserves all viewing and navigation functionality
+
+See [VIEWER_MODE.md](VIEWER_MODE.md) for complete deployment instructions.
+
 ### Database Management
 
 ```bash

@@ -28,6 +28,7 @@
   import { people, relationships } from '../stores/familyStore.js'
   import { rootPeople } from '../stores/derivedStores.js'
   import { modal } from '../stores/modalStore.js'
+  import { isViewerMode } from '../stores/viewerModeStore.js'
 
   // Component state
   let chartContainer
@@ -195,7 +196,8 @@
       // Inline styles override everything
       const bgColor = person.gender === 'F' ? '#F8BBD0' : '#AED6F1';
       const borderStyle = isDeceased ? 'dashed 2px #666' : 'solid 2px #333';
-      const displayPencil = !d.data.to_add ? 'flex' : 'none';
+      // Hide pencil in viewer mode or for placeholder nodes
+      const displayPencil = !d.data.to_add && !$isViewerMode ? 'flex' : 'none';
 
       return `
         <div class="custom-person-card"
@@ -267,6 +269,9 @@
    * Handle pencil click
    */
   function handlePencilClick(event) {
+    // Don't open modal in viewer mode
+    if ($isViewerMode) return
+
     const editButton = event.target.closest('.card-edit-button')
     if (!editButton) return
 

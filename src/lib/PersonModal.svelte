@@ -25,6 +25,7 @@
   import { api } from './api.js'
   import { people, relationships } from '../stores/familyStore.js'
   import { openPanels } from '../stores/panelStore.js'
+  import { isViewerMode } from '../stores/viewerModeStore.js'
 
   const dispatch = createEventDispatcher()
 
@@ -340,7 +341,7 @@
 
 <svelte:window bind:innerWidth={windowWidth} on:keydown={handleKeydown} />
 
-{#if $modal.isOpen}
+{#if $modal.isOpen && !$isViewerMode}
   <div class="modal-backdrop" role="presentation" on:click={handleBackdropClick} on:keydown>
     <div class="modal-content hybrid-modal" class:mobile={isMobile} class:tablet={isTablet} class:desktop={isDesktop}>
       <button class="close-button" on:click={closeModal} aria-label="Close modal">
