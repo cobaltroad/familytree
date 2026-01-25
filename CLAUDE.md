@@ -33,6 +33,15 @@ The application is configured to build as a static site using `@sveltejs/adapter
 
 **Note**: The static build does NOT include server-side API routes or authentication. For full functionality with database and authentication, use the development server (`npm run dev`).
 
+**GitHub Pages Deployment (Story #150 - IMPLEMENTED)**:
+The application is deployed to GitHub Pages with automated CI/CD via GitHub Actions:
+- **Live Site**: https://cobaltroad.github.io/familytree/
+- **Workflow**: `.github/workflows/deploy-static-site.yml`
+- **Triggers**: Automatic on push to `main` branch, or manual via workflow dispatch
+- **Build Process**: Exports data, builds with viewer mode, deploys to GitHub Pages
+- **Base Path**: Configured for `/familytree` subpath via `GITHUB_PAGES=true` environment variable
+- **Documentation**: See `DEPLOYMENT.md` for deployment guide, troubleshooting, and rollback procedures
+
 ### Drizzle ORM (Database Management)
 ```bash
 npm run db:studio         # Open Drizzle Studio (database GUI)
