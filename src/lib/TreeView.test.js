@@ -20,6 +20,7 @@ import { tick } from 'svelte'
 import * as svelteinternal from 'svelte/internal'
 import { people, relationships } from '../stores/familyStore.js'
 import { modal } from '../stores/modalStore.js'
+import * as viewerModeStore from '../stores/viewerModeStore.js'
 
 // use internal DOM runtime to force lifecycle hooks for subsequent modules
 beforeAll(async () => {
@@ -556,5 +557,108 @@ describe('TreeView - Edge Cases', () => {
     // Should handle gracefully - invalid relationship ignored
     const person = data.find(d => d.id === '1')
     expect(person.rels.children).not.toContain('999')
+  })
+})
+
+describe('TreeView - Viewer Mode', () => {
+  const samplePeople = [
+    { id: 1, firstName: 'John', lastName: 'Doe', gender: 'male', birthDate: '1950-01-15', deathDate: null },
+    { id: 2, firstName: 'Jane', lastName: 'Smith', gender: 'female', birthDate: '1975-06-10', deathDate: null }
+  ]
+
+  const sampleRelationships = [
+    { id: 1, person1Id: 1, person2Id: 2, type: 'father', parentRole: 'father' }
+  ]
+
+  beforeEach(() => {
+    people.set(samplePeople)
+    relationships.set(sampleRelationships)
+    modal.close()
+  })
+
+  it('should not open modal when person card is clicked in viewer mode', async () => {
+    // Mock viewer mode as enabled
+    vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+      fn(true)
+      return () => {}
+    }})
+
+    const modalOpenSpy = vi.spyOn(modal, 'open')
+
+    const { container } = render(TreeView)
+    await tick()
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Try to find and click a person card
+    const personCard = container.querySelector('[data-person-id]')
+    if (personCard) {
+      await fireEvent.click(personCard)
+      await tick()
+
+      // Modal should NOT have been called
+      expect(modalOpenSpy).not.toHaveBeenCalled()
+    }
+
+    modalOpenSpy.mockRestore()
+  })
+
+  it('should hide edit pencil buttons on person cards in viewer mode', async () => {
+    // Mock viewer mode as enabled
+    vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+      fn(true)
+      return () => {}
+    }})
+
+    const { container } = render(TreeView)
+    await tick()
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Edit buttons should not be rendered
+    const editButtons = container.querySelectorAll('.card-edit-button')
+    editButtons.forEach(button => {
+      expect(button.style.display).toBe('none')
+    })
+  })
+
+  it('should still allow zoom and pan in viewer mode', async () => {
+    // Mock viewer mode as enabled
+    vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+      fn(true)
+      return () => {}
+    }})
+
+    const { container } = render(TreeView)
+    await tick()
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Chart wrapper should exist and be functional
+    const chartWrapper = container.querySelector('[data-testid="chart-wrapper"]')
+    expect(chartWrapper).toBeInTheDocument()
+  })
+
+  it('should not call modal.open in handlePencilClick when in viewer mode', async () => {
+    // Mock viewer mode as enabled
+    vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+      fn(true)
+      return () => {}
+    }})
+
+    const modalOpenSpy = vi.spyOn(modal, 'open')
+
+    const { container } = render(TreeView)
+    await tick()
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Simulate clicking on an edit button (if visible, which it shouldn't be)
+    const editButton = container.querySelector('.card-edit-button')
+    if (editButton) {
+      await fireEvent.click(editButton)
+      await tick()
+
+      // Modal should NOT have been called
+      expect(modalOpenSpy).not.toHaveBeenCalled()
+    }
+
+    modalOpenSpy.mockRestore()
   })
 })

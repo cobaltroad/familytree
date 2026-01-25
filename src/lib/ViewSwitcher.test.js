@@ -10,6 +10,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
 import ViewSwitcher from './ViewSwitcher.svelte'
 import { modal } from '../stores/modalStore.js'
+import * as viewerModeStore from '../stores/viewerModeStore.js'
 
 describe('ViewSwitcher - Add Person Link', () => {
   beforeEach(() => {
@@ -177,6 +178,83 @@ describe('ViewSwitcher - Add Person Link', () => {
 
       // Should not have "active" class
       expect(addPersonElement.classList.contains('active')).toBe(false)
+    })
+  })
+
+  describe('Viewer Mode', () => {
+    it('should hide Add Person link in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
+
+      // Add Person link should not be rendered
+      const addPersonElement = screen.queryByText(/add person/i)
+      expect(addPersonElement).toBeNull()
+    })
+
+    it('should hide Admin tab in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
+
+      // Admin tab should not be rendered
+      const adminTab = screen.queryByText('Admin')
+      expect(adminTab).toBeNull()
+    })
+
+    it('should hide Import tab in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
+
+      // Import tab should not be rendered
+      const importTab = screen.queryByText('Import')
+      expect(importTab).toBeNull()
+    })
+
+    it('should hide Duplicates tab in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
+
+      // Duplicates tab should not be rendered
+      const duplicatesTab = screen.queryByText('Duplicates')
+      expect(duplicatesTab).toBeNull()
+    })
+
+    it('should only show Tree tab in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      render(ViewSwitcher, { props: { currentPath: '/tree' } })
+
+      // Tree tab should still be visible
+      expect(screen.getByText('Tree')).toBeTruthy()
+
+      // Other tabs should be hidden
+      expect(screen.queryByText('Admin')).toBeNull()
+      expect(screen.queryByText('Import')).toBeNull()
+      expect(screen.queryByText('Duplicates')).toBeNull()
+      expect(screen.queryByText(/add person/i)).toBeNull()
     })
   })
 })

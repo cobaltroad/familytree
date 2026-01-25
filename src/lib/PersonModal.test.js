@@ -4,6 +4,7 @@ import PersonModal from './PersonModal.svelte'
 import { modal } from '../stores/modalStore.js'
 import { people, relationships } from '../stores/familyStore.js'
 import { get } from 'svelte/store'
+import * as viewerModeStore from '../stores/viewerModeStore.js'
 
 // Mock $app/stores
 vi.mock('$app/stores', () => ({
@@ -478,6 +479,76 @@ describe('PersonModal', () => {
 
       const importButton = container.querySelector('.resync-facebook-button, button[data-testid="resync-facebook"]')
       expect(importButton).toBeFalsy()
+    })
+  })
+
+  describe('Viewer Mode', () => {
+    beforeEach(() => {
+      people.set(mockPeople)
+      relationships.set(mockRelationships)
+    })
+
+    it('should not render modal when opened in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      // Modal should not be rendered
+      const modalBackdrop = container.querySelector('.modal-backdrop')
+      expect(modalBackdrop).toBeFalsy()
+    })
+
+    it('should not render modal when openNew is called in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      modal.openNew()
+
+      const { container } = render(PersonModal)
+
+      // Modal should not be rendered
+      const modalBackdrop = container.querySelector('.modal-backdrop')
+      expect(modalBackdrop).toBeFalsy()
+    })
+
+    it('should not render delete button in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      // Delete button should not be rendered
+      const deleteButton = container.querySelector('.delete-button')
+      expect(deleteButton).toBeFalsy()
+    })
+
+    it('should not render Quick Add buttons in viewer mode', () => {
+      // Mock viewer mode as enabled
+      vi.spyOn(viewerModeStore, 'isViewerMode', 'get').mockReturnValue({ subscribe: (fn) => {
+        fn(true)
+        return () => {}
+      }})
+
+      modal.open(3, 'edit')
+
+      const { container } = render(PersonModal)
+
+      // Modal should not be rendered at all, so no Quick Add components should exist
+      expect(container.querySelector('.modal-backdrop')).toBeFalsy()
     })
   })
 })
