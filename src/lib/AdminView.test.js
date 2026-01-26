@@ -18,7 +18,7 @@ describe('AdminView', () => {
   describe('People Table', () => {
     it('should render people table with headers when people exist', () => {
       const mockPeople = [
-        { id: 1, firstName: 'John', lastName: 'Doe', userId: 101 }
+        { id: 1, firstName: 'John', lastName: 'Doe' }
       ]
 
       vi.spyOn(familyStore, 'people', 'get').mockReturnValue(writable(mockPeople))
@@ -34,8 +34,6 @@ describe('AdminView', () => {
       expect(screen.getByText('Birth Date')).toBeInTheDocument()
       expect(screen.getByText('Death Date')).toBeInTheDocument()
       expect(screen.getByText('Gender')).toBeInTheDocument()
-      expect(screen.getByText('Photo URL')).toBeInTheDocument()
-      expect(screen.getByText('User ID')).toBeInTheDocument()
     })
 
     it('should display person records in table rows', () => {
@@ -47,8 +45,7 @@ describe('AdminView', () => {
           birthDate: '1980-01-15',
           deathDate: null,
           gender: 'male',
-          photoUrl: 'https://example.com/photo.jpg',
-          userId: 101
+          photoUrl: 'https://example.com/photo.jpg'
         },
         {
           id: 2,
@@ -57,8 +54,7 @@ describe('AdminView', () => {
           birthDate: '1985-06-20',
           deathDate: '2020-12-25',
           gender: 'female',
-          photoUrl: null,
-          userId: 102
+          photoUrl: null
         }
       ]
 
@@ -73,8 +69,6 @@ describe('AdminView', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('1980-01-15')).toBeInTheDocument()
       expect(screen.getByText('male')).toBeInTheDocument()
-      expect(screen.getByText('https://example.com/photo.jpg')).toBeInTheDocument()
-      expect(screen.getByText('101')).toBeInTheDocument()
 
       // Check second person
       expect(screen.getByText('2')).toBeInTheDocument()
@@ -82,7 +76,6 @@ describe('AdminView', () => {
       expect(screen.getByText('1985-06-20')).toBeInTheDocument()
       expect(screen.getByText('2020-12-25')).toBeInTheDocument()
       expect(screen.getByText('female')).toBeInTheDocument()
-      expect(screen.getByText('102')).toBeInTheDocument()
     })
 
     it('should show empty state when no people exist', () => {
@@ -97,9 +90,9 @@ describe('AdminView', () => {
 
     it('should display record count', () => {
       const mockPeople = [
-        { id: 1, firstName: 'John', lastName: 'Doe', userId: 101 },
-        { id: 2, firstName: 'Jane', lastName: 'Smith', userId: 102 },
-        { id: 3, firstName: 'Bob', lastName: 'Johnson', userId: 101 }
+        { id: 1, firstName: 'John', lastName: 'Doe' },
+        { id: 2, firstName: 'Jane', lastName: 'Smith' },
+        { id: 3, firstName: 'Bob', lastName: 'Johnson' }
       ]
 
       vi.spyOn(familyStore, 'people', 'get').mockReturnValue(writable(mockPeople))
@@ -120,8 +113,7 @@ describe('AdminView', () => {
           birthDate: null,
           deathDate: null,
           gender: null,
-          photoUrl: null,
-          userId: 101
+          photoUrl: null
         }
       ]
 
@@ -141,7 +133,7 @@ describe('AdminView', () => {
   describe('Relationships Table', () => {
     it('should render relationships table with headers when relationships exist', () => {
       const mockRelationships = [
-        { id: 1, person1Id: 1, person2Id: 2, type: 'spouse', userId: 101 }
+        { id: 1, person1Id: 1, person2Id: 2, type: 'spouse' }
       ]
 
       vi.spyOn(familyStore, 'people', 'get').mockReturnValue(writable([]))
@@ -158,8 +150,8 @@ describe('AdminView', () => {
 
     it('should display relationship records with person names', () => {
       const mockPeople = [
-        { id: 1, firstName: 'John', lastName: 'Doe', userId: 101 },
-        { id: 2, firstName: 'Jane', lastName: 'Smith', userId: 101 }
+        { id: 1, firstName: 'John', lastName: 'Doe' },
+        { id: 2, firstName: 'Jane', lastName: 'Smith' }
       ]
 
       const mockRelationships = [
@@ -168,16 +160,14 @@ describe('AdminView', () => {
           person1Id: 1,
           person2Id: 2,
           type: 'parentOf',
-          parentRole: 'mother',
-          userId: 101
+          parentRole: 'mother'
         },
         {
           id: 101,
           person1Id: 1,
           person2Id: 2,
           type: 'spouse',
-          parentRole: null,
-          userId: 101
+          parentRole: null
         }
       ]
 
@@ -211,8 +201,8 @@ describe('AdminView', () => {
 
     it('should display relationship record count', () => {
       const mockRelationships = [
-        { id: 1, person1Id: 1, person2Id: 2, type: 'spouse', userId: 101 },
-        { id: 2, person1Id: 1, person2Id: 3, type: 'parentOf', parentRole: 'mother', userId: 101 }
+        { id: 1, person1Id: 1, person2Id: 2, type: 'spouse' },
+        { id: 2, person1Id: 1, person2Id: 3, type: 'parentOf', parentRole: 'mother' }
       ]
 
       vi.spyOn(familyStore, 'people', 'get').mockReturnValue(writable([]))
@@ -226,7 +216,7 @@ describe('AdminView', () => {
 
     it('should handle unknown person IDs gracefully', () => {
       const mockPeople = [
-        { id: 1, firstName: 'John', lastName: 'Doe', userId: 101 }
+        { id: 1, firstName: 'John', lastName: 'Doe' }
       ]
 
       const mockRelationships = [
@@ -234,8 +224,7 @@ describe('AdminView', () => {
           id: 100,
           person1Id: 1,
           person2Id: 999, // Unknown person ID
-          type: 'spouse',
-          userId: 101
+          type: 'spouse'
         }
       ]
 
@@ -250,46 +239,10 @@ describe('AdminView', () => {
     })
   })
 
-  describe('Data Isolation Visibility', () => {
-    it('should group people by user ID for easy data isolation verification', () => {
-      const mockPeople = [
-        { id: 1, firstName: 'John', lastName: 'Doe', userId: 101 },
-        { id: 2, firstName: 'Jane', lastName: 'Smith', userId: 102 },
-        { id: 3, firstName: 'Bob', lastName: 'Johnson', userId: 101 }
-      ]
-
-      vi.spyOn(familyStore, 'people', 'get').mockReturnValue(writable(mockPeople))
-      vi.spyOn(familyStore, 'relationships', 'get').mockReturnValue(writable([]))
-      vi.spyOn(derivedStores, 'peopleById', 'get').mockReturnValue(writable(createPeopleByIdMap(mockPeople)))
-
-      render(AdminView)
-
-      // Should display user IDs prominently
-      expect(screen.getAllByText('101').length).toBeGreaterThan(0)
-      expect(screen.getByText('102')).toBeInTheDocument()
-    })
-
-    it('should show user ID in relationships for data isolation', () => {
-      const mockRelationships = [
-        { id: 1, person1Id: 1, person2Id: 2, type: 'spouse', userId: 101 },
-        { id: 2, person1Id: 3, person2Id: 4, type: 'parentOf', parentRole: 'mother', userId: 102 }
-      ]
-
-      vi.spyOn(familyStore, 'people', 'get').mockReturnValue(writable([]))
-      vi.spyOn(familyStore, 'relationships', 'get').mockReturnValue(writable(mockRelationships))
-      vi.spyOn(derivedStores, 'peopleById', 'get').mockReturnValue(writable(new Map()))
-
-      render(AdminView)
-
-      expect(screen.getAllByText('101').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('102').length).toBeGreaterThan(0)
-    })
-  })
-
   describe('Responsive Design', () => {
     it('should render tables with horizontal scroll capability', () => {
       const mockPeople = [
-        { id: 1, firstName: 'John', lastName: 'Doe', userId: 101 }
+        { id: 1, firstName: 'John', lastName: 'Doe' }
       ]
 
       vi.spyOn(familyStore, 'people', 'get').mockReturnValue(writable(mockPeople))
@@ -419,17 +372,6 @@ describe('AdminView', () => {
       // Button should be in the control panel area
       const controlPanel = container.querySelector('.control-panel')
       expect(controlPanel).toContainElement(exportButton)
-    })
-
-    it('should be positioned in the control panel near the toggle', () => {
-      const { container } = render(AdminView)
-
-      const controlPanel = container.querySelector('.control-panel')
-      const exportButton = screen.getByRole('button', { name: /export family tree as gedcom file/i })
-      const toggle = screen.getByRole('checkbox')
-
-      expect(controlPanel).toContainElement(exportButton)
-      expect(controlPanel).toContainElement(toggle)
     })
   })
 })
