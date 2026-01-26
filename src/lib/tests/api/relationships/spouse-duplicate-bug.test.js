@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { people, relationships, users } from '$lib/db/schema.js'
+import { people, relationships } from '$lib/db/schema.js'
 import { POST } from '../../../../routes/api/relationships/+server.js'
 import { eq } from 'drizzle-orm'
 import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
@@ -26,7 +26,6 @@ import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
 describe('BUG: Bidirectional Spouse Relationship Creation', () => {
   let sqlite
   let db
-  let testUserId
   let person1Id
   let person2Id
 
@@ -34,9 +33,6 @@ describe('BUG: Bidirectional Spouse Relationship Creation', () => {
     // Create in-memory SQLite database
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
-
-    // Setup test database with users table and default test user
-    testUserId = await setupTestDatabase(sqlite, db)
 
     // Insert two people (who will become spouses)
     sqlite.prepare(`
