@@ -1,0 +1,457 @@
+[
+  {
+    "id": 41,
+    "person1Id": 125,
+    "person2Id": 124,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 42,
+    "person1Id": 124,
+    "person2Id": 125,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 43,
+    "person1Id": 125,
+    "person2Id": 123,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 44,
+    "person1Id": 124,
+    "person2Id": 123,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 45,
+    "person1Id": 125,
+    "person2Id": 126,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 46,
+    "person1Id": 124,
+    "person2Id": 126,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 47,
+    "person1Id": 126,
+    "person2Id": 127,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 48,
+    "person1Id": 127,
+    "person2Id": 126,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 49,
+    "person1Id": 129,
+    "person2Id": 130,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 50,
+    "person1Id": 130,
+    "person2Id": 129,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 51,
+    "person1Id": 129,
+    "person2Id": 128,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 52,
+    "person1Id": 130,
+    "person2Id": 128,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 53,
+    "person1Id": 129,
+    "person2Id": 121,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 54,
+    "person1Id": 130,
+    "person2Id": 121,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 55,
+    "person1Id": 136,
+    "person2Id": 131,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 56,
+    "person1Id": 131,
+    "person2Id": 136,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 57,
+    "person1Id": 136,
+    "person2Id": 137,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 58,
+    "person1Id": 131,
+    "person2Id": 137,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 59,
+    "person1Id": 136,
+    "person2Id": 140,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 60,
+    "person1Id": 131,
+    "person2Id": 140,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 61,
+    "person1Id": 136,
+    "person2Id": 142,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 62,
+    "person1Id": 131,
+    "person2Id": 142,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 63,
+    "person1Id": 136,
+    "person2Id": 143,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 64,
+    "person1Id": 131,
+    "person2Id": 143,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 65,
+    "person1Id": 138,
+    "person2Id": 137,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 66,
+    "person1Id": 137,
+    "person2Id": 138,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 67,
+    "person1Id": 141,
+    "person2Id": 140,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 68,
+    "person1Id": 140,
+    "person2Id": 141,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 69,
+    "person1Id": 135,
+    "person2Id": 144,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 70,
+    "person1Id": 144,
+    "person2Id": 135,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 71,
+    "person1Id": 135,
+    "person2Id": 145,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 72,
+    "person1Id": 144,
+    "person2Id": 145,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 73,
+    "person1Id": 135,
+    "person2Id": 146,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 74,
+    "person1Id": 144,
+    "person2Id": 146,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 75,
+    "person1Id": 135,
+    "person2Id": 147,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 76,
+    "person1Id": 144,
+    "person2Id": 147,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 77,
+    "person1Id": 148,
+    "person2Id": 147,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 78,
+    "person1Id": 147,
+    "person2Id": 148,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 79,
+    "person1Id": 146,
+    "person2Id": 149,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 80,
+    "person1Id": 149,
+    "person2Id": 146,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 81,
+    "person1Id": 121,
+    "person2Id": 139,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 82,
+    "person1Id": 139,
+    "person2Id": 121,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 83,
+    "person1Id": 121,
+    "person2Id": 122,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 84,
+    "person1Id": 139,
+    "person2Id": 122,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 85,
+    "person1Id": 123,
+    "person2Id": 132,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 86,
+    "person1Id": 132,
+    "person2Id": 123,
+    "type": "spouse",
+    "parentRole": null
+  },
+  {
+    "id": 87,
+    "person1Id": 123,
+    "person2Id": 131,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 88,
+    "person1Id": 132,
+    "person2Id": 131,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 89,
+    "person1Id": 123,
+    "person2Id": 133,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 90,
+    "person1Id": 132,
+    "person2Id": 133,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 91,
+    "person1Id": 123,
+    "person2Id": 134,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 92,
+    "person1Id": 132,
+    "person2Id": 134,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 93,
+    "person1Id": 123,
+    "person2Id": 135,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 94,
+    "person1Id": 132,
+    "person2Id": 135,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 95,
+    "person1Id": 123,
+    "person2Id": 129,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 96,
+    "person1Id": 132,
+    "person2Id": 129,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 97,
+    "person1Id": 134,
+    "person2Id": 150,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 98,
+    "person1Id": 134,
+    "person2Id": 151,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 99,
+    "person1Id": 133,
+    "person2Id": 152,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 100,
+    "person1Id": 153,
+    "person2Id": 130,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 101,
+    "person1Id": 154,
+    "person2Id": 130,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 102,
+    "person1Id": 154,
+    "person2Id": 155,
+    "type": "parentOf",
+    "parentRole": "father"
+  },
+  {
+    "id": 103,
+    "person1Id": 155,
+    "person2Id": 156,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 104,
+    "person1Id": 155,
+    "person2Id": 157,
+    "type": "parentOf",
+    "parentRole": "mother"
+  },
+  {
+    "id": 105,
+    "person1Id": 155,
+    "person2Id": 158,
+    "type": "parentOf",
+    "parentRole": "mother"
+  }
+]
