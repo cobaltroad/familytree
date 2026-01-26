@@ -891,7 +891,7 @@
     align-items: center;
   }
 
-  .update-button, .delete-button, .resync-facebook-button, .set-profile-button {
+  .update-button, .delete-button, .set-profile-button {
     padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 4px;
@@ -994,7 +994,7 @@
       gap: 0.75rem;
     }
 
-    .update-button, .delete-button, .resync-facebook-button, .set-profile-button {
+    .update-button, .delete-button, .set-profile-button {
       width: 100%;
     }
   }

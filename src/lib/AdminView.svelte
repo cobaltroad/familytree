@@ -238,62 +238,6 @@
     cursor: not-allowed;
   }
 
-  .toggle-label {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-    position: relative;
-  }
-
-  .toggle-checkbox {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .toggle-slider {
-    position: relative;
-    display: inline-block;
-    width: 48px;
-    height: 24px;
-    background-color: #ccc;
-    border-radius: 24px;
-    transition: background-color 0.3s;
-  }
-
-  .toggle-slider::after {
-    content: '';
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    left: 3px;
-    top: 3px;
-    background-color: white;
-    border-radius: 50%;
-    transition: transform 0.3s;
-  }
-
-  .toggle-checkbox:checked + .toggle-slider {
-    background-color: #FF9800;
-  }
-
-  .toggle-checkbox:checked + .toggle-slider::after {
-    transform: translateX(24px);
-  }
-
-  .toggle-checkbox:disabled + .toggle-slider {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .toggle-text {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #333;
-  }
-
   .loading-indicator {
     color: #666;
     font-size: 0.9rem;
@@ -304,48 +248,6 @@
     color: #d32f2f;
     font-size: 0.9rem;
     font-weight: 500;
-  }
-
-  /* Banner Styles */
-  .banner {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    border: 1px solid;
-  }
-
-  .banner-info {
-    background: #E3F2FD;
-    border-color: #2196F3;
-    color: #0D47A1;
-  }
-
-  .banner-warning {
-    background: #FFF3E0;
-    border-color: #FF9800;
-    color: #E65100;
-  }
-
-  .banner-icon {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-
-  .banner strong {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 1rem;
-  }
-
-  .banner p {
-    margin: 0;
-    font-size: 0.9rem;
-    opacity: 0.9;
   }
 
   h2 {
@@ -432,13 +334,6 @@
     border-bottom: none;
   }
 
-  .truncate {
-    max-width: 250px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .user-id {
     font-weight: 600;
     color: #4CAF50;
@@ -500,10 +395,6 @@
     th, td {
       padding: 0.6rem 0.75rem;
     }
-
-    .truncate {
-      max-width: 150px;
-    }
   }
 
   @media (max-width: 480px) {
@@ -513,10 +404,6 @@
 
     th, td {
       padding: 0.5rem 0.5rem;
-    }
-
-    .truncate {
-      max-width: 100px;
     }
   }
 </style>
