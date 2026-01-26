@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { GET, POST } from '../../../../routes/api/people/+server.js'
 import { GET as GET_ONE, PUT, DELETE } from '../../../../routes/api/people/[id]/+server.js'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
 
 /**
  * Test suite for Photo URL support in Person API
@@ -34,12 +34,12 @@ describe('Story #77: Photo URL Support', () => {
     it('should return photoUrl when person has a photo', async () => {
       // Arrange: Insert person with photo URL
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('John', 'Doe', 'https://example.com/photos/john.jpg', userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('John', 'Doe', 'https://example.com/photos/john.jpg')
 
       // Act
-      const event = createMockAuthenticatedEvent(db)
+      const event = createMockEvent(db)
       const response = await GET(event)
       const data = await response.json()
 
@@ -56,12 +56,12 @@ describe('Story #77: Photo URL Support', () => {
     it('should return photoUrl as null when person has no photo', async () => {
       // Arrange: Insert person without photo URL
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('Jane', 'Smith', null, userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('Jane', 'Smith', null)
 
       // Act
-      const event = createMockAuthenticatedEvent(db)
+      const event = createMockEvent(db)
       const response = await GET(event)
       const data = await response.json()
 
@@ -77,22 +77,22 @@ describe('Story #77: Photo URL Support', () => {
     it('should handle multiple people with different photo URLs', async () => {
       // Arrange
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('John', 'Doe', 'https://example.com/john.jpg', userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('John', 'Doe', 'https://example.com/john.jpg')
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('Jane', 'Smith', null, userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('Jane', 'Smith', null)
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('Bob', 'Jones', 'https://cdn.example.org/bob.png', userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('Bob', 'Jones', 'https://cdn.example.org/bob.png')
 
       // Act
-      const event = createMockAuthenticatedEvent(db)
+      const event = createMockEvent(db)
       const response = await GET(event)
       const data = await response.json()
 
@@ -119,7 +119,7 @@ describe('Story #77: Photo URL Support', () => {
       }
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { request })
+      const event = createMockEvent(db, { request })
       const response = await POST(event)
       const data = await response.json()
 
@@ -150,7 +150,7 @@ describe('Story #77: Photo URL Support', () => {
       }
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { request })
+      const event = createMockEvent(db, { request })
       const response = await POST(event)
       const data = await response.json()
 
@@ -176,7 +176,7 @@ describe('Story #77: Photo URL Support', () => {
       }
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { request })
+      const event = createMockEvent(db, { request })
       const response = await POST(event)
       const data = await response.json()
 
@@ -198,7 +198,7 @@ describe('Story #77: Photo URL Support', () => {
       }
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { request })
+      const event = createMockEvent(db, { request })
       const response = await POST(event)
 
       // Assert
@@ -228,7 +228,7 @@ describe('Story #77: Photo URL Support', () => {
         }
 
         // Act
-        const event = createMockAuthenticatedEvent(db, null, { request })
+        const event = createMockEvent(db, { request })
         const response = await POST(event)
         const data = await response.json()
 
@@ -243,12 +243,12 @@ describe('Story #77: Photo URL Support', () => {
     it('should return photoUrl when person has a photo', async () => {
       // Arrange
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('John', 'Doe', 'https://example.com/john.jpg', userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('John', 'Doe', 'https://example.com/john.jpg')
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { params: { id: '1' } })
+      const event = createMockEvent(db, { params: { id: '1' } })
       const response = await GET_ONE(event)
       const data = await response.json()
 
@@ -260,12 +260,12 @@ describe('Story #77: Photo URL Support', () => {
     it('should return photoUrl as null when person has no photo', async () => {
       // Arrange
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('Jane', 'Smith', null, userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('Jane', 'Smith', null)
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { params: { id: '1' } })
+      const event = createMockEvent(db, { params: { id: '1' } })
       const response = await GET_ONE(event)
       const data = await response.json()
 
@@ -279,9 +279,9 @@ describe('Story #77: Photo URL Support', () => {
     it('should update photoUrl when provided', async () => {
       // Arrange: Create person without photo
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('John', 'Doe', null, userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('John', 'Doe', null)
 
       const requestData = {
         firstName: 'John',
@@ -294,7 +294,7 @@ describe('Story #77: Photo URL Support', () => {
       }
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request })
+      const event = createMockEvent(db, { params: { id: '1' }, request })
       const response = await PUT(event)
       const data = await response.json()
 
@@ -310,9 +310,9 @@ describe('Story #77: Photo URL Support', () => {
     it('should remove photoUrl when set to null', async () => {
       // Arrange: Create person with photo
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('John', 'Doe', 'https://example.com/old-photo.jpg', userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('John', 'Doe', 'https://example.com/old-photo.jpg')
 
       const requestData = {
         firstName: 'John',
@@ -325,7 +325,7 @@ describe('Story #77: Photo URL Support', () => {
       }
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request })
+      const event = createMockEvent(db, { params: { id: '1' }, request })
       const response = await PUT(event)
       const data = await response.json()
 
@@ -341,9 +341,9 @@ describe('Story #77: Photo URL Support', () => {
     it('should preserve existing photoUrl when not included in update', async () => {
       // Arrange: Create person with photo
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('John', 'Doe', 'https://example.com/photo.jpg', userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('John', 'Doe', 'https://example.com/photo.jpg')
 
       const requestData = {
         firstName: 'Johnny',
@@ -356,7 +356,7 @@ describe('Story #77: Photo URL Support', () => {
       }
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request })
+      const event = createMockEvent(db, { params: { id: '1' }, request })
       const response = await PUT(event)
       const data = await response.json()
 
@@ -373,9 +373,9 @@ describe('Story #77: Photo URL Support', () => {
     it('should validate photoUrl is a string when updating', async () => {
       // Arrange
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, photo_url, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run('John', 'Doe', null, userId)
+        INSERT INTO people (first_name, last_name, photo_url)
+        VALUES (?, ?, ?)
+      `).run('John', 'Doe', null)
 
       const requestData = {
         firstName: 'John',
@@ -388,7 +388,7 @@ describe('Story #77: Photo URL Support', () => {
       }
 
       // Act
-      const event = createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request })
+      const event = createMockEvent(db, { params: { id: '1' }, request })
       const response = await PUT(event)
 
       // Assert

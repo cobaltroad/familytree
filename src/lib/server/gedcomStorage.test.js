@@ -30,28 +30,18 @@ describe('generateUploadId', () => {
     expect(id1).not.toBe(id2)
   })
 
-  it('should generate ID with userId and timestamp', () => {
-    const userId = 123
-    const uploadId = generateUploadId(userId)
+  it('should generate ID with timestamp and random hash', () => {
+    const uploadId = generateUploadId()
 
-    expect(uploadId).toContain('123')
-    expect(uploadId).toMatch(/^\d+_\d+_[a-z0-9]+$/)
+    // Format: {timestamp}_{randomHash}
+    expect(uploadId).toMatch(/^\d+_[a-z0-9]+$/)
   })
 
-  it('should generate different IDs for same user', () => {
-    const userId = 123
-    const id1 = generateUploadId(userId)
-    const id2 = generateUploadId(userId)
+  it('should generate different IDs for consecutive calls', () => {
+    const id1 = generateUploadId()
+    const id2 = generateUploadId()
 
     expect(id1).not.toBe(id2)
-  })
-
-  it('should handle string userId', () => {
-    const userId = 'user-abc-123'
-    const uploadId = generateUploadId(userId)
-
-    expect(uploadId).toBeTruthy()
-    expect(uploadId).toContain('user-abc-123')
   })
 })
 

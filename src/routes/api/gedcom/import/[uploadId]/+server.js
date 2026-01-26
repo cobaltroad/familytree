@@ -3,12 +3,12 @@
  * Story #95: Import GEDCOM Data to User's Tree
  *
  * POST /api/gedcom/import/:uploadId
- * Imports GEDCOM data to user's family tree with transaction safety
+ * Imports GEDCOM data to family tree with transaction safety
  */
 
 import { json } from '@sveltejs/kit'
 import { db } from '$lib/db/client.js'
-import { people, relationships, users } from '$lib/db/schema.js'
+import { people, relationships } from '$lib/db/schema.js'
 import { eq } from 'drizzle-orm'
 import { getPreviewData, getResolutionDecisions } from '$lib/server/gedcomPreview.js'
 import {
@@ -16,12 +16,10 @@ import {
   buildRelationshipsAfterInsertion,
   mapGedcomPersonToSchema
 } from '$lib/server/gedcomImporter.js'
-import { requireAuth } from '$lib/server/session.js'
-import { getUserById } from '$lib/server/userSync.js'
 
 /**
  * POST /api/gedcom/import/:uploadId
- * Imports GEDCOM data into user's tree
+ * Imports GEDCOM data into family tree
  *
  * Request body:
  * - importAll: boolean - Import all individuals
@@ -32,45 +30,16 @@ import { getUserById } from '$lib/server/userSync.js'
  * - imported: { persons: number, relationships: number, updated: number }
  * - errors: string[] (optional)
  */
-export async function POST({ request, params, locals, ...event }) {
+export async function POST({ request, params }) {
   const { uploadId } = params
 
   try {
-    // Require authentication (consistent with other API endpoints)
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
-    // Check if user record exists in database
-    // This handles the chicken-and-egg problem for fresh/empty databases
-    // where the user has authenticated via OAuth but no user record exists yet
-    // (e.g., restore from backup scenario)
-    let user = await getUserById(userId)
-
-    if (!user) {
-      // Auto-create user record from session data
-      // This allows GEDCOM import to proceed without foreign key constraint errors
-      const now = new Date().toISOString()
-      const [createdUser] = await db.insert(users).values({
-        id: userId,
-        email: session.user.email,
-        name: session.user.name || null,
-        avatarUrl: session.user.image || null,
-        provider: session.user.provider || 'unknown',
-        providerUserId: null, // We don't have this in the session
-        emailVerified: true,
-        createdAt: now,
-        lastLoginAt: now
-      }).returning()
-
-      user = createdUser
-    }
-
     // Parse request body
     const body = await request.json()
     const { importAll } = body
 
     // Get preview data
-    const previewData = await getPreviewData(uploadId, userId)
+    const previewData = await getPreviewData(uploadId)
     if (!previewData) {
       return json(
         { error: 'Preview data not found. Please upload and parse a GEDCOM file first.' },
@@ -79,21 +48,20 @@ export async function POST({ request, params, locals, ...event }) {
     }
 
     // Get resolution decisions
-    const resolutionDecisions = await getResolutionDecisions(uploadId, userId)
+    const resolutionDecisions = await getResolutionDecisions(uploadId)
 
-    // Validate that all referenced person IDs in skip/merge decisions exist and belong to this user
+    // Validate that all referenced person IDs in skip/merge decisions exist
     const referencedPersonIds = resolutionDecisions
       .filter(d => (d.resolution === 'skip' || d.resolution === 'merge') && d.existingPersonId)
       .map(d => d.existingPersonId)
 
     if (referencedPersonIds.length > 0) {
-      // Query database to get all person IDs for this user
-      const userPersons = await db
+      // Query database to get all person IDs
+      const allPersons = await db
         .select({ id: people.id })
         .from(people)
-        .where(eq(people.userId, userId))
 
-      const validPersonIds = new Set(userPersons.map(p => p.id))
+      const validPersonIds = new Set(allPersons.map(p => p.id))
 
       // Check for invalid person IDs
       const invalidPersonIds = referencedPersonIds.filter(id => !validPersonIds.has(id))
@@ -117,8 +85,7 @@ export async function POST({ request, params, locals, ...event }) {
     // Prepare import data
     const importData = prepareImportData(
       previewData,
-      resolutionDecisions,
-      userId
+      resolutionDecisions
     )
 
     // Track import statistics
@@ -167,8 +134,7 @@ export async function POST({ request, params, locals, ...event }) {
       // Step 3: Build relationships after persons are inserted
       const relationshipsToInsert = buildRelationshipsAfterInsertion(
         importData,
-        insertedPersons,
-        userId
+        insertedPersons
       )
 
       // Step 4: Insert relationships
@@ -201,14 +167,6 @@ export async function POST({ request, params, locals, ...event }) {
       }
     })
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return json(
-        { error: error.message },
-        { status: error.status }
-      )
-    }
-
     console.error('Import error:', error)
 
     // Story #97: Enhanced error handling with actionable messages

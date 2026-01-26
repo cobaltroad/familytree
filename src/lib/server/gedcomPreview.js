@@ -5,20 +5,19 @@
  * Provides functions to store, retrieve, and manage preview data for GEDCOM imports
  */
 
-// In-memory storage for preview data (will be replaced with database in production)
-// Structure: Map<uploadId, Map<userId, PreviewData>>
+// In-memory storage for preview data
+// Structure: Map<uploadId, PreviewData>
 const previewDataStore = new Map()
 
 /**
  * Stores preview data for a GEDCOM upload
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @param {Object} parsedData - Parsed GEDCOM data (individuals, families)
  * @param {Array} duplicates - Array of duplicate matches
  * @returns {Promise<Object>} Result with success status
  */
-export async function storePreviewData(uploadId, userId, parsedData, duplicates) {
+export async function storePreviewData(uploadId, parsedData, duplicates) {
   try {
     // Create a map of gedcom IDs to duplicate information
     const duplicateMap = new Map()
@@ -60,7 +59,6 @@ export async function storePreviewData(uploadId, userId, parsedData, duplicates)
     // Store preview data
     const previewData = {
       uploadId,
-      userId,
       individuals: individualsWithStatus,
       families: parsedData.families || [],
       duplicates,
@@ -69,12 +67,7 @@ export async function storePreviewData(uploadId, userId, parsedData, duplicates)
       errors: parsedData.errors || [] // Story #97: Store parsing errors
     }
 
-    // Create nested map structure if needed
-    if (!previewDataStore.has(uploadId)) {
-      previewDataStore.set(uploadId, new Map())
-    }
-
-    previewDataStore.get(uploadId).set(userId, previewData)
+    previewDataStore.set(uploadId, previewData)
 
     return {
       success: true,
@@ -92,29 +85,21 @@ export async function storePreviewData(uploadId, userId, parsedData, duplicates)
  * Retrieves preview data for a GEDCOM upload
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @returns {Promise<Object|null>} Preview data or null if not found
  */
-export async function getPreviewData(uploadId, userId) {
-  const uploadData = previewDataStore.get(uploadId)
-  if (!uploadData) {
-    return null
-  }
-
-  const previewData = uploadData.get(userId)
-  return previewData || null
+export async function getPreviewData(uploadId) {
+  return previewDataStore.get(uploadId) || null
 }
 
 /**
  * Gets paginated, sorted, and filtered individuals from preview data
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @param {Object} options - Query options (page, limit, sortBy, sortOrder, search)
  * @returns {Promise<Object>} Paginated individuals with metadata
  */
-export async function getPreviewIndividuals(uploadId, userId, options = {}) {
-  const previewData = await getPreviewData(uploadId, userId)
+export async function getPreviewIndividuals(uploadId, options = {}) {
+  const previewData = await getPreviewData(uploadId)
   if (!previewData) {
     return null
   }
@@ -198,12 +183,11 @@ export async function getPreviewIndividuals(uploadId, userId, options = {}) {
  * Gets details for a specific person with relationships
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @param {string} gedcomId - GEDCOM ID of the person
  * @returns {Promise<Object|null>} Person details with relationships or null
  */
-export async function getPreviewPerson(uploadId, userId, gedcomId) {
-  const previewData = await getPreviewData(uploadId, userId)
+export async function getPreviewPerson(uploadId, gedcomId) {
+  const previewData = await getPreviewData(uploadId)
   if (!previewData) {
     return null
   }
@@ -310,11 +294,10 @@ export async function getPreviewPerson(uploadId, userId, gedcomId) {
  * Gets tree structure from preview data
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @returns {Promise<Object|null>} Tree structure with individuals and relationships
  */
-export async function getPreviewTree(uploadId, userId) {
-  const previewData = await getPreviewData(uploadId, userId)
+export async function getPreviewTree(uploadId) {
+  const previewData = await getPreviewData(uploadId)
   if (!previewData) {
     return null
   }
@@ -377,11 +360,10 @@ export async function getPreviewTree(uploadId, userId) {
  * Gets summary statistics for preview data
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @returns {Promise<Object|null>} Summary statistics or null
  */
-export async function getPreviewSummary(uploadId, userId) {
-  const previewData = await getPreviewData(uploadId, userId)
+export async function getPreviewSummary(uploadId) {
+  const previewData = await getPreviewData(uploadId)
   if (!previewData) {
     return null
   }
@@ -393,12 +375,11 @@ export async function getPreviewSummary(uploadId, userId) {
  * Saves resolution decisions for duplicate individuals
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @param {Array} decisions - Array of resolution decisions
  * @returns {Promise<Object>} Result with success status
  */
-export async function saveResolutionDecisions(uploadId, userId, decisions) {
-  const previewData = await getPreviewData(uploadId, userId)
+export async function saveResolutionDecisions(uploadId, decisions) {
+  const previewData = await getPreviewData(uploadId)
   if (!previewData) {
     throw new Error('Preview data not found')
   }
@@ -435,11 +416,10 @@ export async function saveResolutionDecisions(uploadId, userId, decisions) {
  * Gets saved resolution decisions
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @returns {Promise<Array>} Array of resolution decisions
  */
-export async function getResolutionDecisions(uploadId, userId) {
-  const previewData = await getPreviewData(uploadId, userId)
+export async function getResolutionDecisions(uploadId) {
+  const previewData = await getPreviewData(uploadId)
   if (!previewData) {
     return []
   }
@@ -451,19 +431,10 @@ export async function getResolutionDecisions(uploadId, userId) {
  * Clears preview data for a specific upload
  *
  * @param {string} uploadId - Upload ID
- * @param {number} userId - User ID
  * @returns {Promise<Object>} Result with success status
  */
-export async function clearPreviewData(uploadId, userId) {
-  const uploadData = previewDataStore.get(uploadId)
-  if (uploadData) {
-    uploadData.delete(userId)
-
-    // Clean up empty upload maps
-    if (uploadData.size === 0) {
-      previewDataStore.delete(uploadId)
-    }
-  }
+export async function clearPreviewData(uploadId) {
+  previewDataStore.delete(uploadId)
 
   return {
     success: true

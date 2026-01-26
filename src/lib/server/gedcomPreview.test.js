@@ -19,7 +19,6 @@ import {
 
 describe('gedcomPreview', () => {
   const uploadId = 'test-upload-123'
-  const userId = 1
 
   const mockParsedData = {
     individuals: [
@@ -96,20 +95,20 @@ describe('gedcomPreview', () => {
   })
 
   describe('storePreviewData', () => {
-    it('should store parsed GEDCOM data with upload ID and user ID', async () => {
-      const result = await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+    it('should store parsed GEDCOM data with upload ID', async () => {
+      const result = await storePreviewData(uploadId, mockParsedData, mockDuplicates)
 
       expect(result.success).toBe(true)
       expect(result.uploadId).toBe(uploadId)
     })
 
     it('should calculate status for each individual (new/duplicate/existing)', async () => {
-      const result = await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      const result = await storePreviewData(uploadId, mockParsedData, mockDuplicates)
 
       expect(result.success).toBe(true)
 
       // Retrieve stored data to verify status calculation
-      const previewData = await getPreviewData(uploadId, userId)
+      const previewData = await getPreviewData(uploadId)
       expect(previewData).toBeDefined()
       expect(previewData.individuals).toHaveLength(3)
 
@@ -127,9 +126,9 @@ describe('gedcomPreview', () => {
     })
 
     it('should generate summary statistics', async () => {
-      const result = await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      const result = await storePreviewData(uploadId, mockParsedData, mockDuplicates)
 
-      const previewData = await getPreviewData(uploadId, userId)
+      const previewData = await getPreviewData(uploadId)
       expect(previewData.summary).toBeDefined()
       expect(previewData.summary.totalIndividuals).toBe(3)
       expect(previewData.summary.newCount).toBe(2)
@@ -140,36 +139,29 @@ describe('gedcomPreview', () => {
 
   describe('getPreviewData', () => {
     it('should return null if preview data does not exist', async () => {
-      const result = await getPreviewData('non-existent-upload', userId)
+      const result = await getPreviewData('non-existent-upload')
       expect(result).toBeNull()
     })
 
     it('should return stored preview data', async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      await storePreviewData(uploadId, mockParsedData, mockDuplicates)
 
-      const result = await getPreviewData(uploadId, userId)
+      const result = await getPreviewData(uploadId)
       expect(result).toBeDefined()
       expect(result.uploadId).toBe(uploadId)
       expect(result.individuals).toHaveLength(3)
       expect(result.families).toHaveLength(2)
       expect(result.duplicates).toHaveLength(1)
     })
-
-    it('should not allow access to another user\'s preview data', async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
-
-      const result = await getPreviewData(uploadId, userId + 1)
-      expect(result).toBeNull()
-    })
   })
 
   describe('getPreviewIndividuals', () => {
     beforeEach(async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      await storePreviewData(uploadId, mockParsedData, mockDuplicates)
     })
 
     it('should return paginated individuals (default page 1, limit 50)', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId, {})
+      const result = await getPreviewIndividuals(uploadId, {})
 
       expect(result).toBeDefined()
       expect(result.individuals).toHaveLength(3)
@@ -193,9 +185,9 @@ describe('gedcomPreview', () => {
         spouseFamilies: []
       }))
 
-      await storePreviewData(uploadId + '-many', userId, { individuals: manyIndividuals, families: [] }, [])
+      await storePreviewData(uploadId + '-many', { individuals: manyIndividuals, families: [] }, [])
 
-      const result = await getPreviewIndividuals(uploadId + '-many', userId, { page: 2, limit: 25 })
+      const result = await getPreviewIndividuals(uploadId + '-many', { page: 2, limit: 25 })
 
       expect(result.individuals).toHaveLength(25)
       expect(result.pagination.page).toBe(2)
@@ -205,7 +197,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should sort by name (ascending)', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId, { sortBy: 'name', sortOrder: 'asc' })
+      const result = await getPreviewIndividuals(uploadId, { sortBy: 'name', sortOrder: 'asc' })
 
       expect(result.individuals[0].name).toBe('Alice Smith')
       expect(result.individuals[1].name).toBe('John Smith')
@@ -213,7 +205,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should sort by name (descending)', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId, { sortBy: 'name', sortOrder: 'desc' })
+      const result = await getPreviewIndividuals(uploadId, { sortBy: 'name', sortOrder: 'desc' })
 
       expect(result.individuals[0].name).toBe('Mary Johnson')
       expect(result.individuals[1].name).toBe('John Smith')
@@ -221,7 +213,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should sort by birthDate (ascending)', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId, { sortBy: 'birthDate', sortOrder: 'asc' })
+      const result = await getPreviewIndividuals(uploadId, { sortBy: 'birthDate', sortOrder: 'asc' })
 
       expect(result.individuals[0].birthDate).toBe('1950-01-15')
       expect(result.individuals[1].birthDate).toBe('1952-03-20')
@@ -229,7 +221,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should sort by birthDate (descending)', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId, { sortBy: 'birthDate', sortOrder: 'desc' })
+      const result = await getPreviewIndividuals(uploadId, { sortBy: 'birthDate', sortOrder: 'desc' })
 
       expect(result.individuals[0].birthDate).toBe('1975-07-08')
       expect(result.individuals[1].birthDate).toBe('1952-03-20')
@@ -237,21 +229,21 @@ describe('gedcomPreview', () => {
     })
 
     it('should filter by name (case-insensitive)', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId, { search: 'smith' })
+      const result = await getPreviewIndividuals(uploadId, { search: 'smith' })
 
       expect(result.individuals).toHaveLength(2)
       expect(result.individuals.some(p => p.name.includes('Smith'))).toBe(true)
     })
 
     it('should filter by first name', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId, { search: 'alice' })
+      const result = await getPreviewIndividuals(uploadId, { search: 'alice' })
 
       expect(result.individuals).toHaveLength(1)
       expect(result.individuals[0].firstName).toBe('Alice')
     })
 
     it('should filter by last name', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId, { search: 'johnson' })
+      const result = await getPreviewIndividuals(uploadId, { search: 'johnson' })
 
       expect(result.individuals).toHaveLength(1)
       expect(result.individuals[0].lastName).toBe('Johnson')
@@ -260,11 +252,11 @@ describe('gedcomPreview', () => {
 
   describe('getPreviewPerson', () => {
     beforeEach(async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      await storePreviewData(uploadId, mockParsedData, mockDuplicates)
     })
 
     it('should return person details with relationships', async () => {
-      const result = await getPreviewPerson(uploadId, userId, '@I001@')
+      const result = await getPreviewPerson(uploadId, '@I001@')
 
       expect(result).toBeDefined()
       expect(result.person.gedcomId).toBe('@I001@')
@@ -274,7 +266,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should include parents from family references', async () => {
-      const result = await getPreviewPerson(uploadId, userId, '@I003@')
+      const result = await getPreviewPerson(uploadId, '@I003@')
 
       expect(result.relationships.parents).toBeDefined()
       expect(result.relationships.parents).toHaveLength(2)
@@ -285,7 +277,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should include spouses from family references', async () => {
-      const result = await getPreviewPerson(uploadId, userId, '@I001@')
+      const result = await getPreviewPerson(uploadId, '@I001@')
 
       expect(result.relationships.spouses).toBeDefined()
       expect(result.relationships.spouses).toHaveLength(1)
@@ -293,7 +285,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should include children from family references', async () => {
-      const result = await getPreviewPerson(uploadId, userId, '@I001@')
+      const result = await getPreviewPerson(uploadId, '@I001@')
 
       expect(result.relationships.children).toBeDefined()
       expect(result.relationships.children).toHaveLength(1)
@@ -301,18 +293,18 @@ describe('gedcomPreview', () => {
     })
 
     it('should return null if person does not exist', async () => {
-      const result = await getPreviewPerson(uploadId, userId, '@I999@')
+      const result = await getPreviewPerson(uploadId, '@I999@')
       expect(result).toBeNull()
     })
   })
 
   describe('getPreviewTree', () => {
     beforeEach(async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      await storePreviewData(uploadId, mockParsedData, mockDuplicates)
     })
 
     it('should return tree structure from GEDCOM data', async () => {
-      const result = await getPreviewTree(uploadId, userId)
+      const result = await getPreviewTree(uploadId)
 
       expect(result).toBeDefined()
       expect(result.individuals).toHaveLength(3)
@@ -321,7 +313,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should convert family structures to parent-child relationships', async () => {
-      const result = await getPreviewTree(uploadId, userId)
+      const result = await getPreviewTree(uploadId)
 
       // Should have parent-child relationships
       const parentChildRels = result.relationships.filter(r => r.type === 'parent')
@@ -333,7 +325,7 @@ describe('gedcomPreview', () => {
     })
 
     it('should convert family structures to spouse relationships', async () => {
-      const result = await getPreviewTree(uploadId, userId)
+      const result = await getPreviewTree(uploadId)
 
       // Should have spouse relationships
       const spouseRels = result.relationships.filter(r => r.type === 'spouse')
@@ -350,11 +342,11 @@ describe('gedcomPreview', () => {
 
   describe('getPreviewSummary', () => {
     beforeEach(async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      await storePreviewData(uploadId, mockParsedData, mockDuplicates)
     })
 
     it('should return summary with counts', async () => {
-      const result = await getPreviewSummary(uploadId, userId)
+      const result = await getPreviewSummary(uploadId)
 
       expect(result).toBeDefined()
       expect(result.totalIndividuals).toBe(3)
@@ -366,7 +358,7 @@ describe('gedcomPreview', () => {
 
   describe('saveResolutionDecisions', () => {
     beforeEach(async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      await storePreviewData(uploadId, mockParsedData, mockDuplicates)
     })
 
     it('should save resolution decisions for duplicates', async () => {
@@ -377,7 +369,7 @@ describe('gedcomPreview', () => {
         }
       ]
 
-      const result = await saveResolutionDecisions(uploadId, userId, decisions)
+      const result = await saveResolutionDecisions(uploadId, decisions)
 
       expect(result.success).toBe(true)
       expect(result.saved).toBe(1)
@@ -390,34 +382,34 @@ describe('gedcomPreview', () => {
         { gedcomId: '@I003@', resolution: 'skip' }
       ]
 
-      const result = await saveResolutionDecisions(uploadId, userId, validDecisions)
+      const result = await saveResolutionDecisions(uploadId, validDecisions)
       expect(result.success).toBe(true)
 
       const invalidDecisions = [
         { gedcomId: '@I001@', resolution: 'invalid_option' }
       ]
 
-      await expect(saveResolutionDecisions(uploadId, userId, invalidDecisions))
+      await expect(saveResolutionDecisions(uploadId, invalidDecisions))
         .rejects.toThrow(/Invalid resolution/)
     })
 
-    it('should not save decisions for another user\'s preview data', async () => {
+    it('should throw error for non-existent preview data', async () => {
       const decisions = [
         { gedcomId: '@I001@', resolution: 'merge' }
       ]
 
-      await expect(saveResolutionDecisions(uploadId, userId + 1, decisions))
+      await expect(saveResolutionDecisions('non-existent-upload', decisions))
         .rejects.toThrow(/not found/)
     })
   })
 
   describe('getResolutionDecisions', () => {
     beforeEach(async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      await storePreviewData(uploadId, mockParsedData, mockDuplicates)
     })
 
     it('should return empty array if no decisions saved', async () => {
-      const result = await getResolutionDecisions(uploadId, userId)
+      const result = await getResolutionDecisions(uploadId)
       expect(result).toEqual([])
     })
 
@@ -426,9 +418,9 @@ describe('gedcomPreview', () => {
         { gedcomId: '@I001@', resolution: 'merge' }
       ]
 
-      await saveResolutionDecisions(uploadId, userId, decisions)
+      await saveResolutionDecisions(uploadId, decisions)
 
-      const result = await getResolutionDecisions(uploadId, userId)
+      const result = await getResolutionDecisions(uploadId)
       expect(result).toHaveLength(1)
       expect(result[0].gedcomId).toBe('@I001@')
       expect(result[0].resolution).toBe('merge')
@@ -437,11 +429,11 @@ describe('gedcomPreview', () => {
 
   describe('getPreviewIndividuals - statistics field', () => {
     beforeEach(async () => {
-      await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+      await storePreviewData(uploadId, mockParsedData, mockDuplicates)
     })
 
     it('should include statistics object in response', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId)
+      const result = await getPreviewIndividuals(uploadId)
 
       expect(result).toBeDefined()
       expect(result.statistics).toBeDefined()
@@ -449,35 +441,35 @@ describe('gedcomPreview', () => {
     })
 
     it('should include totalIndividuals count in statistics', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId)
+      const result = await getPreviewIndividuals(uploadId)
 
       expect(result.statistics.totalIndividuals).toBeDefined()
       expect(result.statistics.totalIndividuals).toBe(3)
     })
 
     it('should include newIndividuals count in statistics', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId)
+      const result = await getPreviewIndividuals(uploadId)
 
       expect(result.statistics.newIndividuals).toBeDefined()
       expect(result.statistics.newIndividuals).toBe(2) // 3 total - 1 duplicate
     })
 
     it('should include duplicateIndividuals count in statistics', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId)
+      const result = await getPreviewIndividuals(uploadId)
 
       expect(result.statistics.duplicateIndividuals).toBeDefined()
       expect(result.statistics.duplicateIndividuals).toBe(1)
     })
 
     it('should include existingIndividuals count in statistics', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId)
+      const result = await getPreviewIndividuals(uploadId)
 
       expect(result.statistics.existingIndividuals).toBeDefined()
       expect(result.statistics.existingIndividuals).toBe(0) // Initially 0, updated after resolution
     })
 
     it('should return correct statistics structure for GedcomPreview component', async () => {
-      const result = await getPreviewIndividuals(uploadId, userId)
+      const result = await getPreviewIndividuals(uploadId)
 
       expect(result.statistics).toEqual({
         totalIndividuals: 3,
@@ -489,7 +481,7 @@ describe('gedcomPreview', () => {
 
     it('should handle undefined statistics gracefully', async () => {
       // Test that component can handle missing statistics
-      const result = await getPreviewIndividuals('non-existent', userId)
+      const result = await getPreviewIndividuals('non-existent')
 
       expect(result).toBeNull()
     })

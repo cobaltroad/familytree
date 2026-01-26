@@ -9,7 +9,6 @@ import { POST } from './+server.js'
  * - Accepts valid .ged files within size limit
  * - Rejects files exceeding 10MB
  * - Rejects non-.ged file types
- * - Requires authentication
  * - Returns correct response format
  * - Cleans up on error
  */
@@ -285,49 +284,6 @@ describe('POST /api/gedcom/upload', () => {
     })
   })
 
-  describe('authentication requirements', () => {
-    it('should reject request without authentication', async () => {
-      const unauthenticatedLocals = {
-        getSession: vi.fn(() => Promise.resolve(null))
-      }
-
-      const unauthEvent = {
-        locals: unauthenticatedLocals
-      }
-
-      const fileContent = '0 HEAD\n0 TRLR\n'
-      const file = createMockFile(Buffer.from(fileContent), 'tree.ged')
-
-      const formData = createMockFormData(file)
-
-      mockRequest = {
-        formData: vi.fn(() => Promise.resolve(formData))
-      }
-
-      const response = await POST({ request: mockRequest, ...unauthEvent })
-
-      expect(response.status).toBe(401) // 401 Unauthorized
-    })
-
-    it('should associate upload with authenticated user', async () => {
-      const fileContent = '0 HEAD\n0 TRLR\n'
-      const file = createMockFile(Buffer.from(fileContent), 'tree.ged')
-
-      const formData = createMockFormData(file)
-
-      mockRequest = {
-        formData: vi.fn(() => Promise.resolve(formData))
-      }
-
-      const response = await POST({ request: mockRequest, ...mockEvent })
-
-      expect(response.status).toBe(200)
-
-      const data = await response.json()
-      // Upload ID should contain user ID (123)
-      expect(data.uploadId).toContain('123')
-    })
-  })
 
   describe('error handling', () => {
     it('should return 400 if no file is provided', async () => {
@@ -424,7 +380,7 @@ describe('POST /api/gedcom/upload', () => {
       const response = await POST({ request: mockRequest, ...mockEvent })
       const data = await response.json()
 
-      expect(data.uploadId).toMatch(/^\d+_\d+_[a-z0-9]+$/)
+      expect(data.uploadId).toMatch(/^\d+_[a-z0-9]+$/)
     })
   })
 })

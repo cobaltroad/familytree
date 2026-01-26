@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { people } from '$lib/db/schema.js'
 import { GET, POST } from '../../../../routes/api/people/+server.js'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
 
 /**
  * Test suite for People API Collection Endpoints
@@ -30,7 +30,7 @@ describe('GET /api/people', () => {
   })
 
   it('should return empty array when no people exist', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
     const response = await GET(event)
     const data = await response.json()
 
@@ -41,17 +41,17 @@ describe('GET /api/people', () => {
   it('should return all people as JSON array', async () => {
     // Arrange: Insert test data with user_id (Issue #72)
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, death_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run('John', 'Doe', '1980-01-01', null, 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, death_date, gender)
+      VALUES (?, ?, ?, ?, ?)
+    `).run('John', 'Doe', '1980-01-01', null, 'male')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, death_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run('Jane', 'Smith', '1985-05-15', null, 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, death_date, gender)
+      VALUES (?, ?, ?, ?, ?)
+    `).run('Jane', 'Smith', '1985-05-15', null, 'female')
 
     // Act
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
     const response = await GET(event)
     const data = await response.json()
 
@@ -85,12 +85,12 @@ describe('GET /api/people', () => {
   it('should return people with death dates', async () => {
     // Arrange
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, death_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run('Albert', 'Einstein', '1879-03-14', '1955-04-18', 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, death_date, gender)
+      VALUES (?, ?, ?, ?, ?)
+    `).run('Albert', 'Einstein', '1879-03-14', '1955-04-18', 'male')
 
     // Act
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
     const response = await GET(event)
     const data = await response.json()
 
@@ -102,12 +102,12 @@ describe('GET /api/people', () => {
   it('should handle people with null optional fields', async () => {
     // Arrange: Person with minimal data
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, death_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run('Minimal', 'Person', null, null, null, userId)
+      INSERT INTO people (first_name, last_name, birth_date, death_date, gender)
+      VALUES (?, ?, ?, ?, ?)
+    `).run('Minimal', 'Person', null, null, null)
 
     // Act
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
     const response = await GET(event)
     const data = await response.json()
 
@@ -123,7 +123,7 @@ describe('GET /api/people', () => {
   })
 
   it('should return Content-Type application/json header', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
     const response = await GET(event)
 
     expect(response.headers.get('Content-Type')).toBe('application/json')
@@ -134,7 +134,7 @@ describe('GET /api/people', () => {
     sqlite.close()
 
     // Act
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
     const response = await GET(event)
 
     // Assert
@@ -175,7 +175,7 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { request })
+    const event = createMockEvent(db, { request })
     const response = await POST(event)
     const data = await response.json()
 
@@ -213,7 +213,7 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { request })
+    const event = createMockEvent(db, { request })
     const response = await POST(event)
     const data = await response.json()
 
@@ -241,7 +241,7 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { request })
+    const event = createMockEvent(db, { request })
     const response = await POST(event)
     const data = await response.json()
 
@@ -256,7 +256,7 @@ describe('POST /api/people', () => {
     const request1 = {
       json: async () => ({ firstName: 'First', lastName: 'Person' })
     }
-    const event1 = createMockAuthenticatedEvent(db, null, { request: request1 })
+    const event1 = createMockEvent(db, { request: request1 })
     const response1 = await POST(event1)
     const data1 = await response1.json()
 
@@ -264,7 +264,7 @@ describe('POST /api/people', () => {
     const request2 = {
       json: async () => ({ firstName: 'Second', lastName: 'Person' })
     }
-    const event2 = createMockAuthenticatedEvent(db, null, { request: request2 })
+    const event2 = createMockEvent(db, { request: request2 })
     const response2 = await POST(event2)
     const data2 = await response2.json()
 
@@ -282,7 +282,7 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { request })
+    const event = createMockEvent(db, { request })
     const response = await POST(event)
 
     // Assert
@@ -300,7 +300,7 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { request })
+    const event = createMockEvent(db, { request })
     const response = await POST(event)
 
     // Assert
@@ -318,7 +318,7 @@ describe('POST /api/people', () => {
     }
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { request })
+    const event = createMockEvent(db, { request })
     const response = await POST(event)
 
     // Assert
@@ -335,7 +335,7 @@ describe('POST /api/people', () => {
       json: async () => requestData
     }
 
-    const event = createMockAuthenticatedEvent(db, null, { request })
+    const event = createMockEvent(db, { request })
     const response = await POST(event)
 
     expect(response.headers.get('Content-Type')).toBe('application/json')
@@ -356,7 +356,7 @@ describe('POST /api/people', () => {
     sqlite.close()
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { request })
+    const event = createMockEvent(db, { request })
     const response = await POST(event)
 
     // Assert

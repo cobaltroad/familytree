@@ -8,14 +8,11 @@
  */
 
 import { json } from '@sveltejs/kit'
-import { requireAuth } from '$lib/server/session.js'
 import { getPreviewIndividuals } from '$lib/server/gedcomPreview.js'
 
 /**
  * GET /api/gedcom/preview/:uploadId/individuals
  * Get paginated individuals from preview data
- *
- * Authentication: Required
  *
  * Query Parameters:
  * - page: Page number (default: 1)
@@ -24,18 +21,12 @@ import { getPreviewIndividuals } from '$lib/server/gedcomPreview.js'
  * - sortOrder: Sort direction (asc, desc)
  * - search: Filter by name (case-insensitive)
  *
- * @param {Request} request - HTTP request
- * @param {Object} locals - SvelteKit locals (contains session)
  * @param {Object} params - Route parameters (uploadId)
  * @param {URL} url - Request URL with query parameters
  * @returns {Response} JSON with paginated individuals or error
  */
-export async function GET({ request, locals, params, url, ...event }) {
+export async function GET({ params, url }) {
   try {
-    // Require authentication
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
     const { uploadId } = params
 
     // Parse query parameters
@@ -46,7 +37,7 @@ export async function GET({ request, locals, params, url, ...event }) {
     const search = url.searchParams.get('search') || ''
 
     // Get preview individuals
-    const result = await getPreviewIndividuals(uploadId, userId, {
+    const result = await getPreviewIndividuals(uploadId, {
       page,
       limit,
       sortBy,
@@ -60,11 +51,6 @@ export async function GET({ request, locals, params, url, ...event }) {
 
     return json(result)
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('Error retrieving preview individuals:', error)
     return new Response('Internal Server Error', { status: 500 })
   }

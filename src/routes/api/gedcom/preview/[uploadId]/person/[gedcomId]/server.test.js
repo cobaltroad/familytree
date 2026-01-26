@@ -5,14 +5,12 @@
  * Tests for GET /api/gedcom/preview/:uploadId/person/:gedcomId
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { GET } from './+server.js'
 import { storePreviewData } from '$lib/server/gedcomPreview.js'
 
 describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
-  let mockLocals
   const uploadId = 'test-upload-123'
-  const userId = 1
 
   const mockParsedData = {
     individuals: [
@@ -89,18 +87,7 @@ describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
   }
 
   beforeEach(async () => {
-    mockLocals = {
-      getSession: vi.fn(() =>
-        Promise.resolve({
-          user: {
-            id: userId,
-            email: 'test@example.com'
-          }
-        })
-      )
-    }
-
-    await storePreviewData(uploadId, userId, mockParsedData, [])
+    await storePreviewData(uploadId, mockParsedData, [])
   })
 
   it('should return person details with relationships', async () => {
@@ -109,7 +96,7 @@ describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
 
     const response = await GET({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -128,7 +115,7 @@ describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
 
     const response = await GET({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -147,7 +134,7 @@ describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
 
     const response = await GET({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -164,7 +151,7 @@ describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
 
     const response = await GET({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -181,7 +168,7 @@ describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
 
     const response = await GET({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -197,7 +184,7 @@ describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
 
     const response = await GET({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -210,27 +197,10 @@ describe('GET /api/gedcom/preview/:uploadId/person/:gedcomId', () => {
 
     const response = await GET({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
     expect(response.status).toBe(404)
-  })
-
-  it('should require authentication', async () => {
-    const unauthenticatedLocals = {
-      getSession: vi.fn(() => Promise.resolve(null))
-    }
-
-    const mockRequest = new Request('http://localhost/api/gedcom/preview/test-upload-123/person/@I001@')
-    const mockParams = { uploadId, gedcomId: '@I001@' }
-
-    const response = await GET({
-      request: mockRequest,
-      locals: unauthenticatedLocals,
-      params: mockParams
-    })
-
-    expect(response.status).toBe(401)
   })
 })

@@ -35,14 +35,6 @@ import { executeMerge } from '$lib/server/personMerge.js'
  */
 export async function POST({ request, locals }) {
   try {
-    // Check authentication
-    const session = await locals.getSession()
-    if (!session?.user) {
-      return json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userId = session.user.id
-
     // Parse request body
     const body = await request.json()
     const { sourceId, targetId } = body
@@ -61,7 +53,7 @@ export async function POST({ request, locals }) {
     }
 
     // Execute merge
-    const result = await executeMerge(sourceId, targetId, userId, locals.db)
+    const result = await executeMerge(sourceId, targetId, locals.db)
 
     return json(result, { status: 200 })
   } catch (error) {

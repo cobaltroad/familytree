@@ -1,1 +1,0 @@
-ALTER TABLE `users` ADD `view_all_records` integer DEFAULT false NOT NULL;

@@ -5,7 +5,7 @@
  * Provides atomic transaction logic for merging two people with relationship transfer
  */
 
-import { people, relationships, users } from '../db/schema.js'
+import { people, relationships } from '../db/schema.js'
 import { eq, or, and } from 'drizzle-orm'
 import { selectBestValue } from './mergePreview.js'
 
@@ -13,26 +13,23 @@ import { selectBestValue } from './mergePreview.js'
  * Executes a merge operation within an atomic transaction
  *
  * Transaction steps:
- * 1. Validate ownership and permissions
- * 2. Load both people with relationships
- * 3. Validate no default person conflicts
- * 4. Update target person fields (merged values)
- * 5. Transfer relationships (deduplicate)
- * 6. Delete source person (CASCADE removes old relationships)
- * 7. Return merge summary
+ * 1. Load both people with relationships
+ * 2. Update target person fields (merged values)
+ * 3. Transfer relationships (deduplicate)
+ * 4. Delete source person (CASCADE removes old relationships)
+ * 5. Return merge summary
  *
  * @param {number} sourceId - ID of source person (will be deleted)
  * @param {number} targetId - ID of target person (will receive merged data)
- * @param {number} userId - Current user ID
  * @param {Object} db - Drizzle database instance
  * @returns {Promise<Object>} Merge result with success status and details
  * @throws {Error} If validation fails or transaction fails
  *
  * @example
- * const result = await executeMerge(15, 27, userId, db)
+ * const result = await executeMerge(15, 27, db)
  * // Returns: { success: true, targetId: 27, sourceId: 15, relationshipsTransferred: 3, mergedData: {...} }
  */
-export async function executeMerge(sourceId, targetId, userId, db) {
+export async function executeMerge(sourceId, targetId, db) {
   // Execute everything within a transaction for atomicity
   return db.transaction((tx) => {
     // Step 1: Load both people
@@ -55,30 +52,7 @@ export async function executeMerge(sourceId, targetId, userId, db) {
       throw new Error('Target person not found')
     }
 
-    // Step 2: Validate ownership
-    if (source.userId !== userId) {
-      throw new Error('Source person does not belong to current user')
-    }
-
-    if (target.userId !== userId) {
-      throw new Error('Target person does not belong to current user')
-    }
-
-    // Step 3: Validate default person restrictions
-    const user = tx.select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .get()
-
-    if (user.defaultPersonId === targetId) {
-      throw new Error('Cannot merge into your profile person')
-    }
-
-    if (user.defaultPersonId === sourceId) {
-      throw new Error('Cannot merge your profile person into another person')
-    }
-
-    // Step 4: Load relationships for both people
+    // Step 2: Load relationships for both people
     const sourceRelationships = tx.select()
       .from(relationships)
       .where(or(
@@ -192,19 +166,18 @@ export async function executeMerge(sourceId, targetId, userId, db) {
           person1Id: newPerson1Id,
           person2Id: newPerson2Id,
           type: rel.type,
-          parentRole: rel.parentRole,
-          userId: rel.userId
+          parentRole: rel.parentRole
         }).run()
         relationshipsTransferred++
       }
     }
 
-    // Step 9: Delete source person (CASCADE will delete old source relationships)
+    // Step 7: Delete source person (CASCADE will delete old source relationships)
     tx.delete(people)
       .where(eq(people.id, sourceId))
       .run()
 
-    // Step 10: Return merge summary
+    // Step 8: Return merge summary
     return {
       success: true,
       targetId,
@@ -212,8 +185,7 @@ export async function executeMerge(sourceId, targetId, userId, db) {
       relationshipsTransferred,
       mergedData: {
         id: targetId,
-        ...mergedData,
-        userId: target.userId
+        ...mergedData
       }
     }
   })

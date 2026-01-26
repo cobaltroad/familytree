@@ -194,28 +194,6 @@ export const api = {
   },
 
   /**
-   * Updates current user's settings
-   *
-   * @param {Object} settings - Settings object
-   * @param {boolean} settings.viewAllRecords - Feature flag to bypass data isolation
-   * @returns {Promise<Object>} Updated settings
-   * @throws {Error} If request fails
-   *
-   * @example
-   * const settings = await api.updateUserSettings({ viewAllRecords: true })
-   * // Returns: { viewAllRecords: true }
-   */
-  async updateUserSettings(settings) {
-    const response = await fetch(`${API_BASE}/user/settings`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings)
-    })
-    if (!response.ok) throw await createApiError(response, 'Failed to update user settings')
-    return response.json()
-  },
-
-  /**
    * Uploads a GEDCOM file for import processing
    * Story #102: GEDCOM Upload UI Component
    *
@@ -567,7 +545,7 @@ export const api = {
     if (!response.ok) throw await createApiError(response, 'Failed to fetch duplicates')
     return response.json()
   },
-  
+
   /**
    * Updates the authenticated user's default person ID
    * Issue #129: Set Person as My Profile from PersonModal

@@ -84,9 +84,9 @@ describe('export-data script', () => {
       userId = await setupTestDatabase(sqlite, db)
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-        VALUES (?, ?, ?, ?, ?)
-      `).run('John', 'Doe', '1980-01-01', 'male', userId)
+        INSERT INTO people (first_name, last_name, birth_date, gender)
+        VALUES (?, ?, ?, ?)
+      `).run('John', 'Doe', '1980-01-01', 'male')
 
       sqlite.close()
 
@@ -106,14 +106,14 @@ describe('export-data script', () => {
       userId = await setupTestDatabase(sqlite, db)
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, birth_date, death_date, gender, photo_url, birth_surname, nickname, user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run('John', 'Doe', '1980-01-01', null, 'male', 'https://example.com/photo.jpg', 'Smith', 'Johnny', userId)
+        INSERT INTO people (first_name, last_name, birth_date, death_date, gender, photo_url, birth_surname, nickname)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run('John', 'Doe', '1980-01-01', null, 'male', 'https://example.com/photo.jpg', 'Smith', 'Johnny')
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-        VALUES (?, ?, ?, ?, ?)
-      `).run('Jane', 'Doe', '1985-05-15', 'female', userId)
+        INSERT INTO people (first_name, last_name, birth_date, gender)
+        VALUES (?, ?, ?, ?)
+      `).run('Jane', 'Doe', '1985-05-15', 'female')
 
       sqlite.close()
 
@@ -152,35 +152,35 @@ describe('export-data script', () => {
 
       // Insert people
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('John', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('John', 'Doe')
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('Jane', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('Jane', 'Doe')
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('Baby', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('Baby', 'Doe')
 
       // Insert relationships
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(1, 3, 'parentOf', 'father', userId)
-
-      sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(2, 3, 'parentOf', 'mother', userId)
-
-      sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, user_id)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
         VALUES (?, ?, ?, ?)
-      `).run(1, 2, 'spouse', userId)
+      `).run(1, 3, 'parentOf', 'father')
+
+      sqlite.prepare(`
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+        VALUES (?, ?, ?, ?)
+      `).run(2, 3, 'parentOf', 'mother')
+
+      sqlite.prepare(`
+        INSERT INTO relationships (person1_id, person2_id, type)
+      VALUES (?, ?, ?)
+      `).run(1, 2, 'spouse')
 
       sqlite.close()
 
@@ -231,9 +231,9 @@ describe('export-data script', () => {
       userId = await setupTestDatabase(sqlite, db)
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('John', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('John', 'Doe')
 
       sqlite.close()
 
@@ -254,20 +254,20 @@ describe('export-data script', () => {
 
       // Insert people
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('John', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('John', 'Doe')
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('Jane', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('Jane', 'Doe')
 
       // Insert relationship
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run(1, 2, 'spouse', userId)
+        INSERT INTO relationships (person1_id, person2_id, type)
+      VALUES (?, ?, ?)
+      `).run(1, 2, 'spouse')
 
       sqlite.close()
 
@@ -287,19 +287,19 @@ describe('export-data script', () => {
       userId = await setupTestDatabase(sqlite, db)
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('John', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('John', 'Doe')
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('Jane', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('Jane', 'Doe')
 
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, user_id)
-        VALUES (?, ?, ?, ?)
-      `).run(1, 2, 'spouse', userId)
+        INSERT INTO relationships (person1_id, person2_id, type)
+      VALUES (?, ?, ?)
+      `).run(1, 2, 'spouse')
 
       sqlite.close()
 
@@ -325,9 +325,9 @@ describe('export-data script', () => {
       userId = await setupTestDatabase(sqlite, db)
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('John', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('John', 'Doe')
 
       sqlite.close()
 
@@ -351,9 +351,9 @@ describe('export-data script', () => {
       userId = await setupTestDatabase(sqlite, db)
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('John', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('John', 'Doe')
 
       sqlite.close()
 
@@ -440,9 +440,9 @@ describe('export-data script', () => {
       userId = await setupTestDatabase(sqlite, db)
 
       sqlite.prepare(`
-        INSERT INTO people (first_name, last_name, user_id)
-        VALUES (?, ?, ?)
-      `).run('John', 'Doe', userId)
+        INSERT INTO people (first_name, last_name)
+      VALUES (?, ?)
+      `).run('John', 'Doe')
 
       sqlite.close()
 
@@ -465,46 +465,46 @@ describe('export-data script', () => {
       userId = await setupTestDatabase(sqlite, db)
 
       // Grandparents
-      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run('George', 'Doe', '1920-01-01', 'male', userId)
-      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run('Mary', 'Doe', '1922-03-15', 'female', userId)
+      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender)
+        VALUES (?, ?, ?, ?)`).run('George', 'Doe', '1920-01-01', 'male')
+      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender)
+        VALUES (?, ?, ?, ?)`).run('Mary', 'Doe', '1922-03-15', 'female')
 
       // Parents
-      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run('John', 'Doe', '1950-05-20', 'male', userId)
-      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run('Jane', 'Smith', '1952-08-30', 'female', userId)
+      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender)
+        VALUES (?, ?, ?, ?)`).run('John', 'Doe', '1950-05-20', 'male')
+      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender)
+        VALUES (?, ?, ?, ?)`).run('Jane', 'Smith', '1952-08-30', 'female')
 
       // Children
-      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run('Alice', 'Doe', '1980-01-01', 'female', userId)
-      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run('Bob', 'Doe', '1982-06-15', 'male', userId)
+      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender)
+        VALUES (?, ?, ?, ?)`).run('Alice', 'Doe', '1980-01-01', 'female')
+      sqlite.prepare(`INSERT INTO people (first_name, last_name, birth_date, gender)
+        VALUES (?, ?, ?, ?)`).run('Bob', 'Doe', '1982-06-15', 'male')
 
       // Relationships - grandparents to parent
-      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run(1, 3, 'parentOf', 'father', userId)
-      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run(2, 3, 'parentOf', 'mother', userId)
+      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+        VALUES (?, ?, ?, ?)`).run(1, 3, 'parentOf', 'father')
+      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+        VALUES (?, ?, ?, ?)`).run(2, 3, 'parentOf', 'mother')
 
       // Grandparent spouse
-      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, user_id)
-        VALUES (?, ?, ?, ?)`).run(1, 2, 'spouse', userId)
+      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type)
+      VALUES (?, ?, ?)`).run(1, 2, 'spouse')
 
       // Parent spouse
-      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, user_id)
-        VALUES (?, ?, ?, ?)`).run(3, 4, 'spouse', userId)
+      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type)
+      VALUES (?, ?, ?)`).run(3, 4, 'spouse')
 
       // Parents to children
-      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run(3, 5, 'parentOf', 'father', userId)
-      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run(4, 5, 'parentOf', 'mother', userId)
-      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run(3, 6, 'parentOf', 'father', userId)
-      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-        VALUES (?, ?, ?, ?, ?)`).run(4, 6, 'parentOf', 'mother', userId)
+      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+        VALUES (?, ?, ?, ?)`).run(3, 5, 'parentOf', 'father')
+      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+        VALUES (?, ?, ?, ?)`).run(4, 5, 'parentOf', 'mother')
+      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+        VALUES (?, ?, ?, ?)`).run(3, 6, 'parentOf', 'father')
+      sqlite.prepare(`INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+        VALUES (?, ?, ?, ?)`).run(4, 6, 'parentOf', 'mother')
 
       sqlite.close()
 

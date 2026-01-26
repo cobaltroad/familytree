@@ -5,7 +5,7 @@ import { GET as getPeople, POST as postPerson } from '../../../routes/api/people
 import { GET as getPerson, PUT as putPerson, DELETE as deletePerson } from '../../../routes/api/people/[id]/+server.js'
 import { GET as getRelationships, POST as postRelationship } from '../../../routes/api/relationships/+server.js'
 import { DELETE as deleteRelationship } from '../../../routes/api/relationships/[id]/+server.js'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '../../server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '../../server/testHelpers.js'
 
 /**
  * Data Integrity Tests for SvelteKit API Routes
@@ -37,7 +37,7 @@ describe('Data Integrity - CRUD Operations', () => {
 
   it('should maintain data integrity through full person CRUD lifecycle', async () => {
     // CREATE
-    const createResponse = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const createResponse = await postPerson(createMockEvent(db, {
       request: {
         json: async () => ({
           firstName: 'John',
@@ -53,7 +53,7 @@ describe('Data Integrity - CRUD Operations', () => {
     const personId = created.id
 
     // READ
-    const readResponse = await getPerson(createMockAuthenticatedEvent(db, null, {
+    const readResponse = await getPerson(createMockEvent(db, {
       params: { id: personId.toString() }
     }))
 
@@ -68,7 +68,7 @@ describe('Data Integrity - CRUD Operations', () => {
     })
 
     // UPDATE
-    const updateResponse = await putPerson(createMockAuthenticatedEvent(db, null, {
+    const updateResponse = await putPerson(createMockEvent(db, {
       params: { id: personId.toString() },
       request: {
         json: async () => ({
@@ -91,21 +91,21 @@ describe('Data Integrity - CRUD Operations', () => {
     })
 
     // Verify update persisted
-    const verifyResponse = await getPerson(createMockAuthenticatedEvent(db, null, {
+    const verifyResponse = await getPerson(createMockEvent(db, {
       params: { id: personId.toString() }
     }))
     const verified = await verifyResponse.json()
     expect(verified.firstName).toBe('Jane')
 
     // DELETE
-    const deleteResponse = await deletePerson(createMockAuthenticatedEvent(db, null, {
+    const deleteResponse = await deletePerson(createMockEvent(db, {
       params: { id: personId.toString() }
     }))
 
     expect(deleteResponse.status).toBe(204)
 
     // Verify deletion
-    const finalResponse = await getPerson(createMockAuthenticatedEvent(db, null, {
+    const finalResponse = await getPerson(createMockEvent(db, {
       params: { id: personId.toString() }
     }))
 
@@ -114,14 +114,14 @@ describe('Data Integrity - CRUD Operations', () => {
 
   it('should maintain data integrity through full relationship CRUD lifecycle', async () => {
     // Create two people first
-    const person1Response = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const person1Response = await postPerson(createMockEvent(db, {
       request: {
         json: async () => ({ firstName: 'Child', lastName: 'Person' })
       }
     }))
     const person1 = await person1Response.json()
 
-    const person2Response = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const person2Response = await postPerson(createMockEvent(db, {
       request: {
         json: async () => ({ firstName: 'Mother', lastName: 'Person' })
       }
@@ -129,7 +129,7 @@ describe('Data Integrity - CRUD Operations', () => {
     const person2 = await person2Response.json()
 
     // CREATE relationship
-    const createResponse = await postRelationship(createMockAuthenticatedEvent(db, null, {
+    const createResponse = await postRelationship(createMockEvent(db, {
       request: {
         json: async () => ({
           person1Id: person2.id,
@@ -144,7 +144,7 @@ describe('Data Integrity - CRUD Operations', () => {
     const relationshipId = created.id
 
     // READ relationships
-    const readResponse = await getRelationships(createMockAuthenticatedEvent(db))
+    const readResponse = await getRelationships(createMockEvent(db))
     expect(readResponse.status).toBe(200)
     const relationships = await readResponse.json()
 
@@ -158,23 +158,23 @@ describe('Data Integrity - CRUD Operations', () => {
     })
 
     // DELETE relationship
-    const deleteResponse = await deleteRelationship(createMockAuthenticatedEvent(db, null, {
+    const deleteResponse = await deleteRelationship(createMockEvent(db, {
       params: { id: relationshipId.toString() }
     }))
 
     expect(deleteResponse.status).toBe(204)
 
     // Verify deletion
-    const verifyResponse = await getRelationships(createMockAuthenticatedEvent(db))
+    const verifyResponse = await getRelationships(createMockEvent(db))
     const finalRelationships = await verifyResponse.json()
     const deletedRel = finalRelationships.find(r => r.id === relationshipId)
     expect(deletedRel).toBeUndefined()
 
     // Verify people still exist (only relationship deleted)
-    const person1Check = await getPerson(createMockAuthenticatedEvent(db, null, {
+    const person1Check = await getPerson(createMockEvent(db, {
       params: { id: person1.id.toString() }
     }))
-    const person2Check = await getPerson(createMockAuthenticatedEvent(db, null, {
+    const person2Check = await getPerson(createMockEvent(db, {
       params: { id: person2.id.toString() }
     }))
 
@@ -200,16 +200,16 @@ describe('Data Integrity - Foreign Key Constraints', () => {
 
   it('should CASCADE DELETE relationships when person is deleted', async () => {
     // Create two people
-    const child = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const child = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Child', lastName: 'One' }) }
     })).then(r => r.json())
 
-    const parent = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const parent = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Parent', lastName: 'One' }) }
     })).then(r => r.json())
 
     // Create relationship
-    await postRelationship(createMockAuthenticatedEvent(db, null, {
+    await postRelationship(createMockEvent(db, {
       request: {
         json: async () => ({
           person1Id: parent.id,
@@ -220,20 +220,20 @@ describe('Data Integrity - Foreign Key Constraints', () => {
     }))
 
     // Verify relationship exists
-    let relationships = await getRelationships(createMockAuthenticatedEvent(db)).then(r => r.json())
+    let relationships = await getRelationships(createMockEvent(db)).then(r => r.json())
     expect(relationships.length).toBe(1)
 
     // Delete parent
-    await deletePerson(createMockAuthenticatedEvent(db, null, {
+    await deletePerson(createMockEvent(db, {
       params: { id: parent.id.toString() }
     }))
 
     // Verify relationship is CASCADE DELETED
-    relationships = await getRelationships(createMockAuthenticatedEvent(db)).then(r => r.json())
+    relationships = await getRelationships(createMockEvent(db)).then(r => r.json())
     expect(relationships.length).toBe(0)
 
     // Verify child still exists
-    const childCheck = await getPerson(createMockAuthenticatedEvent(db, null, {
+    const childCheck = await getPerson(createMockEvent(db, {
       params: { id: child.id.toString() }
     }))
     expect(childCheck.status).toBe(200)
@@ -241,54 +241,54 @@ describe('Data Integrity - Foreign Key Constraints', () => {
 
   it('should maintain referential integrity across complex operations', async () => {
     // Create family structure
-    const mother = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const mother = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Mother', lastName: 'Smith', gender: 'female' }) }
     })).then(r => r.json())
 
-    const father = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const father = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Father', lastName: 'Smith', gender: 'male' }) }
     })).then(r => r.json())
 
-    const child1 = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const child1 = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Child', lastName: 'Smith', birthDate: '2010-01-01' }) }
     })).then(r => r.json())
 
-    const child2 = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const child2 = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Child2', lastName: 'Smith', birthDate: '2012-05-15' }) }
     })).then(r => r.json())
 
     // Create relationships
-    await postRelationship(createMockAuthenticatedEvent(db, null, {
+    await postRelationship(createMockEvent(db, {
       request: { json: async () => ({ person1Id: mother.id, person2Id: child1.id, type: 'mother' }) }
     }))
 
-    await postRelationship(createMockAuthenticatedEvent(db, null, {
+    await postRelationship(createMockEvent(db, {
       request: { json: async () => ({ person1Id: father.id, person2Id: child1.id, type: 'father' }) }
     }))
 
-    await postRelationship(createMockAuthenticatedEvent(db, null, {
+    await postRelationship(createMockEvent(db, {
       request: { json: async () => ({ person1Id: mother.id, person2Id: child2.id, type: 'mother' }) }
     }))
 
-    await postRelationship(createMockAuthenticatedEvent(db, null, {
+    await postRelationship(createMockEvent(db, {
       request: { json: async () => ({ person1Id: father.id, person2Id: child2.id, type: 'father' }) }
     }))
 
-    await postRelationship(createMockAuthenticatedEvent(db, null, {
+    await postRelationship(createMockEvent(db, {
       request: { json: async () => ({ person1Id: mother.id, person2Id: father.id, type: 'spouse' }) }
     }))
 
     // Verify all relationships exist
-    let relationships = await getRelationships(createMockAuthenticatedEvent(db)).then(r => r.json())
+    let relationships = await getRelationships(createMockEvent(db)).then(r => r.json())
     expect(relationships.length).toBeGreaterThanOrEqual(5)
 
     // Delete one child
-    await deletePerson(createMockAuthenticatedEvent(db, null, {
+    await deletePerson(createMockEvent(db, {
       params: { id: child1.id.toString() }
     }))
 
     // Verify only child1's relationships are deleted
-    relationships = await getRelationships(createMockAuthenticatedEvent(db)).then(r => r.json())
+    relationships = await getRelationships(createMockEvent(db)).then(r => r.json())
     const child1Rels = relationships.filter(r => r.person2Id === child1.id || r.person1Id === child1.id)
     expect(child1Rels.length).toBe(0)
 
@@ -319,56 +319,56 @@ describe('Data Integrity - No Orphaned Records', () => {
 
   it('should not create orphaned relationships when both people are deleted', async () => {
     // Create two people
-    const person1 = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const person1 = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Person', lastName: 'One' }) }
     })).then(r => r.json())
 
-    const person2 = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const person2 = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Person', lastName: 'Two' }) }
     })).then(r => r.json())
 
     // Create relationship
-    await postRelationship(createMockAuthenticatedEvent(db, null, {
+    await postRelationship(createMockEvent(db, {
       request: { json: async () => ({ person1Id: person1.id, person2Id: person2.id, type: 'spouse' }) }
     }))
 
     // Verify relationship exists
-    let relationships = await getRelationships(createMockAuthenticatedEvent(db)).then(r => r.json())
+    let relationships = await getRelationships(createMockEvent(db)).then(r => r.json())
     expect(relationships.length).toBeGreaterThanOrEqual(1)
 
     // Delete both people
-    await deletePerson(createMockAuthenticatedEvent(db, null, {
+    await deletePerson(createMockEvent(db, {
       params: { id: person1.id.toString() }
     }))
 
-    await deletePerson(createMockAuthenticatedEvent(db, null, {
+    await deletePerson(createMockEvent(db, {
       params: { id: person2.id.toString() }
     }))
 
     // Verify no orphaned relationships remain
-    relationships = await getRelationships(createMockAuthenticatedEvent(db)).then(r => r.json())
+    relationships = await getRelationships(createMockEvent(db)).then(r => r.json())
     expect(relationships.length).toBe(0)
   })
 
   it('should verify all relationships reference existing people', async () => {
     // Create test data
-    const person1 = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const person1 = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Person', lastName: 'One' }) }
     })).then(r => r.json())
 
-    const person2 = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const person2 = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Person', lastName: 'Two' }) }
     })).then(r => r.json())
 
-    await postRelationship(createMockAuthenticatedEvent(db, null, {
+    await postRelationship(createMockEvent(db, {
       request: { json: async () => ({ person1Id: person1.id, person2Id: person2.id, type: 'spouse' }) }
     }))
 
     // Get all relationships
-    const relationships = await getRelationships(createMockAuthenticatedEvent(db)).then(r => r.json())
+    const relationships = await getRelationships(createMockEvent(db)).then(r => r.json())
 
     // Get all people
-    const people = await getPeople(createMockAuthenticatedEvent(db)).then(r => r.json())
+    const people = await getPeople(createMockEvent(db)).then(r => r.json())
     const personIds = new Set(people.map(p => p.id))
 
     // Verify all relationship references are valid
@@ -383,26 +383,26 @@ describe('Data Integrity - No Orphaned Records', () => {
     // the database should remain in a consistent state
 
     // Create a person
-    const person = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const person = await postPerson(createMockEvent(db, {
       request: { json: async () => ({ firstName: 'Test', lastName: 'Person' }) }
     })).then(r => r.json())
 
     // Try to create a relationship with non-existent person (should fail)
-    const invalidResponse = await postRelationship(createMockAuthenticatedEvent(db, null, {
+    const invalidResponse = await postRelationship(createMockEvent(db, {
       request: { json: async () => ({ person1Id: person.id, person2Id: 99999, type: 'spouse' }) }
     }))
 
     expect([400, 403]).toContain(invalidResponse.status)  // Should reject invalid relationship (400 or 403)
 
     // Verify original person still exists and is unaffected
-    const personCheck = await getPerson(createMockAuthenticatedEvent(db, null, {
+    const personCheck = await getPerson(createMockEvent(db, {
       params: { id: person.id.toString() }
     }))
 
     expect(personCheck.status).toBe(200)
 
     // Verify no orphaned relationships were created
-    const relationships = await getRelationships(createMockAuthenticatedEvent(db)).then(r => r.json())
+    const relationships = await getRelationships(createMockEvent(db)).then(r => r.json())
     const orphaned = relationships.filter(r => r.person1Id === person.id && r.person2Id === 99999)
     expect(orphaned.length).toBe(0)
   })

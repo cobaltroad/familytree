@@ -10,45 +10,12 @@
   $: relationshipsList = $relationships || []
 
   // View all records feature flag state
-  let viewAllRecords = false
+  let viewAllRecords = true
   let loading = false
   let error = null
 
   // GEDCOM export state
   let exporting = false
-
-  // Check if user's view_all_records is enabled on mount
-  onMount(async () => {
-    try {
-      // Get current user from session data embedded in page
-      const response = await fetch('/api/user/settings')
-      if (response.ok) {
-        const settings = await response.json()
-        viewAllRecords = settings.viewAllRecords
-      }
-    } catch (err) {
-      console.error('Failed to load user settings:', err)
-    }
-  })
-
-  // Toggle view all records
-  async function toggleViewAllRecords() {
-    loading = true
-    error = null
-    try {
-      const newValue = !viewAllRecords
-      const updated = await api.updateUserSettings({ viewAllRecords: newValue })
-      viewAllRecords = updated.viewAllRecords
-
-      // Reload data to reflect new filter
-      window.location.reload()
-    } catch (err) {
-      error = err.message
-      console.error('Failed to update settings:', err)
-    } finally {
-      loading = false
-    }
-  }
 
   // Export family tree as GEDCOM
   async function handleExportGedcom() {
@@ -93,19 +60,6 @@
   <div class="control-panel">
     <div class="control-row">
       <div class="toggle-section">
-        <label class="toggle-label">
-          <input
-            type="checkbox"
-            bind:checked={viewAllRecords}
-            on:change={toggleViewAllRecords}
-            disabled={loading}
-            class="toggle-checkbox"
-          />
-          <span class="toggle-slider"></span>
-          <span class="toggle-text">
-            View All Users' Records
-          </span>
-        </label>
         {#if loading}
           <span class="loading-indicator">Updating...</span>
         {/if}
@@ -131,29 +85,6 @@
     </div>
   </div>
 
-  <!-- Visual Banner -->
-  {#if viewAllRecords}
-    <div class="banner banner-warning">
-      <svg class="banner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-      </svg>
-      <div>
-        <strong>Viewing ALL users' records</strong>
-        <p>You are seeing records from all users in the database. This bypasses data isolation.</p>
-      </div>
-    </div>
-  {:else}
-    <div class="banner banner-info">
-      <svg class="banner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-      </svg>
-      <div>
-        <strong>Viewing only your records</strong>
-        <p>You are seeing only records that belong to you (data isolation active).</p>
-      </div>
-    </div>
-  {/if}
-
   <!-- People Table -->
   <section class="table-section">
     <div class="section-header">
@@ -177,8 +108,6 @@
               <th>Birth Date</th>
               <th>Death Date</th>
               <th>Gender</th>
-              <th>Photo URL</th>
-              <th>User ID</th>
             </tr>
           </thead>
           <tbody>
@@ -191,8 +120,6 @@
                 <td>{person.birthDate || '—'}</td>
                 <td>{person.deathDate || '—'}</td>
                 <td>{person.gender || '—'}</td>
-                <td class="truncate">{person.photoUrl || '—'}</td>
-                <td class="user-id">{person.userId}</td>
               </tr>
             {/each}
           </tbody>

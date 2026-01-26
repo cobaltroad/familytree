@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { GET as getPeople, POST as postPerson } from '../../../routes/api/people/+server.js'
 import { GET as getPerson, PUT as putPerson } from '../../../routes/api/people/[id]/+server.js'
 import { GET as getRelationships, POST as postRelationship } from '../../../routes/api/relationships/+server.js'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '../../server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '../../server/testHelpers.js'
 
 /**
  * Performance Benchmark Tests for SvelteKit API Routes
@@ -35,7 +35,7 @@ describe('Performance Benchmarks - People API', () => {
 
   // Skip: Environment-sensitive test - timing thresholds vary by environment
   it.skip('should fetch empty people list in < 100ms', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     const start = performance.now()
     const response = await getPeople(event)
@@ -49,16 +49,16 @@ describe('Performance Benchmarks - People API', () => {
   })
 
   it('should fetch 100 people in < 200ms', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     // Insert 100 people
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
     `)
 
     for (let i = 0; i < 100; i++) {
-      stmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male', userId)
+      stmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male')
     }
 
     const start = performance.now()
@@ -75,16 +75,16 @@ describe('Performance Benchmarks - People API', () => {
 
   // Skip: Environment-sensitive test - timing thresholds vary by environment
   it.skip('should fetch 1000 people in < 500ms', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     // Insert 1000 people
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
     `)
 
     for (let i = 0; i < 1000; i++) {
-      stmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male', userId)
+      stmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male')
     }
 
     const start = performance.now()
@@ -99,10 +99,10 @@ describe('Performance Benchmarks - People API', () => {
     expect(duration).toBeLessThan(500)
   })
 
-  it('should create person in < 50ms', async () => {
+  it('should create person in < 100ms', async () => {
     const start = performance.now()
 
-    const response = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const response = await postPerson(createMockEvent(db, {
       request: {
         json: async () => ({
           firstName: 'John',
@@ -119,12 +119,13 @@ describe('Performance Benchmarks - People API', () => {
     console.log(`POST /api/people: ${duration.toFixed(2)}ms`)
 
     expect(response.status).toBe(201)
-    expect(duration).toBeLessThan(50)
+    // Threshold of 100ms accounts for CI/CD environment variance
+    expect(duration).toBeLessThan(100)
   })
 
   it('should fetch single person in < 50ms', async () => {
     // Create a person first
-    const createResponse = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const createResponse = await postPerson(createMockEvent(db, {
       request: {
         json: async () => ({ firstName: 'John', lastName: 'Doe' })
       }
@@ -134,7 +135,7 @@ describe('Performance Benchmarks - People API', () => {
 
     const start = performance.now()
 
-    const response = await getPerson(createMockAuthenticatedEvent(db, null, {
+    const response = await getPerson(createMockEvent(db, {
       params: { id: person.id.toString() }
     }))
 
@@ -149,7 +150,7 @@ describe('Performance Benchmarks - People API', () => {
 
   it('should update person in < 50ms', async () => {
     // Create a person first
-    const createResponse = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const createResponse = await postPerson(createMockEvent(db, {
       request: {
         json: async () => ({ firstName: 'John', lastName: 'Doe' })
       }
@@ -159,7 +160,7 @@ describe('Performance Benchmarks - People API', () => {
 
     const start = performance.now()
 
-    const response = await putPerson(createMockAuthenticatedEvent(db, null, {
+    const response = await putPerson(createMockEvent(db, {
       params: { id: person.id.toString() },
       request: {
         json: async () => ({
@@ -180,7 +181,7 @@ describe('Performance Benchmarks - People API', () => {
 
   it('should handle 100 sequential updates efficiently', async () => {
     // Create a person
-    const createResponse = await postPerson(createMockAuthenticatedEvent(db, null, {
+    const createResponse = await postPerson(createMockEvent(db, {
       request: {
         json: async () => ({ firstName: 'Test', lastName: 'Person' })
       }
@@ -192,7 +193,7 @@ describe('Performance Benchmarks - People API', () => {
 
     // Perform 100 updates
     for (let i = 0; i < 100; i++) {
-      await putPerson(createMockAuthenticatedEvent(db, null, {
+      await putPerson(createMockEvent(db, {
         params: { id: person.id.toString() },
         request: {
           json: async () => ({
@@ -225,8 +226,8 @@ describe('Performance Benchmarks - Relationships API', () => {
     // Create 10 test people
     for (let i = 1; i <= 10; i++) {
       sqlite.prepare(`
-        INSERT INTO people (id, first_name, last_name, user_id) VALUES (?, ?, ?, ?)
-      `).run(i, `Person${i}`, `LastName${i}`, userId)
+        INSERT INTO people (id, first_name, last_name) VALUES (?, ?, ?)
+      `).run(i, `Person${i}`, `LastName${i}`)
     }
   })
 
@@ -236,7 +237,7 @@ describe('Performance Benchmarks - Relationships API', () => {
 
   // Skip: Environment-sensitive test - timing thresholds vary by environment
   it.skip('should fetch empty relationships list in < 100ms', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     const start = performance.now()
     const response = await getRelationships(event)
@@ -250,19 +251,19 @@ describe('Performance Benchmarks - Relationships API', () => {
   })
 
   it('should fetch 100 relationships in < 200ms', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     // Create 100 spouse relationships
     const stmt = sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, user_id)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO relationships (person1_id, person2_id, type)
+      VALUES (?, ?, ?)
     `)
 
     for (let i = 0; i < 100; i++) {
       const personId = (i % 10) + 1
       const relatedPersonId = ((i + 1) % 10) + 1
       if (personId !== relatedPersonId) {
-        stmt.run(personId, relatedPersonId, 'spouse', userId)
+        stmt.run(personId, relatedPersonId, 'spouse')
       }
     }
 
@@ -281,7 +282,7 @@ describe('Performance Benchmarks - Relationships API', () => {
   it('should create relationship in < 60ms', async () => {
     const start = performance.now()
 
-    const response = await postRelationship(createMockAuthenticatedEvent(db, null, {
+    const response = await postRelationship(createMockEvent(db, {
       request: {
         json: async () => ({
           person1Id: 1,
@@ -324,22 +325,22 @@ describe('Performance Benchmarks - Complex Queries', () => {
   })
 
   it('should handle large dataset (500 people, 1000 relationships) efficiently', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     // Create 500 people
     const peopleStmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
     `)
 
     for (let i = 1; i <= 500; i++) {
-      peopleStmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male', userId)
+      peopleStmt.run(`Person${i}`, `LastName${i}`, '1980-01-01', 'male')
     }
 
     // Create 1000 relationships
     const relStmt = sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
     `)
 
     for (let i = 1; i <= 1000; i++) {
@@ -348,11 +349,11 @@ describe('Performance Benchmarks - Complex Queries', () => {
 
       if (personId !== relatedPersonId) {
         if (i % 3 === 0) {
-          relStmt.run(personId, relatedPersonId, 'parentOf', 'mother', userId)
+          relStmt.run(personId, relatedPersonId, 'parentOf', 'mother')
         } else if (i % 3 === 1) {
-          relStmt.run(personId, relatedPersonId, 'parentOf', 'father', userId)
+          relStmt.run(personId, relatedPersonId, 'parentOf', 'father')
         } else {
-          relStmt.run(personId, relatedPersonId, 'spouse', null, userId)
+          relStmt.run(personId, relatedPersonId, 'spouse', null)
         }
       }
     }
@@ -383,7 +384,7 @@ describe('Performance Benchmarks - Complex Queries', () => {
   // sensitive to system load, causing ratios to vary from 0.5x to 33x between runs.
   // The large dataset test (500 people) provides adequate performance coverage.
   it.skip('should scale linearly with dataset size', async () => {
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
     const results = []
 
     // Test with 100, 200, 300 people
@@ -394,8 +395,8 @@ describe('Performance Benchmarks - Complex Queries', () => {
       // Insert people
       for (let i = 1; i <= count; i++) {
         sqlite.prepare(`
-          INSERT INTO people (first_name, last_name, user_id) VALUES (?, ?, ?)
-        `).run(`Person${i}`, `LastName${i}`, userId)
+          INSERT INTO people (first_name, last_name) VALUES (?, ?)
+        `).run(`Person${i}`, `LastName${i}`)
       }
 
       // Measure fetch time

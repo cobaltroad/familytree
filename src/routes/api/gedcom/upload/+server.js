@@ -7,13 +7,11 @@
  * Handles file upload for GEDCOM files:
  * - Validates file type (.ged only)
  * - Validates file size (10MB max)
- * - Requires authentication
  * - Stores file temporarily for processing
  * - Returns upload metadata
  */
 
 import { json } from '@sveltejs/kit'
-import { requireAuth } from '$lib/server/session.js'
 import { validateFileType, validateFileSize, sanitizeFileName } from '$lib/server/gedcomValidation.js'
 import {
   generateUploadId,
@@ -25,19 +23,13 @@ import {
  * POST /api/gedcom/upload
  * Upload a GEDCOM file for processing
  *
- * Authentication: Required
- *
  * @param {Request} request - HTTP request with multipart/form-data
  * @returns {Response} JSON with uploadId, fileName, fileSize or error
  */
-export async function POST({ request, locals, ...event }) {
+export async function POST({ request }) {
   let uploadId = null
 
   try {
-    // Require authentication
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
     // Parse multipart form data
     let formData
     try {
@@ -69,7 +61,7 @@ export async function POST({ request, locals, ...event }) {
     }
 
     // Generate unique upload ID
-    uploadId = generateUploadId(userId)
+    uploadId = generateUploadId()
 
     // Read file data
     const fileData = Buffer.from(await file.arrayBuffer())
@@ -94,11 +86,6 @@ export async function POST({ request, locals, ...event }) {
     // Clean up temp file on error
     if (uploadId) {
       await cleanupTempFile(uploadId)
-    }
-
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
     }
 
     return new Response('Internal Server Error', { status: 500 })
