@@ -46,9 +46,8 @@ describe('selectBestValue', () => {
 describe('validateMerge', () => {
   it('should allow merge when genders match', () => {
     const result = validateMerge(
-      { id: 1, gender: 'male', userId: 1 },
-      { id: 2, gender: 'male', userId: 1 },
-      { id: 1, defaultPersonId: null }
+      { id: 1, gender: 'male' },
+      { id: 2, gender: 'male' }
     )
 
     expect(result.canMerge).toBe(true)
@@ -57,9 +56,8 @@ describe('validateMerge', () => {
 
   it('should prevent merge when genders mismatch', () => {
     const result = validateMerge(
-      { id: 1, gender: 'male', userId: 1 },
-      { id: 2, gender: 'female', userId: 1 },
-      { id: 1, defaultPersonId: null }
+      { id: 1, gender: 'male' },
+      { id: 2, gender: 'female' }
     )
 
     expect(result.canMerge).toBe(false)
@@ -68,9 +66,8 @@ describe('validateMerge', () => {
 
   it('should allow merge when one gender is unspecified', () => {
     const result = validateMerge(
-      { id: 1, gender: 'male', userId: 1 },
-      { id: 2, gender: 'unspecified', userId: 1 },
-      { id: 1, defaultPersonId: null }
+      { id: 1, gender: 'male' },
+      { id: 2, gender: 'unspecified' }
     )
 
     expect(result.canMerge).toBe(true)
@@ -79,53 +76,8 @@ describe('validateMerge', () => {
 
   it('should allow merge when both genders are null', () => {
     const result = validateMerge(
-      { id: 1, gender: null, userId: 1 },
-      { id: 2, gender: null, userId: 1 },
-      { id: 1, defaultPersonId: null }
-    )
-
-    expect(result.canMerge).toBe(true)
-    expect(result.errors).toEqual([])
-  })
-
-  it('should prevent merge when source is user default person', () => {
-    const result = validateMerge(
-      { id: 15, gender: 'male', userId: 1 },
-      { id: 27, gender: 'male', userId: 1 },
-      { id: 1, defaultPersonId: 15 }
-    )
-
-    expect(result.canMerge).toBe(false)
-    expect(result.errors).toContain('Cannot merge your profile person into another person')
-  })
-
-  it('should prevent merge when target is user default person', () => {
-    const result = validateMerge(
-      { id: 15, gender: 'male', userId: 1 },
-      { id: 27, gender: 'male', userId: 1 },
-      { id: 1, defaultPersonId: 27 }
-    )
-
-    expect(result.canMerge).toBe(false)
-    expect(result.errors).toContain('Cannot merge into your profile person')
-  })
-
-  it('should prevent cross-user merge', () => {
-    const result = validateMerge(
-      { id: 1, gender: 'male', userId: 1 },
-      { id: 2, gender: 'male', userId: 2 },
-      { id: 1, defaultPersonId: null }
-    )
-
-    expect(result.canMerge).toBe(false)
-    expect(result.errors).toContain('Cannot merge records across different users')
-  })
-
-  it('should allow merge when same user and no default person conflicts', () => {
-    const result = validateMerge(
-      { id: 1, gender: 'male', userId: 1 },
-      { id: 2, gender: 'male', userId: 1 },
-      { id: 1, defaultPersonId: 5 }
+      { id: 1, gender: null },
+      { id: 2, gender: null }
     )
 
     expect(result.canMerge).toBe(true)
@@ -216,8 +168,7 @@ describe('generateMergePreview', () => {
       birthDate: '1950',
       deathDate: null,
       gender: 'male',
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
 
     const target = {
@@ -227,15 +178,13 @@ describe('generateMergePreview', () => {
       birthDate: '1950-03-15',
       deathDate: null,
       gender: 'male',
-      photoUrl: 'http://example.com/photo.jpg',
-      userId: 1
+      photoUrl: 'http://example.com/photo.jpg'
     }
 
-    const user = { id: 1, defaultPersonId: null }
     const sourceRelationships = []
     const targetRelationships = []
 
-    const preview = generateMergePreview(source, target, user, sourceRelationships, targetRelationships)
+    const preview = generateMergePreview(source, target, null, sourceRelationships, targetRelationships)
 
     expect(preview.canMerge).toBe(true)
     expect(preview.validation.errors).toEqual([])
@@ -253,8 +202,7 @@ describe('generateMergePreview', () => {
       birthDate: '1950',
       deathDate: null,
       gender: 'male',
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
 
     const target = {
@@ -264,15 +212,13 @@ describe('generateMergePreview', () => {
       birthDate: '1950',
       deathDate: null,
       gender: 'female',
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
 
-    const user = { id: 1, defaultPersonId: null }
     const sourceRelationships = []
     const targetRelationships = []
 
-    const preview = generateMergePreview(source, target, user, sourceRelationships, targetRelationships)
+    const preview = generateMergePreview(source, target, null, sourceRelationships, targetRelationships)
 
     expect(preview.canMerge).toBe(false)
     expect(preview.validation.errors).toContain('Gender mismatch: Cannot merge male into female')
@@ -286,8 +232,7 @@ describe('generateMergePreview', () => {
       birthDate: '1950',
       deathDate: null,
       gender: 'male',
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
 
     const target = {
@@ -297,11 +242,8 @@ describe('generateMergePreview', () => {
       birthDate: '1950-03-15',
       deathDate: null,
       gender: 'male',
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
-
-    const user = { id: 1, defaultPersonId: null }
 
     const sourceRelationships = [
       { person1Id: 8, person2Id: 15, type: 'parentOf', parentRole: 'mother' }
@@ -311,7 +253,7 @@ describe('generateMergePreview', () => {
       { person1Id: 10, person2Id: 27, type: 'parentOf', parentRole: 'mother' }
     ]
 
-    const preview = generateMergePreview(source, target, user, sourceRelationships, targetRelationships)
+    const preview = generateMergePreview(source, target, null, sourceRelationships, targetRelationships)
 
     expect(preview.canMerge).toBe(true) // Conflicts are warnings, not blockers
     expect(preview.validation.warnings).toContain('Both people have different mothers - merge will overwrite')
@@ -326,8 +268,7 @@ describe('generateMergePreview', () => {
       birthDate: '1950',
       deathDate: null,
       gender: 'male',
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
 
     const target = {
@@ -337,11 +278,8 @@ describe('generateMergePreview', () => {
       birthDate: '1950-03-15',
       deathDate: null,
       gender: 'male',
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
-
-    const user = { id: 1, defaultPersonId: null }
 
     const sourceRelationships = [
       { id: 1, person1Id: 8, person2Id: 15, type: 'parentOf', parentRole: 'mother' },
@@ -354,7 +292,7 @@ describe('generateMergePreview', () => {
       { id: 5, person1Id: 27, person2Id: 35, type: 'parentOf', parentRole: 'father' }
     ]
 
-    const preview = generateMergePreview(source, target, user, sourceRelationships, targetRelationships)
+    const preview = generateMergePreview(source, target, null, sourceRelationships, targetRelationships)
 
     expect(preview.relationshipsToTransfer).toHaveLength(3)
     expect(preview.existingRelationships).toHaveLength(2)
@@ -368,8 +306,7 @@ describe('generateMergePreview', () => {
       birthDate: null,
       deathDate: null,
       gender: null,
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
 
     const target = {
@@ -379,15 +316,13 @@ describe('generateMergePreview', () => {
       birthDate: '1950',
       deathDate: null,
       gender: 'male',
-      photoUrl: null,
-      userId: 1
+      photoUrl: null
     }
 
-    const user = { id: 1, defaultPersonId: null }
     const sourceRelationships = []
     const targetRelationships = []
 
-    const preview = generateMergePreview(source, target, user, sourceRelationships, targetRelationships)
+    const preview = generateMergePreview(source, target, null, sourceRelationships, targetRelationships)
 
     expect(preview.canMerge).toBe(true)
     expect(preview.merged.firstName).toBe('John')

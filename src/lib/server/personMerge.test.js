@@ -16,115 +16,30 @@ import { eq, or, and } from 'drizzle-orm'
 describe('executeMerge', () => {
   let sqlite
   let db
-  let userId
 
   beforeEach(async () => {
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
-    userId = await setupTestDatabase(sqlite, db)
+    await setupTestDatabase(sqlite, db)
   })
 
   describe('validation', () => {
     it('should throw error when source person does not exist', async () => {
       const target = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Doe',
-        userId
+        lastName: 'Doe'
       }).returning().get()
 
-      await expect(executeMerge(999, target.id, userId, db)).rejects.toThrow('Source person not found')
+      await expect(executeMerge(999, target.id, db)).rejects.toThrow('Source person not found')
     })
 
     it('should throw error when target person does not exist', async () => {
       const source = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Doe',
-        userId
+        lastName: 'Doe'
       }).returning().get()
 
-      await expect(executeMerge(source.id, 999, userId, db)).rejects.toThrow('Target person not found')
-    })
-
-    it('should throw error when source person belongs to different user', async () => {
-      // Create another user
-      const otherUserId = sqlite.prepare(`
-        INSERT INTO users (email, name, provider)
-        VALUES (?, ?, ?)
-      `).run('other@example.com', 'Other User', 'test').lastInsertRowid
-
-      const source = await db.insert(people).values({
-        firstName: 'John',
-        lastName: 'Doe',
-        userId: otherUserId
-      }).returning().get()
-
-      const target = await db.insert(people).values({
-        firstName: 'John',
-        lastName: 'Doe',
-        userId
-      }).returning().get()
-
-      await expect(executeMerge(source.id, target.id, userId, db)).rejects.toThrow('Source person does not belong to current user')
-    })
-
-    it('should throw error when target person belongs to different user', async () => {
-      // Create another user
-      const otherUserId = sqlite.prepare(`
-        INSERT INTO users (email, name, provider)
-        VALUES (?, ?, ?)
-      `).run('other@example.com', 'Other User', 'test').lastInsertRowid
-
-      const source = await db.insert(people).values({
-        firstName: 'John',
-        lastName: 'Doe',
-        userId
-      }).returning().get()
-
-      const target = await db.insert(people).values({
-        firstName: 'John',
-        lastName: 'Doe',
-        userId: otherUserId
-      }).returning().get()
-
-      await expect(executeMerge(source.id, target.id, userId, db)).rejects.toThrow('Target person does not belong to current user')
-    })
-
-    it('should throw error when trying to merge source into user default person', async () => {
-      const target = await db.insert(people).values({
-        firstName: 'John',
-        lastName: 'Doe',
-        userId
-      }).returning().get()
-
-      const source = await db.insert(people).values({
-        firstName: 'John',
-        lastName: 'Smith',
-        userId
-      }).returning().get()
-
-      // Set target as default person
-      sqlite.prepare(`UPDATE users SET default_person_id = ? WHERE id = ?`).run(target.id, userId)
-
-      await expect(executeMerge(source.id, target.id, userId, db)).rejects.toThrow('Cannot merge into your profile person')
-    })
-
-    it('should throw error when trying to merge user default person as source', async () => {
-      const source = await db.insert(people).values({
-        firstName: 'John',
-        lastName: 'Doe',
-        userId
-      }).returning().get()
-
-      const target = await db.insert(people).values({
-        firstName: 'John',
-        lastName: 'Smith',
-        userId
-      }).returning().get()
-
-      // Set source as default person
-      sqlite.prepare(`UPDATE users SET default_person_id = ? WHERE id = ?`).run(source.id, userId)
-
-      await expect(executeMerge(source.id, target.id, userId, db)).rejects.toThrow('Cannot merge your profile person into another person')
+      await expect(executeMerge(source.id, 999, db)).rejects.toThrow('Target person not found')
     })
   })
 
@@ -133,18 +48,16 @@ describe('executeMerge', () => {
       const source = await db.insert(people).values({
         firstName: 'John',
         lastName: 'Smith',
-        birthDate: '1950',
-        userId
+        birthDate: '1950'
       }).returning().get()
 
       const target = await db.insert(people).values({
         firstName: 'John',
         lastName: 'A. Smith',
-        birthDate: '1950-03-15',
-        userId
+        birthDate: '1950-03-15'
       }).returning().get()
 
-      const result = await executeMerge(source.id, target.id, userId, db)
+      const result = await executeMerge(source.id, target.id, db)
 
       expect(result.success).toBe(true)
       expect(result.targetId).toBe(target.id)
@@ -166,36 +79,32 @@ describe('executeMerge', () => {
     it('should transfer relationships from source to target', async () => {
       const source = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const target = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const mother = await db.insert(people).values({
         firstName: 'Mary',
         lastName: 'Smith',
-        gender: 'female',
-        userId
+        gender: 'female'
       }).returning().get()
 
       const child = await db.insert(people).values({
         firstName: 'Jane',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       // Create relationships for source
       await db.insert(relationships).values([
-        { person1Id: mother.id, person2Id: source.id, type: 'parentOf', parentRole: 'mother', userId },
-        { person1Id: source.id, person2Id: child.id, type: 'parentOf', parentRole: 'father', userId }
+        { person1Id: mother.id, person2Id: source.id, type: 'parentOf', parentRole: 'mother' },
+        { person1Id: source.id, person2Id: child.id, type: 'parentOf', parentRole: 'father' }
       ])
 
-      const result = await executeMerge(source.id, target.id, userId, db)
+      const result = await executeMerge(source.id, target.id, db)
 
       expect(result.success).toBe(true)
       expect(result.relationshipsTransferred).toBe(2)
@@ -229,39 +138,35 @@ describe('executeMerge', () => {
     it('should deduplicate relationships during transfer', async () => {
       const source = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const target = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const mother = await db.insert(people).values({
         firstName: 'Mary',
         lastName: 'Smith',
-        gender: 'female',
-        userId
+        gender: 'female'
       }).returning().get()
 
       const father = await db.insert(people).values({
         firstName: 'Bob',
         lastName: 'Smith',
-        gender: 'male',
-        userId
+        gender: 'male'
       }).returning().get()
 
       // Both source and target have same mother (should deduplicate)
       await db.insert(relationships).values([
-        { person1Id: mother.id, person2Id: source.id, type: 'parentOf', parentRole: 'mother', userId },
-        { person1Id: mother.id, person2Id: target.id, type: 'parentOf', parentRole: 'mother', userId },
+        { person1Id: mother.id, person2Id: source.id, type: 'parentOf', parentRole: 'mother' },
+        { person1Id: mother.id, person2Id: target.id, type: 'parentOf', parentRole: 'mother' },
         // Source has father, target doesn't (should transfer)
-        { person1Id: father.id, person2Id: source.id, type: 'parentOf', parentRole: 'father', userId }
+        { person1Id: father.id, person2Id: source.id, type: 'parentOf', parentRole: 'father' }
       ])
 
-      const result = await executeMerge(source.id, target.id, userId, db)
+      const result = await executeMerge(source.id, target.id, db)
 
       expect(result.success).toBe(true)
       expect(result.relationshipsTransferred).toBe(1) // Only father transferred, mother deduplicated
@@ -285,29 +190,26 @@ describe('executeMerge', () => {
     it('should handle bidirectional spouse relationships', async () => {
       const source = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const target = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const spouse = await db.insert(people).values({
         firstName: 'Jane',
-        lastName: 'Doe',
-        userId
+        lastName: 'Doe'
       }).returning().get()
 
       // Create bidirectional spouse relationship
       await db.insert(relationships).values([
-        { person1Id: source.id, person2Id: spouse.id, type: 'spouse', userId },
-        { person1Id: spouse.id, person2Id: source.id, type: 'spouse', userId }
+        { person1Id: source.id, person2Id: spouse.id, type: 'spouse' },
+        { person1Id: spouse.id, person2Id: source.id, type: 'spouse' }
       ])
 
-      const result = await executeMerge(source.id, target.id, userId, db)
+      const result = await executeMerge(source.id, target.id, db)
 
       expect(result.success).toBe(true)
       expect(result.relationshipsTransferred).toBe(2)
@@ -330,37 +232,33 @@ describe('executeMerge', () => {
     it('should handle relationship conflict by preferring source parent', async () => {
       const source = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const target = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const sourceMother = await db.insert(people).values({
         firstName: 'Mary',
         lastName: 'Smith',
-        gender: 'female',
-        userId
+        gender: 'female'
       }).returning().get()
 
       const targetMother = await db.insert(people).values({
         firstName: 'Jane',
         lastName: 'Doe',
-        gender: 'female',
-        userId
+        gender: 'female'
       }).returning().get()
 
       // Both have different mothers
       await db.insert(relationships).values([
-        { person1Id: sourceMother.id, person2Id: source.id, type: 'parentOf', parentRole: 'mother', userId },
-        { person1Id: targetMother.id, person2Id: target.id, type: 'parentOf', parentRole: 'mother', userId }
+        { person1Id: sourceMother.id, person2Id: source.id, type: 'parentOf', parentRole: 'mother' },
+        { person1Id: targetMother.id, person2Id: target.id, type: 'parentOf', parentRole: 'mother' }
       ])
 
-      const result = await executeMerge(source.id, target.id, userId, db)
+      const result = await executeMerge(source.id, target.id, db)
 
       expect(result.success).toBe(true)
 
@@ -389,8 +287,7 @@ describe('executeMerge', () => {
         gender: 'male',
         photoUrl: 'http://example.com/photo.jpg',
         birthSurname: 'Johnson',
-        nickname: 'Johnny',
-        userId
+        nickname: 'Johnny'
       }).returning().get()
 
       const target = await db.insert(people).values({
@@ -401,11 +298,10 @@ describe('executeMerge', () => {
         gender: 'male',
         photoUrl: null,
         birthSurname: null,
-        nickname: null,
-        userId
+        nickname: null
       }).returning().get()
 
-      const result = await executeMerge(source.id, target.id, userId, db)
+      const result = await executeMerge(source.id, target.id, db)
 
       expect(result.success).toBe(true)
 
@@ -423,31 +319,27 @@ describe('executeMerge', () => {
     it('should return merge summary', async () => {
       const source = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const target = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const mother = await db.insert(people).values({
         firstName: 'Mary',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       await db.insert(relationships).values({
         person1Id: mother.id,
         person2Id: source.id,
         type: 'parentOf',
-        parentRole: 'mother',
-        userId
+        parentRole: 'mother'
       })
 
-      const result = await executeMerge(source.id, target.id, userId, db)
+      const result = await executeMerge(source.id, target.id, db)
 
       expect(result).toMatchObject({
         success: true,
@@ -466,26 +358,20 @@ describe('executeMerge', () => {
     it('should rollback entire transaction on error', async () => {
       const source = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
 
       const target = await db.insert(people).values({
         firstName: 'John',
-        lastName: 'Smith',
-        userId
+        lastName: 'Smith'
       }).returning().get()
-
-      // Force an error by making executeMerge fail (we'll test this by passing invalid db)
-      // This test verifies that the transaction mechanism works
-      // In practice, we test by checking that partial changes don't persist
 
       const countBefore = await db.select().from(people).all()
       const relCountBefore = await db.select().from(relationships).all()
 
       try {
-        // Pass invalid userId to trigger validation error
-        await executeMerge(source.id, target.id, 999, db)
+        // Attempt to merge non-existent source to trigger error
+        await executeMerge(999, target.id, db)
       } catch (err) {
         // Expected to fail
       }

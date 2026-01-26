@@ -8,24 +8,16 @@ import {
   normalizeRelationship,
   parseId
 } from '$lib/server/relationshipHelpers.js'
-import { requireAuth } from '$lib/server/session.js'
 
 /**
  * GET /api/relationships/[id]
- * Returns a single relationship by ID (must belong to authenticated user)
- *
- * Authentication: Required
- * Ownership: User must own the relationship (403 if not)
+ * Returns a single relationship by ID
  *
  * @param {Object} params - URL parameters containing id
- * @returns {Response} JSON of relationship or 404/403 if not found/forbidden
+ * @returns {Response} JSON of relationship or 404 if not found
  */
-export async function GET({ params, locals, ...event }) {
+export async function GET({ params, locals }) {
   try {
-    // Require authentication (Issue #72)
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
@@ -35,28 +27,14 @@ export async function GET({ params, locals, ...event }) {
       return new Response('Invalid ID', { status: 400 })
     }
 
-    // Query relationship by ID and user_id (Issue #72: Ownership Verification)
+    // Query relationship by ID
     const result = await database
       .select()
       .from(relationships)
-      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
+      .where(eq(relationships.id, id))
 
     if (result.length === 0) {
-      // Check if relationship exists at all (to differentiate 404 vs 403)
-      const anyRelationship = await database
-        .select()
-        .from(relationships)
-        .where(eq(relationships.id, id))
-
-      if (anyRelationship.length > 0) {
-        // Relationship exists but doesn't belong to user
-        return new Response('Forbidden: You do not have access to this relationship', {
-          status: 403
-        })
-      } else {
-        // Relationship doesn't exist at all
-        return new Response('Relationship not found', { status: 404 })
-      }
+      return new Response('Relationship not found', { status: 404 })
     }
 
     // Transform to API format (denormalize)
@@ -64,11 +42,6 @@ export async function GET({ params, locals, ...event }) {
 
     return json(transformedRelationship)
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('Error fetching relationship:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -77,9 +50,6 @@ export async function GET({ params, locals, ...event }) {
 /**
  * PUT /api/relationships/[id]
  * Updates a relationship with business logic validation
- *
- * Authentication: Required
- * Ownership: User must own the relationship and both people (403 if not)
  *
  * Business logic:
  * - Normalizes "mother"/"father" to "parentOf" with parent_role
@@ -91,12 +61,8 @@ export async function GET({ params, locals, ...event }) {
  * @param {Request} request - HTTP request with relationship data in body
  * @returns {Response} JSON of updated relationship or error
  */
-export async function PUT({ params, request, locals, ...event }) {
+export async function PUT({ params, request, locals }) {
   try {
-    // Require authentication (Issue #72)
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
@@ -120,44 +86,27 @@ export async function PUT({ params, request, locals, ...event }) {
       return new Response(validation.error, { status: 400 })
     }
 
-    // Check if relationship exists and belongs to user (Issue #72: Ownership Verification)
+    // Check if relationship exists
     const existing = await database
       .select()
       .from(relationships)
-      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
+      .where(eq(relationships.id, id))
 
     if (existing.length === 0) {
-      // Check if relationship exists at all (to differentiate 404 vs 403)
-      const anyRelationship = await database
-        .select()
-        .from(relationships)
-        .where(eq(relationships.id, id))
-
-      if (anyRelationship.length > 0) {
-        // Relationship exists but doesn't belong to user
-        return new Response('Forbidden: You do not have access to this relationship', {
-          status: 403
-        })
-      } else {
-        // Relationship doesn't exist at all
-        return new Response('Relationship not found', { status: 404 })
-      }
+      return new Response('Relationship not found', { status: 404 })
     }
 
     // Normalize relationship (convert mother/father to parentOf)
     const normalized = normalizeRelationship(data.person1Id, data.person2Id, data.type)
 
-    // Verify both people belong to the user (Issue #72: Ownership Verification)
-    const personsOwnedByUser = await checkPersonsOwnedByUser(
+    // Verify both people exist
+    const personsExist = await checkPersonsExist(
       database,
-      userId,
       normalized.person1Id,
       normalized.person2Id
     )
-    if (!personsOwnedByUser) {
-      return json({ error: 'One or both persons do not exist or do not belong to you' }, {
-        status: 403
-      })
+    if (!personsExist) {
+      return json({ error: 'One or both persons do not exist' }, { status: 400 })
     }
 
     // For parent relationships, validate child doesn't already have this parent role
@@ -195,7 +144,7 @@ export async function PUT({ params, request, locals, ...event }) {
         type: normalized.type,
         parentRole: normalized.parentRole
       })
-      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
+      .where(eq(relationships.id, id))
       .returning()
 
     const updatedRelationship = result[0]
@@ -205,11 +154,6 @@ export async function PUT({ params, request, locals, ...event }) {
 
     return json(transformedRelationship)
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('Error updating relationship:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -217,20 +161,13 @@ export async function PUT({ params, request, locals, ...event }) {
 
 /**
  * DELETE /api/relationships/[id]
- * Deletes a relationship by ID (must belong to authenticated user)
- *
- * Authentication: Required
- * Ownership: User must own the relationship (403 if not)
+ * Deletes a relationship by ID
  *
  * @param {Object} params - URL parameters containing id
  * @returns {Response} 204 No Content on success or error
  */
-export async function DELETE({ params, locals, ...event }) {
+export async function DELETE({ params, locals }) {
   try {
-    // Require authentication (Issue #72)
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
@@ -240,42 +177,23 @@ export async function DELETE({ params, locals, ...event }) {
       return new Response('Invalid ID', { status: 400 })
     }
 
-    // Check if relationship exists and belongs to user (Issue #72: Ownership Verification)
+    // Check if relationship exists
     const existing = await database
       .select()
       .from(relationships)
-      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
+      .where(eq(relationships.id, id))
 
     if (existing.length === 0) {
-      // Check if relationship exists at all (to differentiate 404 vs 403)
-      const anyRelationship = await database
-        .select()
-        .from(relationships)
-        .where(eq(relationships.id, id))
-
-      if (anyRelationship.length > 0) {
-        // Relationship exists but doesn't belong to user
-        return new Response('Forbidden: You do not have access to this relationship', {
-          status: 403
-        })
-      } else {
-        // Relationship doesn't exist at all
-        return new Response('Relationship not found', { status: 404 })
-      }
+      return new Response('Relationship not found', { status: 404 })
     }
 
     // Delete relationship
     await database
       .delete(relationships)
-      .where(and(eq(relationships.id, id), eq(relationships.userId, userId)))
+      .where(eq(relationships.id, id))
 
     return new Response(null, { status: 204 })
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('Error deleting relationship:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -323,24 +241,23 @@ async function hasParentOfRole(database, childId, role, excludeId = null) {
 }
 
 /**
- * Check if both persons exist and belong to the specified user
+ * Check if both persons exist
  *
  * @param {Database} database - Drizzle database instance
- * @param {number} userId - User ID
  * @param {number} person1Id - First person ID
  * @param {number} person2Id - Second person ID
- * @returns {Promise<boolean>} True if both persons exist and belong to user
+ * @returns {Promise<boolean>} True if both persons exist
  */
-async function checkPersonsOwnedByUser(database, userId, person1Id, person2Id) {
+async function checkPersonsExist(database, person1Id, person2Id) {
   const person1 = await database
     .select()
     .from(people)
-    .where(and(eq(people.id, person1Id), eq(people.userId, userId)))
+    .where(eq(people.id, person1Id))
 
   const person2 = await database
     .select()
     .from(people)
-    .where(and(eq(people.id, person2Id), eq(people.userId, userId)))
+    .where(eq(people.id, person2Id))
 
   return person1.length > 0 && person2.length > 0
 }

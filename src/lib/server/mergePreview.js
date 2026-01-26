@@ -55,23 +55,14 @@ export function selectBestValue(sourceValue, targetValue) {
  * Validates whether two people can be merged
  *
  * Validation rules:
- * 1. Same user_id required
- * 2. Gender must match or one must be "unspecified" or null
- * 3. Cannot merge if source is user's defaultPersonId
- * 4. Cannot merge if target is user's defaultPersonId
+ * 1. Gender must match or one must be "unspecified" or null
  *
  * @param {Object} source - Source person
  * @param {Object} target - Target person
- * @param {Object} user - Current user with defaultPersonId
  * @returns {Object} Validation result { canMerge, errors }
  */
-export function validateMerge(source, target, user) {
+export function validateMerge(source, target) {
   const errors = []
-
-  // Check user_id match
-  if (source.userId !== target.userId) {
-    errors.push('Cannot merge records across different users')
-  }
 
   // Check gender compatibility
   const sourceGender = source.gender
@@ -83,15 +74,6 @@ export function validateMerge(source, target, user) {
       targetGender !== 'unspecified' &&
       sourceGender !== targetGender) {
     errors.push(`Gender mismatch: Cannot merge ${sourceGender} into ${targetGender}`)
-  }
-
-  // Check default person restrictions
-  if (user.defaultPersonId === source.id) {
-    errors.push('Cannot merge your profile person into another person')
-  }
-
-  if (user.defaultPersonId === target.id) {
-    errors.push('Cannot merge into your profile person')
   }
 
   return {
@@ -149,14 +131,14 @@ export function detectRelationshipConflicts(sourceId, targetId, sourceRelationsh
  *
  * @param {Object} source - Source person (will be deleted)
  * @param {Object} target - Target person (will receive merged data)
- * @param {Object} user - Current user with defaultPersonId
+ * @param {Object} _user - Unused (kept for API compatibility)
  * @param {Array} sourceRelationships - All relationships for source person
  * @param {Array} targetRelationships - All relationships for target person
  * @returns {Object} Merge preview with validation, merged data, and relationship info
  */
-export function generateMergePreview(source, target, user, sourceRelationships, targetRelationships) {
+export function generateMergePreview(source, target, _user, sourceRelationships, targetRelationships) {
   // Validate the merge
-  const validation = validateMerge(source, target, user)
+  const validation = validateMerge(source, target)
 
   // Detect relationship conflicts
   const conflictFields = detectRelationshipConflicts(source.id, target.id, sourceRelationships, targetRelationships)
@@ -183,8 +165,7 @@ export function generateMergePreview(source, target, user, sourceRelationships, 
     gender: selectBestValue(source.gender, target.gender),
     photoUrl: selectBestValue(source.photoUrl, target.photoUrl),
     birthSurname: selectBestValue(source.birthSurname, target.birthSurname),
-    nickname: selectBestValue(source.nickname, target.nickname),
-    userId: target.userId
+    nickname: selectBestValue(source.nickname, target.nickname)
   }
 
   // Build comparison table

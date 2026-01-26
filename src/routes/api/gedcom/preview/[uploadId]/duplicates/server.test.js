@@ -15,45 +15,15 @@ vi.mock('$lib/server/gedcomPreview.js', () => ({
   getPreviewData: vi.fn()
 }))
 
-// Mock the session module
-vi.mock('$lib/server/session.js', () => ({
-  requireAuth: vi.fn()
-}))
-
 import { getPreviewData } from '$lib/server/gedcomPreview.js'
-import { requireAuth } from '$lib/server/session.js'
 
 describe('GET /api/gedcom/preview/:uploadId/duplicates', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('requires authentication', async () => {
-    // Arrange
-    const authError = new Error('Unauthorized')
-    authError.name = 'AuthenticationError'
-    authError.status = 401
-
-    requireAuth.mockRejectedValue(authError)
-
-    const request = new Request('http://localhost/api/gedcom/preview/upload-123/duplicates')
-    const event = {
-      request,
-      locals: {},
-      params: { uploadId: 'upload-123' }
-    }
-
-    // Act
-    const response = await GET(event)
-
-    // Assert
-    expect(response.status).toBe(401)
-    expect(requireAuth).toHaveBeenCalledWith(expect.objectContaining({ locals: {}, request }))
-  })
-
   it('returns 404 if preview data not found', async () => {
     // Arrange
-    requireAuth.mockResolvedValue({ user: { id: 1 } })
     getPreviewData.mockResolvedValue(null)
 
     const request = new Request('http://localhost/api/gedcom/preview/upload-123/duplicates')
@@ -70,12 +40,11 @@ describe('GET /api/gedcom/preview/:uploadId/duplicates', () => {
     expect(response.status).toBe(404)
     const text = await response.text()
     expect(text).toBe('Preview data not found')
-    expect(getPreviewData).toHaveBeenCalledWith('upload-123', 1)
+    expect(getPreviewData).toHaveBeenCalledWith('upload-123')
   })
 
   it('returns empty array when no duplicates exist', async () => {
     // Arrange
-    requireAuth.mockResolvedValue({ user: { id: 1 } })
     getPreviewData.mockResolvedValue({
       duplicates: [],
       individuals: []
@@ -99,8 +68,6 @@ describe('GET /api/gedcom/preview/:uploadId/duplicates', () => {
 
   it('returns duplicates with formatted comparison data', async () => {
     // Arrange
-    requireAuth.mockResolvedValue({ user: { id: 1 } })
-
     const mockPreviewData = {
       duplicates: [
         {
@@ -193,8 +160,6 @@ describe('GET /api/gedcom/preview/:uploadId/duplicates', () => {
 
   it('handles multiple duplicates correctly', async () => {
     // Arrange
-    requireAuth.mockResolvedValue({ user: { id: 1 } })
-
     const mockPreviewData = {
       duplicates: [
         {
@@ -235,8 +200,6 @@ describe('GET /api/gedcom/preview/:uploadId/duplicates', () => {
 
   it('converts GEDCOM sex values to gender values', async () => {
     // Arrange
-    requireAuth.mockResolvedValue({ user: { id: 1 } })
-
     const mockPreviewData = {
       duplicates: [
         {
@@ -283,8 +246,6 @@ describe('GET /api/gedcom/preview/:uploadId/duplicates', () => {
 
   it('handles missing optional fields gracefully', async () => {
     // Arrange
-    requireAuth.mockResolvedValue({ user: { id: 1 } })
-
     const mockPreviewData = {
       duplicates: [
         {
@@ -337,7 +298,6 @@ describe('GET /api/gedcom/preview/:uploadId/duplicates', () => {
 
   it('returns 500 on unexpected errors', async () => {
     // Arrange
-    requireAuth.mockResolvedValue({ user: { id: 1 } })
     getPreviewData.mockRejectedValue(new Error('Database error'))
 
     const request = new Request('http://localhost/api/gedcom/preview/upload-123/duplicates')

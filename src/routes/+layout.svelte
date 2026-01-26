@@ -1,12 +1,7 @@
 <script>
-  import { page } from '$app/stores'
   import Notification from '$lib/components/Notification.svelte'
-  import AuthHeader from '$lib/components/AuthHeader.svelte'
-
-  $: session = $page.data.session
 </script>
 
-<AuthHeader {session} />
 <Notification />
 <slot />
 

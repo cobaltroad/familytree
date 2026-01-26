@@ -36,16 +36,16 @@ describe('Drizzle Migration System', () => {
       expect(tables[0].name).toBe('__drizzle_migrations')
     })
 
-    it('should create all schema tables (users, people, relationships, sessions)', async () => {
+    it('should create all schema tables (people, relationships)', async () => {
       await applyMigrations(sqlite, db)
 
       const tables = sqlite
-        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('users', 'people', 'relationships', 'sessions')")
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('people', 'relationships')")
         .all()
         .map(row => row.name)
         .sort()
 
-      expect(tables).toEqual(['people', 'relationships', 'sessions', 'users'])
+      expect(tables).toEqual(['people', 'relationships'])
     })
 
     it('should record all applied migrations in __drizzle_migrations table', async () => {
@@ -55,8 +55,8 @@ describe('Drizzle Migration System', () => {
         .prepare('SELECT hash FROM __drizzle_migrations ORDER BY id')
         .all()
 
-      // Should have 4 migrations: initial schema, view_all_records, birth_surname/nickname, relationships_unique_idx
-      expect(migrations).toHaveLength(4)
+      // Should have 1 migration (initial schema with people and relationships)
+      expect(migrations).toHaveLength(1)
     })
 
     it('should skip already-applied migrations on subsequent runs', async () => {
@@ -85,29 +85,6 @@ describe('Drizzle Migration System', () => {
       expect(foreignKeys.foreign_keys).toBe(1)
     })
 
-    it('should create all expected indexes', async () => {
-      await applyMigrations(sqlite, db)
-
-      const indexes = sqlite
-        .prepare("SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%'")
-        .all()
-        .map(row => row.name)
-        .sort()
-
-      const expectedIndexes = [
-        'people_user_id_idx',
-        'relationships_user_id_idx',
-        'relationships_unique_idx',
-        'sessions_user_id_idx',
-        'sessions_expires_at_idx',
-        'users_email_unique',
-        'users_email_idx',
-        'users_provider_user_id_idx'
-      ].sort()
-
-      expect(indexes).toEqual(expectedIndexes)
-    })
-
     it('should create people table with all expected columns', async () => {
       await applyMigrations(sqlite, db)
 
@@ -127,34 +104,7 @@ describe('Drizzle Migration System', () => {
         'photo_url',
         'birth_surname',
         'nickname',
-        'created_at',
-        'user_id'
-      ].sort()
-
-      expect(columns).toEqual(expectedColumns)
-    })
-
-    it('should create users table with all expected columns', async () => {
-      await applyMigrations(sqlite, db)
-
-      const columns = sqlite
-        .prepare('PRAGMA table_info(users)')
-        .all()
-        .map(col => col.name)
-        .sort()
-
-      const expectedColumns = [
-        'id',
-        'email',
-        'name',
-        'avatar_url',
-        'provider',
-        'provider_user_id',
-        'email_verified',
-        'created_at',
-        'last_login_at',
-        'default_person_id',
-        'view_all_records'
+        'created_at'
       ].sort()
 
       expect(columns).toEqual(expectedColumns)
@@ -175,28 +125,7 @@ describe('Drizzle Migration System', () => {
         'person2_id',
         'type',
         'parent_role',
-        'created_at',
-        'user_id'
-      ].sort()
-
-      expect(columns).toEqual(expectedColumns)
-    })
-
-    it('should create sessions table with all expected columns', async () => {
-      await applyMigrations(sqlite, db)
-
-      const columns = sqlite
-        .prepare('PRAGMA table_info(sessions)')
-        .all()
-        .map(col => col.name)
-        .sort()
-
-      const expectedColumns = [
-        'id',
-        'user_id',
-        'expires_at',
-        'created_at',
-        'last_accessed_at'
+        'created_at'
       ].sort()
 
       expect(columns).toEqual(expectedColumns)
@@ -205,29 +134,34 @@ describe('Drizzle Migration System', () => {
     it('should allow inserting data after migration', async () => {
       await applyMigrations(sqlite, db)
 
-      // Insert a test user
-      const userResult = sqlite
-        .prepare('INSERT INTO users (email, name, provider) VALUES (?, ?, ?)')
-        .run('test@example.com', 'Test User', 'test')
-
-      expect(userResult.lastInsertRowid).toBeGreaterThan(0)
-
-      // Insert a test person with the user_id
+      // Insert a test person
       const personResult = sqlite
-        .prepare('INSERT INTO people (first_name, last_name, user_id) VALUES (?, ?, ?)')
-        .run('John', 'Doe', userResult.lastInsertRowid)
+        .prepare('INSERT INTO people (first_name, last_name) VALUES (?, ?)')
+        .run('John', 'Doe')
 
       expect(personResult.lastInsertRowid).toBeGreaterThan(0)
+
+      // Insert another person
+      const person2Result = sqlite
+        .prepare('INSERT INTO people (first_name, last_name) VALUES (?, ?)')
+        .run('Jane', 'Doe')
+
+      // Insert a relationship
+      const relResult = sqlite
+        .prepare('INSERT INTO relationships (person1_id, person2_id, type) VALUES (?, ?, ?)')
+        .run(personResult.lastInsertRowid, person2Result.lastInsertRowid, 'spouse')
+
+      expect(relResult.lastInsertRowid).toBeGreaterThan(0)
     })
 
     it('should enforce foreign key constraints', async () => {
       await applyMigrations(sqlite, db)
 
-      // Try to insert person with non-existent user_id
+      // Try to insert relationship with non-existent person_id
       expect(() => {
         sqlite
-          .prepare('INSERT INTO people (first_name, last_name, user_id) VALUES (?, ?, ?)')
-          .run('John', 'Doe', 999)
+          .prepare('INSERT INTO relationships (person1_id, person2_id, type) VALUES (?, ?, ?)')
+          .run(999, 998, 'spouse')
       }).toThrow()
     })
   })
@@ -251,7 +185,7 @@ describe('Drizzle Migration System', () => {
       await applyMigrations(sqlite, db)
 
       const status = await getMigrationStatus(sqlite)
-      expect(status).toHaveLength(4)
+      expect(status).toHaveLength(1)
       expect(status[0]).toHaveProperty('hash')
       expect(status[0]).toHaveProperty('created_at')
     })
@@ -269,19 +203,19 @@ describe('Drizzle Migration System', () => {
       await applyMigrations(sqlite, db)
       await applyMigrations(sqlite, db)
 
-      // Should still have exactly 4 migration records
+      // Should still have exactly 1 migration record
       const count = sqlite
         .prepare('SELECT COUNT(*) as count FROM __drizzle_migrations')
         .get().count
 
-      expect(count).toBe(4)
+      expect(count).toBe(1)
 
       // Schema should still be intact
       const tables = sqlite
-        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('users', 'people', 'relationships', 'sessions')")
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('people', 'relationships')")
         .all()
 
-      expect(tables).toHaveLength(4)
+      expect(tables).toHaveLength(2)
     })
   })
 })

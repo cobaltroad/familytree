@@ -8,7 +8,6 @@
  */
 
 import { json } from '@sveltejs/kit'
-import { requireAuth } from '$lib/server/session.js'
 import { getPreviewData } from '$lib/server/gedcomPreview.js'
 
 /**
@@ -102,22 +101,15 @@ function buildMatchingFields(gedcomPerson, existingPerson, providedMatchingField
  * GET /api/gedcom/preview/:uploadId/duplicates
  * Get duplicate individuals with comparison data
  *
- * Authentication: Required
- *
- * @param {Object} locals - SvelteKit locals (contains session)
  * @param {Object} params - Route parameters (uploadId)
  * @returns {Response} JSON with duplicates array or error
  */
-export async function GET({ locals, params, ...event }) {
+export async function GET({ params }) {
   try {
-    // Require authentication
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
     const { uploadId } = params
 
     // Get preview data
-    const previewData = await getPreviewData(uploadId, userId)
+    const previewData = await getPreviewData(uploadId)
 
     if (!previewData) {
       return new Response('Preview data not found', { status: 404 })
@@ -143,11 +135,6 @@ export async function GET({ locals, params, ...event }) {
 
     return json({ duplicates: formattedDuplicates })
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('Error fetching duplicates:', error)
     return new Response('Internal Server Error', { status: 500 })
   }

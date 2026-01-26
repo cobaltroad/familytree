@@ -534,55 +534,6 @@ describe('GedcomUpload Component', () => {
     })
   })
 
-  describe('authentication guard', () => {
-    it('should display authentication required message when not logged in', () => {
-      const { container } = render(GedcomUpload, {
-        props: { isAuthenticated: false }
-      })
-
-      expect(container.textContent).toContain('Sign In')
-      expect(container.textContent.toLowerCase()).toContain('authentication')
-    })
-
-    it('should hide upload interface when not authenticated', () => {
-      const { container } = render(GedcomUpload, {
-        props: { isAuthenticated: false }
-      })
-
-      const dropZone = container.querySelector('.drop-zone')
-      expect(dropZone).toBeFalsy()
-    })
-
-    it('should show upload interface when authenticated', () => {
-      const { container } = render(GedcomUpload, {
-        props: { isAuthenticated: true }
-      })
-
-      const dropZone = container.querySelector('.drop-zone')
-      expect(dropZone).toBeTruthy()
-    })
-
-    it('should display sign in button when not authenticated', () => {
-      const { container } = render(GedcomUpload, {
-        props: { isAuthenticated: false }
-      })
-
-      const signInButton = screen.getByText(/Sign In/i)
-      expect(signInButton).toBeTruthy()
-    })
-
-    it('should redirect to sign in page when sign in button clicked', async () => {
-      const { container } = render(GedcomUpload, {
-        props: { isAuthenticated: false }
-      })
-
-      const signInButton = screen.getByText(/Sign In/i)
-      await fireEvent.click(signInButton)
-
-      expect(window.location.hash).toContain('signin')
-    })
-  })
-
   describe('accessibility (WCAG 2.1 AA)', () => {
     it('should have proper page heading structure', () => {
       const { container } = render(GedcomUpload)

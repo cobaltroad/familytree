@@ -5,8 +5,6 @@
   import { api } from './api.js'
   import * as notificationStore from '../stores/notificationStore.js'
 
-  export let isAuthenticated = true // Will be provided by parent component
-
   let uploadState = 'idle' // 'idle' | 'uploading' | 'completed' | 'error'
   let selectedFile = null
   let uploadProgress = 0
@@ -53,12 +51,7 @@
       }
 
       uploadState = 'error'
-
-      if (error.status === 401) {
-        notificationStore.error('Authentication required. Please sign in.')
-      } else {
-        notificationStore.error(error.message || 'Upload failed. Please try again.')
-      }
+      notificationStore.error(error.message || 'Upload failed. Please try again.')
 
       // Reset to allow retry
       resetUpload()
@@ -101,10 +94,6 @@
     }
   }
 
-  function redirectToSignIn() {
-    window.location.hash = '#/signin'
-  }
-
   onMount(() => {
     if (showHelpModal) {
       document.addEventListener('keydown', handleHelpKeydown)
@@ -140,48 +129,30 @@
     </button>
   </header>
 
-  {#if !isAuthenticated}
-    <div class="auth-required">
-      <svg class="lock-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-      </svg>
-      <h2>Authentication Required</h2>
-      <p>You must be signed in to import GEDCOM files.</p>
-      <button
-        type="button"
-        class="sign-in-button"
-        on:click={redirectToSignIn}
-      >
-        Sign In
-      </button>
-    </div>
-  {:else}
-    <div class="upload-container">
-      {#if uploadState === 'idle' || uploadState === 'error'}
-        <div class="instructions">
-          <p>
-            Upload your GEDCOM file to import your family tree data.
-            GEDCOM files contain genealogical information including people,
-            relationships, dates, and events.
-          </p>
-        </div>
+  <div class="upload-container">
+    {#if uploadState === 'idle' || uploadState === 'error'}
+      <div class="instructions">
+        <p>
+          Upload your GEDCOM file to import your family tree data.
+          GEDCOM files contain genealogical information including people,
+          relationships, dates, and events.
+        </p>
+      </div>
 
-        <FileDropZone
-          on:fileSelected={handleFileSelected}
-          on:error={handleFileError}
-        />
-      {:else if uploadState === 'uploading'}
-        <UploadProgress
-          progress={uploadProgress}
-          fileName={selectedFile?.name}
-          uploadedBytes={uploadedBytes}
-          totalBytes={totalBytes}
-          on:cancel={handleCancelUpload}
-        />
-      {/if}
-    </div>
-  {/if}
+      <FileDropZone
+        on:fileSelected={handleFileSelected}
+        on:error={handleFileError}
+      />
+    {:else if uploadState === 'uploading'}
+      <UploadProgress
+        progress={uploadProgress}
+        fileName={selectedFile?.name}
+        uploadedBytes={uploadedBytes}
+        totalBytes={totalBytes}
+        on:cancel={handleCancelUpload}
+      />
+    {/if}
+  </div>
 </div>
 
 <!-- Help Modal -->
@@ -295,51 +266,6 @@
   .help-button:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3);
-  }
-
-  .auth-required {
-    text-align: center;
-    padding: 3rem 2rem;
-    background-color: #fafafa;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-  }
-
-  .lock-icon {
-    color: #999;
-    margin-bottom: 1rem;
-  }
-
-  .auth-required h2 {
-    font-size: 1.5rem;
-    color: #333;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .auth-required p {
-    color: #666;
-    margin: 0 0 1.5rem 0;
-  }
-
-  .sign-in-button {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
-
-  .sign-in-button:hover {
-    background-color: #45a049;
-  }
-
-  .sign-in-button:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
   }
 
   .upload-container {
@@ -507,10 +433,6 @@
     .help-button {
       align-self: stretch;
       width: 100%;
-    }
-
-    .auth-required {
-      padding: 2rem 1rem;
     }
 
     .modal {

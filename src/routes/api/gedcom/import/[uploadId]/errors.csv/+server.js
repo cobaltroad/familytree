@@ -6,7 +6,6 @@
  * Downloads error log as CSV file
  */
 
-import { json } from '@sveltejs/kit'
 import { getPreviewData } from '$lib/server/gedcomPreview.js'
 import { generateErrorLogCSV } from '$lib/server/gedcomErrorHandler.js'
 
@@ -15,21 +14,14 @@ import { generateErrorLogCSV } from '$lib/server/gedcomErrorHandler.js'
  * Downloads error log as CSV file
  *
  * @param {Object} params - Route parameters
- * @param {Object} locals - SvelteKit locals (session data)
  * @returns {Response} CSV file download
  */
-export async function GET({ params, locals }) {
+export async function GET({ params }) {
   try {
-    // Authentication check
-    if (!locals.session || !locals.session.userId) {
-      return new Response('Authentication required', { status: 401 })
-    }
-
-    const userId = locals.session.userId
     const { uploadId } = params
 
     // Get preview data (which includes errors)
-    const previewData = await getPreviewData(uploadId, userId)
+    const previewData = await getPreviewData(uploadId)
 
     if (!previewData) {
       return new Response('Preview data not found', { status: 404 })

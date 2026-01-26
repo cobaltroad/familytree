@@ -1,58 +1,32 @@
 /**
  * Test Helper Utilities
  *
- * Provides reusable functions for testing authenticated API routes (Issue #72).
- * These helpers simplify test setup by providing mock authentication and database schemas.
+ * Provides reusable functions for testing API routes.
+ * These helpers simplify test setup by providing database schema setup.
  */
 
 /**
- * Creates a mock authenticated session for testing
- *
- * @param {number} userId - User ID for the session
- * @param {string} userEmail - User email
- * @param {string} userName - User name
- * @returns {Object} Mock session object
- *
- * @example
- * const session = createMockSession(1, 'test@example.com', 'Test User')
- * const event = { locals: { db, getSession: async () => session } }
- */
-export function createMockSession(userId = 1, userEmail = 'test@example.com', userName = 'Test User') {
-  return {
-    user: {
-      id: userId,
-      email: userEmail,
-      name: userName
-    }
-  }
-}
-
-/**
- * Creates a mock event object with authentication for testing
+ * Creates a mock event object for testing API routes
  *
  * @param {Object} db - Database instance
- * @param {Object} session - Mock session object (optional, uses default if not provided)
  * @param {Object} additionalProps - Additional properties to add to the event
  * @returns {Object} Mock event object
  *
  * @example
- * const event = createMockAuthenticatedEvent(db)
+ * const event = createMockEvent(db)
  * const response = await GET(event)
  */
-export function createMockAuthenticatedEvent(db, session = null, additionalProps = {}) {
-  const mockSession = session || createMockSession()
-
+export function createMockEvent(db, additionalProps = {}) {
   return {
     locals: {
-      db: db,
-      getSession: async () => mockSession
+      db: db
     },
     ...additionalProps
   }
 }
 
 /**
- * Sets up a test database with all required tables and a default test user
+ * Sets up a test database with all required tables
  *
  * CRITICAL (Issue #122): This function uses Drizzle's official migrate()
  * function to apply migrations from the drizzle/ directory. This ensures
@@ -62,12 +36,12 @@ export function createMockAuthenticatedEvent(db, session = null, additionalProps
  *
  * @param {Database} sqlite - Better-SQLite3 database instance
  * @param {DrizzleDatabase} db - Drizzle database instance
- * @returns {Promise<number>} The ID of the created test user
+ * @returns {Promise<void>}
  *
  * @example
  * const sqlite = new Database(':memory:')
  * const db = drizzle(sqlite)
- * const userId = await setupTestDatabase(sqlite, db)
+ * await setupTestDatabase(sqlite, db)
  */
 export async function setupTestDatabase(sqlite, db) {
   // Import applyMigrations dynamically to avoid circular dependency
@@ -80,12 +54,4 @@ export async function setupTestDatabase(sqlite, db) {
   // - Enables foreign keys
   // - Tracks applied migrations
   await applyMigrations(sqlite, db)
-
-  // Create default test user
-  const result = sqlite.prepare(`
-    INSERT INTO users (email, name, provider)
-    VALUES (?, ?, ?)
-  `).run('test@example.com', 'Test User', 'test')
-
-  return result.lastInsertRowid
 }

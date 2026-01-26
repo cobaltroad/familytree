@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { relationships, people } from '$lib/db/schema.js'
 import { GET, PUT, DELETE } from '../../../../../routes/api/relationships/[id]/+server.js'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
 
 /**
  * Test suite for Individual Relationship API Endpoints
@@ -27,19 +27,19 @@ describe('GET /api/relationships/[id]', () => {
 
     // Insert test people
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('John', 'Doe', '1950-01-01', 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('John', 'Doe', '1950-01-01', 'male')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Jane', 'Doe', '1952-05-15', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Jane', 'Doe', '1952-05-15', 'female')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Alice', 'Doe', '1980-03-20', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Alice', 'Doe', '1980-03-20', 'female')
   })
 
   afterEach(() => {
@@ -49,12 +49,12 @@ describe('GET /api/relationships/[id]', () => {
   it('should return relationship by ID with denormalized type', async () => {
     // Arrange: Insert mother relationship
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(2, 3, 'parentOf', 'mother', userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(2, 3, 'parentOf', 'mother')
 
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db, null, { params: { id: '1' } }))
+    const response = await GET(createMockEvent(db, { params: { id: '1' } }))
     const data = await response.json()
 
     // Assert
@@ -72,12 +72,12 @@ describe('GET /api/relationships/[id]', () => {
   it('should return spouse relationship as-is', async () => {
     // Arrange: Insert spouse relationship
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(1, 2, 'spouse', null, userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(1, 2, 'spouse', null)
 
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db, null, { params: { id: '1' } }))
+    const response = await GET(createMockEvent(db, { params: { id: '1' } }))
     const data = await response.json()
 
     // Assert
@@ -93,7 +93,7 @@ describe('GET /api/relationships/[id]', () => {
 
   it('should return 404 for non-existent relationship', async () => {
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db, null, { params: { id: '999' } }))
+    const response = await GET(createMockEvent(db, { params: { id: '999' } }))
 
     // Assert
     expect(response.status).toBe(404)
@@ -103,7 +103,7 @@ describe('GET /api/relationships/[id]', () => {
 
   it('should return 400 for invalid ID format', async () => {
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db, null, { params: { id: 'invalid' } }))
+    const response = await GET(createMockEvent(db, { params: { id: 'invalid' } }))
 
     // Assert
     expect(response.status).toBe(400)
@@ -113,7 +113,7 @@ describe('GET /api/relationships/[id]', () => {
 
   it('should return 400 for negative ID', async () => {
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { params: { id: '-1' } })
+    const event = createMockEvent(db, { params: { id: '-1' } })
     const response = await GET(event)
 
     // Assert
@@ -127,7 +127,7 @@ describe('GET /api/relationships/[id]', () => {
     sqlite.close()
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { params: { id: '1' } })
+    const event = createMockEvent(db, { params: { id: '1' } })
     const response = await GET(event)
 
     // Assert
@@ -150,24 +150,24 @@ describe('PUT /api/relationships/[id]', () => {
 
     // Insert test people
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('John', 'Doe', '1950-01-01', 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('John', 'Doe', '1950-01-01', 'male')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Jane', 'Doe', '1952-05-15', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Jane', 'Doe', '1952-05-15', 'female')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Alice', 'Doe', '1980-03-20', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Alice', 'Doe', '1980-03-20', 'female')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Bob', 'Doe', '1982-07-10', 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Bob', 'Doe', '1982-07-10', 'male')
   })
 
   afterEach(() => {
@@ -178,9 +178,9 @@ describe('PUT /api/relationships/[id]', () => {
     it('should normalize type "mother" when updating', async () => {
       // Arrange: Insert initial spouse relationship
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       const request = new Request('http://localhost/api/relationships/1', {
         method: 'PUT',
@@ -193,7 +193,7 @@ describe('PUT /api/relationships/[id]', () => {
       })
 
       // Act
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '1' }, request }))
       const data = await response.json()
 
       // Assert
@@ -217,9 +217,9 @@ describe('PUT /api/relationships/[id]', () => {
     it('should normalize type "father" when updating', async () => {
       // Arrange: Insert initial relationship
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(2, 3, 'parentOf', 'mother', userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(2, 3, 'parentOf', 'mother')
 
       const request = new Request('http://localhost/api/relationships/1', {
         method: 'PUT',
@@ -232,7 +232,7 @@ describe('PUT /api/relationships/[id]', () => {
       })
 
       // Act
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '1' }, request }))
       const data = await response.json()
 
       // Assert
@@ -251,15 +251,15 @@ describe('PUT /api/relationships/[id]', () => {
     it('should reject update that creates second mother', async () => {
       // Arrange: Create existing mother relationship
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(2, 3, 'parentOf', 'mother', userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(2, 3, 'parentOf', 'mother')
 
       // Create another relationship to update
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       // Act: Try to update relationship #2 to make person 3 have second mother
       const request = new Request('http://localhost/api/relationships/2', {
@@ -272,7 +272,7 @@ describe('PUT /api/relationships/[id]', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '2' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '2' }, request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -283,15 +283,15 @@ describe('PUT /api/relationships/[id]', () => {
     it('should reject update that creates second father', async () => {
       // Arrange: Create existing father relationship
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 3, 'parentOf', 'father', userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 3, 'parentOf', 'father')
 
       // Create another relationship to update
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       // Act: Try to update relationship #2 to make person 3 have second father
       const request = new Request('http://localhost/api/relationships/2', {
@@ -304,7 +304,7 @@ describe('PUT /api/relationships/[id]', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '2' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '2' }, request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -315,9 +315,9 @@ describe('PUT /api/relationships/[id]', () => {
     it('should allow updating same relationship (not counted as duplicate)', async () => {
       // Arrange: Create mother relationship
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(2, 3, 'parentOf', 'mother', userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(2, 3, 'parentOf', 'mother')
 
       // Act: Update same relationship (should succeed)
       const request = new Request('http://localhost/api/relationships/1', {
@@ -330,7 +330,7 @@ describe('PUT /api/relationships/[id]', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '1' }, request }))
 
       // Assert
       expect(response.status).toBe(200)
@@ -341,14 +341,14 @@ describe('PUT /api/relationships/[id]', () => {
     it('should reject update that creates duplicate relationship', async () => {
       // Arrange: Create two relationships
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 3, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 3, 'spouse', null)
 
       // Act: Try to update relationship #2 to duplicate #1
       const request = new Request('http://localhost/api/relationships/2', {
@@ -361,7 +361,7 @@ describe('PUT /api/relationships/[id]', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '2' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '2' }, request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -374,9 +374,9 @@ describe('PUT /api/relationships/[id]', () => {
     it('should reject invalid relationship type', async () => {
       // Arrange: Create relationship
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       // Act
       const request = new Request('http://localhost/api/relationships/1', {
@@ -389,7 +389,7 @@ describe('PUT /api/relationships/[id]', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '1' }, request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -402,9 +402,9 @@ describe('PUT /api/relationships/[id]', () => {
     it('should reject missing person1Id', async () => {
       // Arrange
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       const request = new Request('http://localhost/api/relationships/1', {
         method: 'PUT',
@@ -416,7 +416,7 @@ describe('PUT /api/relationships/[id]', () => {
       })
 
       // Act
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '1' }, request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -437,7 +437,7 @@ describe('PUT /api/relationships/[id]', () => {
       })
 
       // Act
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '999' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '999' }, request }))
 
       // Assert
       expect(response.status).toBe(404)
@@ -458,7 +458,7 @@ describe('PUT /api/relationships/[id]', () => {
       })
 
       // Act
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: 'invalid' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: 'invalid' }, request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -469,9 +469,9 @@ describe('PUT /api/relationships/[id]', () => {
     it('should reject invalid JSON', async () => {
       // Arrange
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       const request = new Request('http://localhost/api/relationships/1', {
         method: 'PUT',
@@ -480,7 +480,7 @@ describe('PUT /api/relationships/[id]', () => {
       })
 
       // Act
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '1' }, request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -493,9 +493,9 @@ describe('PUT /api/relationships/[id]', () => {
     it('should update relationship and return denormalized response', async () => {
       // Arrange
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       const request = new Request('http://localhost/api/relationships/1', {
         method: 'PUT',
@@ -508,7 +508,7 @@ describe('PUT /api/relationships/[id]', () => {
       })
 
       // Act
-      const response = await PUT(createMockAuthenticatedEvent(db, null, { params: { id: '1' }, request }))
+      const response = await PUT(createMockEvent(db, { params: { id: '1' }, request }))
       const data = await response.json()
 
       // Assert
@@ -547,19 +547,19 @@ describe('DELETE /api/relationships/[id]', () => {
 
     // Insert test people
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('John', 'Doe', '1950-01-01', 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('John', 'Doe', '1950-01-01', 'male')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Jane', 'Doe', '1952-05-15', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Jane', 'Doe', '1952-05-15', 'female')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Alice', 'Doe', '1980-03-20', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Alice', 'Doe', '1980-03-20', 'female')
   })
 
   afterEach(() => {
@@ -569,12 +569,12 @@ describe('DELETE /api/relationships/[id]', () => {
   it('should delete relationship and return 204', async () => {
     // Arrange: Insert relationship
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(1, 2, 'spouse', null, userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(1, 2, 'spouse', null)
 
     // Act
-    const response = await DELETE(createMockAuthenticatedEvent(db, null, { params: { id: '1' } }))
+    const response = await DELETE(createMockEvent(db, { params: { id: '1' } }))
 
     // Assert
     expect(response.status).toBe(204)
@@ -588,7 +588,7 @@ describe('DELETE /api/relationships/[id]', () => {
 
   it('should return 404 for non-existent relationship', async () => {
     // Act
-    const response = await DELETE(createMockAuthenticatedEvent(db, null, { params: { id: '999' } }))
+    const response = await DELETE(createMockEvent(db, { params: { id: '999' } }))
 
     // Assert
     expect(response.status).toBe(404)
@@ -598,7 +598,7 @@ describe('DELETE /api/relationships/[id]', () => {
 
   it('should return 400 for invalid ID format', async () => {
     // Act
-    const response = await DELETE(createMockAuthenticatedEvent(db, null, { params: { id: 'invalid' } }))
+    const response = await DELETE(createMockEvent(db, { params: { id: 'invalid' } }))
 
     // Assert
     expect(response.status).toBe(400)
@@ -608,7 +608,7 @@ describe('DELETE /api/relationships/[id]', () => {
 
   it('should return 400 for negative ID', async () => {
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { params: { id: '-1' } })
+    const event = createMockEvent(db, { params: { id: '-1' } })
     const response = await DELETE(event)
 
     // Assert
@@ -620,15 +620,15 @@ describe('DELETE /api/relationships/[id]', () => {
   it('should handle database errors gracefully', async () => {
     // Arrange: Insert relationship
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(1, 2, 'spouse', null, userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(1, 2, 'spouse', null)
 
     // Close database to trigger error
     sqlite.close()
 
     // Act
-    const event = createMockAuthenticatedEvent(db, null, { params: { id: '1' } })
+    const event = createMockEvent(db, { params: { id: '1' } })
     const response = await DELETE(event)
 
     // Assert

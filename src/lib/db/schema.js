@@ -1,14 +1,9 @@
-import { sqliteTable, integer, text, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 /**
  * People table schema
  * Matches existing SQLite database structure
- *
- * User Association (Issue #72):
- * - user_id: Associates each person with a user (multi-user support)
- * - Foreign key to users table with CASCADE DELETE
- * - Index on user_id for performance
  *
  * Photo Support (Story #77):
  * - photo_url: URL to person's photo (nullable, for avatar display)
@@ -16,6 +11,8 @@ import { sql } from 'drizzle-orm'
  * Birth Surname and Nickname (Issue #121):
  * - birth_surname: Original family name before marriage (nullable)
  * - nickname: Common name or alternate name (nullable)
+ *
+ * Note: userId removed - this is now a local-only app with no authentication
  */
 export const people = sqliteTable('people', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -27,14 +24,7 @@ export const people = sqliteTable('people', {
   photoUrl: text('photo_url'),
   birthSurname: text('birth_surname'),
   nickname: text('nickname'),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' })
-}, (table) => {
-  return {
-    userIdIdx: index('people_user_id_idx').on(table.userId)
-  }
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 })
 
 /**
@@ -45,15 +35,12 @@ export const people = sqliteTable('people', {
  * - "parentOf": person1 is parent of person2 (with parent_role: "mother" or "father")
  * - "spouse": person1 is spouse of person2
  *
- * User Association (Issue #72):
- * - user_id: Associates each relationship with a user (multi-user support)
- * - Foreign key to users table with CASCADE DELETE
- * - Index on user_id for performance
- *
  * Duplicate Prevention (Duplicate Resolution Fix):
  * - Unique index on (person1_id, person2_id, type, parent_role)
  * - Prevents duplicate parent and spouse relationships
  * - Handles NULL parent_role values (for spouse relationships)
+ *
+ * Note: userId removed - this is now a local-only app with no authentication
  */
 export const relationships = sqliteTable('relationships', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -65,81 +52,7 @@ export const relationships = sqliteTable('relationships', {
     .references(() => people.id, { onDelete: 'cascade' }),
   type: text('type').notNull(),
   parentRole: text('parent_role'),
-  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' })
-}, (table) => {
-  return {
-    userIdIdx: index('relationships_user_id_idx').on(table.userId),
-    // Prevent duplicate relationships with unique constraint
-    uniqueRelationshipIdx: uniqueIndex('relationships_unique_idx').on(
-      table.person1Id,
-      table.person2Id,
-      table.type,
-      table.parentRole
-    )
-  }
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`)
 })
 
-/**
- * Users table schema
- * Stores user authentication and profile data for OAuth providers
- *
- * Default Person (Story #81):
- * - default_person_id: Links user to their personal Person record
- * - Nullable - not all users may have a default person
- * - Foreign key to people table with SET NULL on delete
- *
- * Feature Flag - View All Records:
- * - view_all_records: Boolean flag to bypass data isolation
- * - When true: User sees ALL records in database (for debugging/admin)
- * - When false: User sees only their own records (default behavior)
- * - Default: false (maintains existing data isolation behavior)
- */
-export const users = sqliteTable(
-  'users',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    email: text('email').notNull().unique(),
-    name: text('name'),
-    avatarUrl: text('avatar_url'),
-    provider: text('provider').notNull(),
-    providerUserId: text('provider_user_id'),
-    emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(true),
-    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
-    lastLoginAt: text('last_login_at'),
-    defaultPersonId: integer('default_person_id')
-      .references(() => people.id, { onDelete: 'set null' }),
-    viewAllRecords: integer('view_all_records', { mode: 'boolean' }).notNull().default(false)
-  },
-  (table) => {
-    return {
-      emailIdx: uniqueIndex('users_email_idx').on(table.email),
-      providerUserIdIdx: index('users_provider_user_id_idx').on(table.providerUserId)
-    }
-  }
-)
-
-/**
- * Sessions table schema
- * Manages user authentication sessions with 30-day expiration
- */
-export const sessions = sqliteTable(
-  'sessions',
-  {
-    id: text('id').primaryKey(),
-    userId: integer('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    expiresAt: text('expires_at').notNull(),
-    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
-    lastAccessedAt: text('last_accessed_at')
-  },
-  (table) => {
-    return {
-      userIdIdx: index('sessions_user_id_idx').on(table.userId),
-      expiresAtIdx: index('sessions_expires_at_idx').on(table.expiresAt)
-    }
-  }
-)
+// Users and sessions tables removed - no authentication in local-only app

@@ -6,9 +6,9 @@
  */
 
 import { json } from '@sveltejs/kit'
-import { eq, or, and } from 'drizzle-orm'
-import { requireAuth } from '$lib/server/session.js'
-import { people, relationships, users } from '$lib/db/schema.js'
+import { eq, or } from 'drizzle-orm'
+import { db } from '$lib/db/client.js'
+import { people, relationships } from '$lib/db/schema.js'
 import { generateMergePreview } from '$lib/server/mergePreview.js'
 
 /**
@@ -39,11 +39,8 @@ import { generateMergePreview } from '$lib/server/mergePreview.js'
  *   existingRelationships: Relationship[]
  * }
  */
-export async function POST({ request, locals, ...event }) {
+export async function POST({ request, locals }) {
   try {
-    // Require authentication
-    const { user } = await requireAuth({ locals, ...event })
-
     // Parse request body
     const { sourceId, targetId } = await request.json()
 
@@ -52,13 +49,14 @@ export async function POST({ request, locals, ...event }) {
       return new Response('sourceId and targetId are required', { status: 400 })
     }
 
-    const db = locals.db
+    // Use locals.db if provided (for testing), otherwise use singleton db
+    const database = locals?.db || db
 
-    // Fetch source person (with userId validation)
-    const sourceResults = await db
+    // Fetch source person
+    const sourceResults = await database
       .select()
       .from(people)
-      .where(and(eq(people.id, sourceId), eq(people.userId, user.id)))
+      .where(eq(people.id, sourceId))
       .limit(1)
 
     if (sourceResults.length === 0) {
@@ -67,11 +65,11 @@ export async function POST({ request, locals, ...event }) {
 
     const source = sourceResults[0]
 
-    // Fetch target person (with userId validation)
-    const targetResults = await db
+    // Fetch target person
+    const targetResults = await database
       .select()
       .from(people)
-      .where(and(eq(people.id, targetId), eq(people.userId, user.id)))
+      .where(eq(people.id, targetId))
       .limit(1)
 
     if (targetResults.length === 0) {
@@ -80,57 +78,39 @@ export async function POST({ request, locals, ...event }) {
 
     const target = targetResults[0]
 
-    // Fetch current user's full data (for defaultPersonId)
-    const userResults = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, user.id))
-      .limit(1)
-
-    const currentUser = userResults[0]
-
-    // Fetch all relationships for source person (with userId validation)
-    const sourceRelationships = await db
+    // Fetch all relationships for source person
+    const sourceRelationships = await database
       .select()
       .from(relationships)
       .where(
-        and(
-          or(
-            eq(relationships.person1Id, sourceId),
-            eq(relationships.person2Id, sourceId)
-          ),
-          eq(relationships.userId, user.id)
+        or(
+          eq(relationships.person1Id, sourceId),
+          eq(relationships.person2Id, sourceId)
         )
       )
 
-    // Fetch all relationships for target person (with userId validation)
-    const targetRelationships = await db
+    // Fetch all relationships for target person
+    const targetRelationships = await database
       .select()
       .from(relationships)
       .where(
-        and(
-          or(
-            eq(relationships.person1Id, targetId),
-            eq(relationships.person2Id, targetId)
-          ),
-          eq(relationships.userId, user.id)
+        or(
+          eq(relationships.person1Id, targetId),
+          eq(relationships.person2Id, targetId)
         )
       )
 
-    // Generate merge preview
+    // Generate merge preview (pass null for currentUser since no auth)
     const preview = generateMergePreview(
       source,
       target,
-      currentUser,
+      null, // No user context needed
       sourceRelationships,
       targetRelationships
     )
 
     return json(preview)
   } catch (error) {
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
     console.error('POST /api/people/merge/preview error:', error)
     return new Response('Internal Server Error', { status: 500 })
   }

@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { relationships, people } from '$lib/db/schema.js'
 import { GET, POST } from '../../../../routes/api/relationships/+server.js'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
 
 /**
  * Test suite for Relationships API Collection Endpoints
@@ -27,19 +27,19 @@ describe('GET /api/relationships', () => {
 
     // Insert test people
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('John', 'Doe', '1950-01-01', 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('John', 'Doe', '1950-01-01', 'male')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Jane', 'Doe', '1952-05-15', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Jane', 'Doe', '1952-05-15', 'female')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Alice', 'Doe', '1980-03-20', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Alice', 'Doe', '1980-03-20', 'female')
   })
 
   afterEach(() => {
@@ -48,7 +48,7 @@ describe('GET /api/relationships', () => {
 
   it('should return empty array when no relationships exist', async () => {
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockEvent(db))
     const data = await response.json()
 
     // Assert
@@ -59,17 +59,17 @@ describe('GET /api/relationships', () => {
   it('should return all relationships as JSON array', async () => {
     // Arrange: Insert test relationships
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(1, 3, 'parentOf', 'father', userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(1, 3, 'parentOf', 'father')
 
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(2, 3, 'parentOf', 'mother', userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(2, 3, 'parentOf', 'mother')
 
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockEvent(db))
     const data = await response.json()
 
     // Assert
@@ -81,17 +81,17 @@ describe('GET /api/relationships', () => {
   it('should denormalize parentOf relationships to mother/father', async () => {
     // Arrange: Insert parent relationships stored as "parentOf"
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(1, 3, 'parentOf', 'father', userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(1, 3, 'parentOf', 'father')
 
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(2, 3, 'parentOf', 'mother', userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(2, 3, 'parentOf', 'mother')
 
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockEvent(db))
     const data = await response.json()
 
     // Assert - Should return as "father" and "mother" types
@@ -115,12 +115,12 @@ describe('GET /api/relationships', () => {
   it('should return spouse relationships as-is without denormalization', async () => {
     // Arrange: Insert spouse relationship
     sqlite.prepare(`
-      INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(1, 2, 'spouse', null, userId)
+      INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+    `).run(1, 2, 'spouse', null)
 
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockEvent(db))
     const data = await response.json()
 
     // Assert
@@ -138,7 +138,7 @@ describe('GET /api/relationships', () => {
     sqlite.close()
 
     // Act
-    const response = await GET(createMockAuthenticatedEvent(db))
+    const response = await GET(createMockEvent(db))
 
     // Assert
     expect(response.status).toBe(500)
@@ -160,24 +160,24 @@ describe('POST /api/relationships', () => {
 
     // Insert test people
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('John', 'Doe', '1950-01-01', 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('John', 'Doe', '1950-01-01', 'male')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Jane', 'Doe', '1952-05-15', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Jane', 'Doe', '1952-05-15', 'female')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Alice', 'Doe', '1980-03-20', 'female', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Alice', 'Doe', '1980-03-20', 'female')
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, gender, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run('Bob', 'Doe', '1982-07-10', 'male', userId)
+      INSERT INTO people (first_name, last_name, birth_date, gender)
+      VALUES (?, ?, ?, ?)
+    `).run('Bob', 'Doe', '1982-07-10', 'male')
   })
 
   afterEach(() => {
@@ -198,7 +198,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
       const data = await response.json()
 
       // Assert - Response should denormalize back to "mother"
@@ -231,7 +231,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
       const data = await response.json()
 
       // Assert - Response should denormalize back to "father"
@@ -264,7 +264,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
       const data = await response.json()
 
       // Assert
@@ -289,9 +289,9 @@ describe('POST /api/relationships', () => {
     it('should reject adding second mother to same person', async () => {
       // Arrange: Add first mother
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(2, 3, 'parentOf', 'mother', userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(2, 3, 'parentOf', 'mother')
 
       // Act: Try to add second mother
       const request = new Request('http://localhost/api/relationships', {
@@ -304,7 +304,7 @@ describe('POST /api/relationships', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -315,9 +315,9 @@ describe('POST /api/relationships', () => {
     it('should reject adding second father to same person', async () => {
       // Arrange: Add first father
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 3, 'parentOf', 'father', userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 3, 'parentOf', 'father')
 
       // Act: Try to add second father
       const request = new Request('http://localhost/api/relationships', {
@@ -330,7 +330,7 @@ describe('POST /api/relationships', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -341,9 +341,9 @@ describe('POST /api/relationships', () => {
     it('should allow adding both mother AND father to same person', async () => {
       // Arrange: Add mother
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(2, 3, 'parentOf', 'mother', userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(2, 3, 'parentOf', 'mother')
 
       // Act: Add father (should succeed)
       const request = new Request('http://localhost/api/relationships', {
@@ -356,7 +356,7 @@ describe('POST /api/relationships', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(201)
@@ -367,9 +367,9 @@ describe('POST /api/relationships', () => {
     it('should reject duplicate identical relationship', async () => {
       // Arrange: Create first relationship
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       // Act: Try to create duplicate
       const request = new Request('http://localhost/api/relationships', {
@@ -382,7 +382,7 @@ describe('POST /api/relationships', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -393,9 +393,9 @@ describe('POST /api/relationships', () => {
     it('should ALLOW inverse spouse relationship (bidirectional)', async () => {
       // Arrange: Create relationship person1 -> person2
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 2, 'spouse', null, userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 2, 'spouse', null)
 
       // Act: Create inverse person2 -> person1 (bidirectional relationship)
       const request = new Request('http://localhost/api/relationships', {
@@ -408,7 +408,7 @@ describe('POST /api/relationships', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert: Bidirectional spouse relationships are ALLOWED (required for QuickAddSpouse feature)
       expect(response.status).toBe(201)
@@ -421,9 +421,9 @@ describe('POST /api/relationships', () => {
     it('should reject inverse parent relationship', async () => {
       // Arrange: Create parent relationship person1 -> person2
       sqlite.prepare(`
-        INSERT INTO relationships (person1_id, person2_id, type, parent_role, user_id)
-      VALUES (?, ?, ?, ?, ?)
-      `).run(1, 3, 'parentOf', 'father', userId)
+        INSERT INTO relationships (person1_id, person2_id, type, parent_role)
+      VALUES (?, ?, ?, ?)
+      `).run(1, 3, 'parentOf', 'father')
 
       // Act: Try to create inverse person2 -> person1
       const request = new Request('http://localhost/api/relationships', {
@@ -436,7 +436,7 @@ describe('POST /api/relationships', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -459,7 +459,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -479,7 +479,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -501,7 +501,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -521,7 +521,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -538,7 +538,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
 
       // Assert
       expect(response.status).toBe(400)
@@ -561,7 +561,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
       const data = await response.json()
 
       // Assert
@@ -589,7 +589,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act
-      const response = await POST(createMockAuthenticatedEvent(db, null, { request }))
+      const response = await POST(createMockEvent(db, { request }))
       const data = await response.json()
 
       // Assert
@@ -617,7 +617,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act: Create first relationship
-      const response1 = await POST(createMockAuthenticatedEvent(db, null, { request: request1 }))
+      const response1 = await POST(createMockEvent(db, { request: request1 }))
       expect(response1.status).toBe(201)
 
       // Act: Create second child relationship
@@ -631,7 +631,7 @@ describe('POST /api/relationships', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response2 = await POST(createMockAuthenticatedEvent(db, null, { request: request2 }))
+      const response2 = await POST(createMockEvent(db, { request: request2 }))
 
       // Assert
       expect(response2.status).toBe(201)
@@ -650,7 +650,7 @@ describe('POST /api/relationships', () => {
       })
 
       // Act: Create first relationship
-      const response1 = await POST(createMockAuthenticatedEvent(db, null, { request: request1 }))
+      const response1 = await POST(createMockEvent(db, { request: request1 }))
       expect(response1.status).toBe(201)
 
       // Act: Create second spouse relationship
@@ -664,7 +664,7 @@ describe('POST /api/relationships', () => {
         headers: { 'Content-Type': 'application/json' }
       })
 
-      const response2 = await POST(createMockAuthenticatedEvent(db, null, { request: request2 }))
+      const response2 = await POST(createMockEvent(db, { request: request2 }))
 
       // Assert
       expect(response2.status).toBe(201)

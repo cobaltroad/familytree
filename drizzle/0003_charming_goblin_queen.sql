@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX `relationships_unique_idx` ON `relationships` (`person1_id`,`person2_id`,`type`,`parent_role`);

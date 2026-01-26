@@ -1,8 +1,6 @@
 <script>
   import { onMount } from 'svelte'
   import { browser } from '$app/environment'
-  import { goto } from '$app/navigation'
-  import { page } from '$app/stores'
   import { api } from '$lib/api'
   import TreeView from '$lib/TreeView.svelte'
   import ImportView from '$lib/ImportView.svelte'
@@ -15,9 +13,6 @@
   import ViewSwitcher from '$lib/ViewSwitcher.svelte'
   import PersonModal from '$lib/PersonModal.svelte'
   import * as familyStore from '../stores/familyStore.js'
-
-  // Get session from page data
-  $: session = $page.data.session
 
   // Initialize currentPath from hash BEFORE first render
   // This ensures the correct view is shown immediately, not after onMount
@@ -49,13 +44,6 @@
   }
 
   onMount(() => {
-    // Check authentication first
-    if (!session || !session.user) {
-      // Not authenticated - redirect to signin
-      goto('/signin')
-      return
-    }
-
     // Load data
     loadData()
 
@@ -77,14 +65,6 @@
       familyStore.people.set(peopleData || [])
       familyStore.relationships.set(relationshipsData || [])
     } catch (err) {
-      // Check if it's an authentication error
-      if (err.status === 401) {
-        // Session expired or invalid - redirect to signin
-        goto('/signin')
-        return
-      }
-
-      // Other errors - show to user
       familyStore.error.set(err.message)
       console.error('Failed to load data:', err)
     } finally {
@@ -105,7 +85,7 @@
   {:else if normalizedPath === '/admin'}
     <AdminView />
   {:else if normalizedPath === '/gedcom/import'}
-    <GedcomUpload isAuthenticated={session && session.user} />
+    <GedcomUpload />
   {:else if normalizedPath.startsWith('/gedcom/parsing/')}
     <GedcomParsingResults uploadId={parsingUploadId} />
   {:else if normalizedPath.startsWith('/gedcom/preview/')}

@@ -13,25 +13,17 @@
  */
 
 import { json } from '@sveltejs/kit'
-import { requireAuth } from '$lib/server/session.js'
 import { getTempFileInfo } from '$lib/server/gedcomStorage.js'
 
 /**
  * GET /api/gedcom/parse/:uploadId/status
  * Get parsing status for an uploaded GEDCOM file
  *
- * Authentication: Required
- *
- * @param {Request} request - HTTP request
- * @param {Object} locals - SvelteKit locals (contains session)
  * @param {Object} params - Route parameters (uploadId)
  * @returns {Response} JSON with status information
  */
-export async function GET({ request, locals, params, ...event }) {
+export async function GET({ params }) {
   try {
-    // Require authentication
-    await requireAuth({ locals, ...event })
-
     const { uploadId } = params
 
     // Check if upload exists
@@ -49,11 +41,6 @@ export async function GET({ request, locals, params, ...event }) {
       uploadId
     })
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('Error getting parse status:', error)
     return new Response('Internal Server Error', { status: 500 })
   }

@@ -31,7 +31,7 @@ The application is configured to build as a static site using `@sveltejs/adapter
 4. Creates a fallback `index.html` for client-side routing
 5. Produces a fully self-contained site ready for static hosting (GitHub Pages, Netlify, Vercel, etc.)
 
-**Note**: The static build does NOT include server-side API routes or authentication. For full functionality with database and authentication, use the development server (`npm run dev`).
+**Note**: The static build does NOT include server-side API routes. For full functionality with database, use the development server (`npm run dev`).
 
 **GitHub Pages Deployment (Story #150 - IMPLEMENTED)**:
 The application is deployed to GitHub Pages with automated CI/CD via GitHub Actions:
@@ -82,7 +82,7 @@ npm run test:ui       # Open Vitest UI for interactive testing
 **v2.2.1 Test Infrastructure Improvements**:
 The v2.2.1 release focused on major test infrastructure improvements, reducing test failures from 315 to 10 (97% reduction). Key improvements include:
 
-- **Test Helpers**: `setupTestDatabase()` and `createMockAuthenticatedEvent()` helpers in `src/lib/server/testHelpers.js` provide consistent test database setup and authentication mocking
+- **Test Helpers**: `setupTestDatabase()` helper in `src/lib/server/testHelpers.js` provides consistent test database setup
 - **Schema Synchronization**: Test databases now use production migrations (single source of truth) instead of duplicated CREATE statements, eliminating schema mismatch errors
 - **Foreign Key Support**: Automatic `PRAGMA foreign_keys = ON` in test helpers ensures foreign key constraints are properly tested
 - **Store Mocking**: Improved Svelte store mock patterns with proper subscribe/unsubscribe contract implementation
@@ -95,40 +95,11 @@ See `TESTING_GUIDELINES.md` for test helper usage patterns and `LESSONS_LEARNED.
 ### Backend Structure
 - SvelteKit server routes (`src/routes/api/`) for REST API
 - Drizzle ORM for type-safe database access
-- SQLite database (`familytree.db`) for persistence
+- SQLite database (`familytree.db`) for local persistence
 - Two main entities: **Person** and **Relationship**
 - Business logic modules in `src/lib/server/`
-- Facebook OAuth integration with Auth.js
-- User authentication and session management
+- No authentication required - local-only application
 
-### Facebook Integration
-
-The application includes comprehensive Facebook OAuth integration for user authentication and profile synchronization. This feature set was implemented in v2.1.0 (Issues #77-84).
-
-#### Authentication Flow
-
-1. **OAuth Login**: Users authenticate via Facebook OAuth 2.0
-2. **Session Management**: Auth.js handles secure session management with JWT tokens
-3. **User Profile**: OAuth profile data (name, email, photo) stored in users table
-4. **Default Person**: On first login, user's Facebook profile automatically creates a Person record
-
-#### Configuration
-
-See `FACEBOOK_OAUTH_SETUP.md` for detailed setup instructions.
-
-**Required Environment Variables**:
-```bash
-FACEBOOK_APP_ID=your_app_id
-FACEBOOK_APP_SECRET=your_app_secret
-AUTH_SECRET=your_32_char_secret  # Generate with: openssl rand -base64 32
-```
-
-**Optional Variables** (with defaults):
-```bash
-FACEBOOK_CALLBACK_URL=http://localhost:5173/auth/callback/facebook
-FACEBOOK_API_VERSION=v19.0
-FACEBOOK_SCOPES=email,public_profile,user_birthday,user_gender
-```
 ### Database Access with Drizzle ORM
 The application uses Drizzle ORM for type-safe database queries:
 - Schema defined in `src/lib/db/schema.js`

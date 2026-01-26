@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { people, relationships, users } from '$lib/db/schema.js'
 import { POST } from '../../../../routes/api/relationships/+server.js'
 import { eq } from 'drizzle-orm'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
 
 /**
  * BUG REPRODUCTION TEST: Adding a spouse via QuickAddSpouse throws "relationship already exists" error
@@ -40,15 +40,15 @@ describe('BUG: Bidirectional Spouse Relationship Creation', () => {
 
     // Insert two people (who will become spouses)
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, gender, user_id)
-      VALUES (?, ?, ?, ?)
-    `).run('John', 'Doe', 'male', testUserId)
+      INSERT INTO people (first_name, last_name, gender)
+      VALUES (?, ?, ?)
+    `).run('John', 'Doe', 'male')
     person1Id = sqlite.prepare('SELECT last_insert_rowid() as id').get().id
 
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, gender, user_id)
-      VALUES (?, ?, ?, ?)
-    `).run('Jane', 'Doe', 'female', testUserId)
+      INSERT INTO people (first_name, last_name, gender)
+      VALUES (?, ?, ?)
+    `).run('Jane', 'Doe', 'female')
     person2Id = sqlite.prepare('SELECT last_insert_rowid() as id').get().id
   })
 
@@ -71,7 +71,7 @@ describe('BUG: Bidirectional Spouse Relationship Creation', () => {
 
     const response1 = await POST({
       request: request1,
-      ...createMockAuthenticatedEvent(db)
+      ...createMockEvent(db)
     })
 
     expect(response1.status).toBe(201)
@@ -94,7 +94,7 @@ describe('BUG: Bidirectional Spouse Relationship Creation', () => {
 
     const response2 = await POST({
       request: request2,
-      ...createMockAuthenticatedEvent(db)
+      ...createMockEvent(db)
     })
 
     // BUG: This currently fails with status 400 "This relationship already exists"
@@ -109,7 +109,6 @@ describe('BUG: Bidirectional Spouse Relationship Creation', () => {
     const allRelationships = await db
       .select()
       .from(relationships)
-      .where(eq(relationships.userId, testUserId))
 
     expect(allRelationships).toHaveLength(2)
 
@@ -138,7 +137,7 @@ describe('BUG: Bidirectional Spouse Relationship Creation', () => {
 
     const response1 = await POST({
       request: request1,
-      ...createMockAuthenticatedEvent(db)
+      ...createMockEvent(db)
     })
 
     expect(response1.status).toBe(201)
@@ -157,7 +156,7 @@ describe('BUG: Bidirectional Spouse Relationship Creation', () => {
 
     const response2 = await POST({
       request: request2,
-      ...createMockAuthenticatedEvent(db)
+      ...createMockEvent(db)
     })
 
     // This SHOULD fail - we don't want exact duplicates

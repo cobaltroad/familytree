@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
 import { GET, POST } from './+server.js'
 import { GET as GET_BY_ID, PUT, DELETE } from './[id]/+server.js'
 
@@ -22,7 +22,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
 
   describe('POST /api/people - Create Person', () => {
     it('should create person with birthSurname', async () => {
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -44,7 +44,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
     })
 
     it('should create person with nickname', async () => {
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -66,7 +66,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
     })
 
     it('should create person with both birthSurname and nickname', async () => {
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -88,7 +88,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
     })
 
     it('should create person without birthSurname (null)', async () => {
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -108,7 +108,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
     })
 
     it('should handle special characters in birthSurname', async () => {
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -128,7 +128,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
     })
 
     it('should handle special characters in nickname', async () => {
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -151,7 +151,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
   describe('GET /api/people - List People', () => {
     it('should return people with birthSurname and nickname fields', async () => {
       // Create test person with both fields
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -166,7 +166,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       await POST(createEvent)
 
       // Retrieve all people
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people')
       })
 
@@ -182,7 +182,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
 
     it('should return null for missing birthSurname and nickname', async () => {
       // Create test person without optional fields
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -195,7 +195,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       await POST(createEvent)
 
       // Retrieve all people
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people')
       })
 
@@ -211,7 +211,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
   describe('GET /api/people/[id] - Get Single Person', () => {
     it('should return person with birthSurname and nickname', async () => {
       // Create test person
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -227,7 +227,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       const created = await createResponse.json()
 
       // Get person by ID
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`),
         params: { id: String(created.id) }
       })
@@ -244,7 +244,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
   describe('PUT /api/people/[id] - Update Person', () => {
     it('should update person with birthSurname', async () => {
       // Create test person
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -258,7 +258,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       const created = await createResponse.json()
 
       // Update with birthSurname
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -280,7 +280,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
 
     it('should update person with nickname', async () => {
       // Create test person
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -294,7 +294,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       const created = await createResponse.json()
 
       // Update with nickname
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -316,7 +316,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
 
     it('should update person to remove birthSurname (set to null)', async () => {
       // Create test person with birthSurname
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -331,7 +331,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       const created = await createResponse.json()
 
       // Update to remove birthSurname
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -353,7 +353,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
 
     it('should update person to change birthSurname', async () => {
       // Create test person with birthSurname
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -368,7 +368,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       const created = await createResponse.json()
 
       // Update birthSurname
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -390,7 +390,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
 
     it('should update both birthSurname and nickname together', async () => {
       // Create test person
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -404,7 +404,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       const created = await createResponse.json()
 
       // Update with both fields
-      const mockEvent = createMockAuthenticatedEvent(db, null, {
+      const mockEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -430,7 +430,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
   describe('Full CRUD Cycle', () => {
     it('should support full CRUD operations with birthSurname and nickname', async () => {
       // CREATE
-      const createEvent = createMockAuthenticatedEvent(db, null, {
+      const createEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -448,7 +448,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       expect(created.nickname).toBe('JJ')
 
       // READ (single)
-      const getEvent = createMockAuthenticatedEvent(db, null, {
+      const getEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`),
         params: { id: String(created.id) }
       })
@@ -458,7 +458,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       expect(retrieved.nickname).toBe('JJ')
 
       // UPDATE
-      const updateEvent = createMockAuthenticatedEvent(db, null, {
+      const updateEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -477,7 +477,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       expect(updated.nickname).toBe('Janey')
 
       // READ (list)
-      const listEvent = createMockAuthenticatedEvent(db, null, {
+      const listEvent = createMockEvent(db, {
         request: new Request('http://localhost/api/people')
       })
       const listResponse = await GET(listEvent)
@@ -486,7 +486,7 @@ describe('API Endpoints - Birth Surname and Nickname Support (AC3)', () => {
       expect(list[0].nickname).toBe('Janey')
 
       // DELETE (cleanup)
-      const deleteEvent = createMockAuthenticatedEvent(db, null, {
+      const deleteEvent = createMockEvent(db, {
         request: new Request(`http://localhost/api/people/${created.id}`, {
           method: 'DELETE'
         }),

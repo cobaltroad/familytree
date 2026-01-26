@@ -9,20 +9,19 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { GET } from '../../../../routes/api/people/duplicates/+server.js'
-import { setupTestDatabase, createMockAuthenticatedEvent } from '$lib/server/testHelpers.js'
+import { setupTestDatabase, createMockEvent } from '$lib/server/testHelpers.js'
 
 describe('GET /api/people/duplicates - Performance', () => {
   let db
   let sqlite
-  let userId
 
   beforeEach(async () => {
     // Create in-memory database for testing
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Setup test database with users table and default test user
-    userId = await setupTestDatabase(sqlite, db)
+    // Setup test database
+    await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -32,15 +31,15 @@ describe('GET /api/people/duplicates - Performance', () => {
   it('should complete in <1s with 100 people (no duplicates)', async () => {
     // Insert 100 distinct people
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, user_id)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date)
+      VALUES (?, ?, ?)
     `)
 
     for (let i = 1; i <= 100; i++) {
-      stmt.run(`Person${i}`, `Last${i}`, `1950-01-${String(i % 28 + 1).padStart(2, '0')}`, userId)
+      stmt.run(`Person${i}`, `Last${i}`, `1950-01-${String(i % 28 + 1).padStart(2, '0')}`)
     }
 
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     // Measure performance
     const startTime = Date.now()
@@ -57,17 +56,17 @@ describe('GET /api/people/duplicates - Performance', () => {
     // Insert 50 pairs of duplicates (100 total people)
     // Each pair has unique names to avoid cross-pair matching
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, user_id)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date)
+      VALUES (?, ?, ?)
     `)
 
     for (let i = 1; i <= 50; i++) {
       // Insert pair with unique names per pair
-      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15', userId)
-      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15', userId)
+      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15')
+      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15')
     }
 
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     // Measure performance
     const startTime = Date.now()
@@ -86,24 +85,24 @@ describe('GET /api/people/duplicates - Performance', () => {
   it('should complete in <1s with 150 people', async () => {
     // Insert 150 people (some duplicates)
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, user_id)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date)
+      VALUES (?, ?, ?)
     `)
 
     // 75 distinct people
     for (let i = 1; i <= 75; i++) {
-      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15', userId)
+      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15')
     }
 
     // 75 more people (30 duplicates + 45 unique)
     for (let i = 1; i <= 30; i++) {
-      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15', userId) // Duplicate
+      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15') // Duplicate
     }
     for (let i = 76; i <= 120; i++) {
-      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15', userId) // Unique
+      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15') // Unique
     }
 
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     // Measure performance
     const startTime = Date.now()
@@ -122,15 +121,15 @@ describe('GET /api/people/duplicates - Performance', () => {
   it.skip('should complete in <1s with 200 people', async () => {
     // Stress test: 200 people
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, user_id)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date)
+      VALUES (?, ?, ?)
     `)
 
     for (let i = 1; i <= 200; i++) {
-      stmt.run(`Person${i}`, `Last${i % 50}`, '1950-01-15', userId)
+      stmt.run(`Person${i}`, `Last${i % 50}`, '1950-01-15')
     }
 
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
 
     // Measure performance
     const startTime = Date.now()
@@ -147,15 +146,14 @@ describe('GET /api/people/duplicates - Performance', () => {
 describe('GET /api/people/[id]/duplicates - Performance', () => {
   let db
   let sqlite
-  let userId
 
   beforeEach(async () => {
     // Create in-memory database for testing
     sqlite = new Database(':memory:')
     db = drizzle(sqlite)
 
-    // Setup test database with users table and default test user
-    userId = await setupTestDatabase(sqlite, db)
+    // Setup test database
+    await setupTestDatabase(sqlite, db)
   })
 
   afterEach(() => {
@@ -165,30 +163,30 @@ describe('GET /api/people/[id]/duplicates - Performance', () => {
   it('should complete in <1s searching within 100 people', async () => {
     // Insert target person
     sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, user_id)
-      VALUES (?, ?, ?, ?)
-    `).run('John', 'Smith', '1950-01-15', userId)
+      INSERT INTO people (first_name, last_name, birth_date)
+      VALUES (?, ?, ?)
+    `).run('John', 'Smith', '1950-01-15')
 
     // Insert 99 more people (some duplicates)
     const stmt = sqlite.prepare(`
-      INSERT INTO people (first_name, last_name, birth_date, user_id)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO people (first_name, last_name, birth_date)
+      VALUES (?, ?, ?)
     `)
 
     for (let i = 2; i <= 50; i++) {
-      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15', userId)
+      stmt.run(`Person${i}`, `Last${i}`, '1950-01-15')
     }
 
     // Add some similar people
     for (let i = 1; i <= 10; i++) {
-      stmt.run('John', 'Smith', '1950-01-15', userId)
+      stmt.run('John', 'Smith', '1950-01-15')
     }
 
     for (let i = 1; i <= 40; i++) {
-      stmt.run(`Other${i}`, `Name${i}`, '1960-01-15', userId)
+      stmt.run(`Other${i}`, `Name${i}`, '1960-01-15')
     }
 
-    const event = createMockAuthenticatedEvent(db)
+    const event = createMockEvent(db)
     event.params = { id: '1' }
 
     // Measure performance
@@ -197,8 +195,10 @@ describe('GET /api/people/[id]/duplicates - Performance', () => {
     const endTime = Date.now()
 
     const duration = endTime - startTime
+    const data = await response.json()
 
     expect(response.status).toBe(200)
+    expect(data.length).toBeGreaterThan(0) // Should find duplicates of John Smith
     expect(duration).toBeLessThan(1000) // Must complete in less than 1 second
   })
 })

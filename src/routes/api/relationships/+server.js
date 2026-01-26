@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit'
 import { db } from '$lib/db/client.js'
-import { relationships, people, users } from '$lib/db/schema.js'
+import { relationships, people } from '$lib/db/schema.js'
 import { eq, and, or } from 'drizzle-orm'
 import {
   transformRelationshipsToAPI,
@@ -8,69 +8,28 @@ import {
   validateRelationshipData,
   normalizeRelationship
 } from '$lib/server/relationshipHelpers.js'
-import { requireAuth } from '$lib/server/session.js'
 
 /**
  * GET /api/relationships
- * Returns relationships from the database for the authenticated user
- *
- * Authentication: Required
- * Data Isolation: Behavior depends on view_all_records flag:
- *   - When false (default): Only returns relationships belonging to current user
- *   - When true: Returns ALL relationships from all users (for debugging/admin)
+ * Returns all relationships from the database
  *
  * @returns {Response} JSON array of relationships
  */
-export async function GET({ locals, ...event }) {
+export async function GET({ locals }) {
   try {
-    // Require authentication (Issue #72)
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
-    // Check user's view_all_records flag (with fallback for tests without users table)
-    let viewAllRecords = false
-    try {
-      const currentUserResult = await database
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-
-      if (currentUserResult.length > 0) {
-        viewAllRecords = currentUserResult[0].viewAllRecords || false
-      }
-    } catch (error) {
-      // If users table doesn't exist (e.g., in some tests), default to false
-      viewAllRecords = false
-    }
-
-    // Query based on flag
-    let userRelationships
-    if (viewAllRecords) {
-      // View ALL records from all users (bypassing data isolation)
-      userRelationships = await database
-        .select()
-        .from(relationships)
-    } else {
-      // View only own records (default behavior - data isolation)
-      userRelationships = await database
-        .select()
-        .from(relationships)
-        .where(eq(relationships.userId, userId))
-    }
+    // Query all relationships
+    const allRelationships = await database
+      .select()
+      .from(relationships)
 
     // Transform to API format (denormalize parent types)
-    const transformedRelationships = transformRelationshipsToAPI(userRelationships)
+    const transformedRelationships = transformRelationshipsToAPI(allRelationships)
 
     return json(transformedRelationships)
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('Error fetching relationships:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -79,9 +38,6 @@ export async function GET({ locals, ...event }) {
 /**
  * POST /api/relationships
  * Creates a new relationship in the database with business logic validation
- *
- * Authentication: Required
- * Ownership: Both people must belong to the current user
  *
  * Business logic:
  * - Normalizes "mother"/"father" to "parentOf" with parent_role
@@ -92,12 +48,8 @@ export async function GET({ locals, ...event }) {
  * @param {Request} request - HTTP request with relationship data in body
  * @returns {Response} JSON of created relationship with 201 status
  */
-export async function POST({ request, locals, ...event }) {
+export async function POST({ request, locals }) {
   try {
-    // Require authentication (Issue #72)
-    const session = await requireAuth({ locals, ...event })
-    const userId = session.user.id
-
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = locals?.db || db
 
@@ -118,15 +70,14 @@ export async function POST({ request, locals, ...event }) {
     // Normalize relationship (convert mother/father to parentOf)
     const normalized = normalizeRelationship(data.person1Id, data.person2Id, data.type, data.parentRole)
 
-    // Check if both people exist and belong to the current user (Issue #72: Ownership Verification)
-    const personsOwnedByUser = await checkPersonsOwnedByUser(
+    // Check if both people exist
+    const personsExist = await checkPersonsExist(
       database,
-      userId,
       normalized.person1Id,
       normalized.person2Id
     )
-    if (!personsOwnedByUser) {
-      return json({ error: 'One or both persons do not exist or do not belong to you' }, { status: 403 })
+    if (!personsExist) {
+      return json({ error: 'One or both persons do not exist' }, { status: 400 })
     }
 
     // For parent relationships, validate child doesn't already have this parent role
@@ -152,15 +103,14 @@ export async function POST({ request, locals, ...event }) {
       return json({ error: 'This relationship already exists' }, { status: 400 })
     }
 
-    // Insert relationship into database with user_id (Issue #72: Data Association)
+    // Insert relationship into database
     const result = await database
       .insert(relationships)
       .values({
         person1Id: normalized.person1Id,
         person2Id: normalized.person2Id,
         type: normalized.type,
-        parentRole: normalized.parentRole,
-        userId: userId
+        parentRole: normalized.parentRole
       })
       .returning()
 
@@ -171,11 +121,6 @@ export async function POST({ request, locals, ...event }) {
 
     return json(transformedRelationship, { status: 201 })
   } catch (error) {
-    // Handle authentication errors
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('Error creating relationship:', error)
     return new Response('Internal Server Error', { status: 500 })
   }
@@ -255,24 +200,23 @@ async function relationshipExists(database, person1Id, person2Id, type) {
 }
 
 /**
- * Check if both persons exist and belong to the specified user
+ * Check if both persons exist
  *
  * @param {Database} database - Drizzle database instance
- * @param {number} userId - User ID
  * @param {number} person1Id - First person ID
  * @param {number} person2Id - Second person ID
- * @returns {Promise<boolean>} True if both persons exist and belong to user
+ * @returns {Promise<boolean>} True if both persons exist
  */
-async function checkPersonsOwnedByUser(database, userId, person1Id, person2Id) {
+async function checkPersonsExist(database, person1Id, person2Id) {
   const person1 = await database
     .select()
     .from(people)
-    .where(and(eq(people.id, person1Id), eq(people.userId, userId)))
+    .where(eq(people.id, person1Id))
 
   const person2 = await database
     .select()
     .from(people)
-    .where(and(eq(people.id, person2Id), eq(people.userId, userId)))
+    .where(eq(people.id, person2Id))
 
   return person1.length > 0 && person2.length > 0
 }

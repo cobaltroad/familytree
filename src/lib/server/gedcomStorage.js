@@ -20,15 +20,14 @@ const TEMP_BASE_DIR = '/tmp/gedcom-uploads'
 /**
  * Generates a unique upload ID for a file upload
  *
- * Format: {userId}_{timestamp}_{randomHash}
+ * Format: {timestamp}_{randomHash}
  *
- * @param {number|string} userId - ID of the authenticated user
  * @returns {string} Unique upload ID
  */
-export function generateUploadId(userId) {
+export function generateUploadId() {
   const timestamp = Date.now()
   const randomHash = crypto.randomBytes(8).toString('hex')
-  return `${userId}_${timestamp}_${randomHash}`
+  return `${timestamp}_${randomHash}`
 }
 
 /**

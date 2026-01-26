@@ -3,21 +3,19 @@
  *
  * GET /api/gedcom/export?format=5.5.1 or format=7.0
  *
- * Exports the authenticated user's family tree as a GEDCOM file.
+ * Exports the family tree as a GEDCOM file.
  *
  * Story #96: Export Family Tree as GEDCOM
  */
 
-import { requireAuth } from '$lib/server/session.js'
 import { people, relationships } from '$lib/db/schema.js'
-import { eq } from 'drizzle-orm'
 import { buildGedcomFile } from '$lib/server/gedcomExporter.js'
 import { db } from '$lib/db/client.js'
 
 /**
  * GET /api/gedcom/export
  *
- * Exports user's family tree as GEDCOM file
+ * Exports family tree as GEDCOM file
  *
  * Query parameters:
  * - format: "5.5.1" or "7.0" (default: "5.5.1")
@@ -28,9 +26,6 @@ import { db } from '$lib/db/client.js'
  */
 export async function GET(event) {
   try {
-    // Require authentication
-    const { user } = await requireAuth(event)
-
     // Use locals.db if provided (for testing), otherwise use singleton db
     const database = event.locals?.db || db
 
@@ -44,23 +39,21 @@ export async function GET(event) {
       })
     }
 
-    // Fetch user's people
-    const userPeople = await database
+    // Fetch all people
+    const allPeople = await database
       .select()
       .from(people)
-      .where(eq(people.userId, user.id))
 
-    // Fetch user's relationships
-    const userRelationships = await database
+    // Fetch all relationships
+    const allRelationships = await database
       .select()
       .from(relationships)
-      .where(eq(relationships.userId, user.id))
 
     // Generate GEDCOM file
     const exportDate = new Date().toISOString().split('T')[0] // YYYY-MM-DD
-    const gedcomContent = buildGedcomFile(userPeople, userRelationships, {
+    const gedcomContent = buildGedcomFile(allPeople, allRelationships, {
       version: format,
-      userName: user.name || 'Unknown',
+      userName: 'FamilyTree App',
       exportDate
     })
 
@@ -77,10 +70,6 @@ export async function GET(event) {
       }
     })
   } catch (error) {
-    if (error.name === 'AuthenticationError') {
-      return new Response(error.message, { status: error.status })
-    }
-
     console.error('GET /api/gedcom/export error:', error)
     return new Response('Internal Server Error', { status: 500 })
   }

@@ -5,14 +5,12 @@
  * Tests for POST /api/gedcom/preview/:uploadId/duplicates/resolve
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { POST } from './+server.js'
 import { storePreviewData, getResolutionDecisions } from '$lib/server/gedcomPreview.js'
 
 describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
-  let mockLocals
   const uploadId = 'test-upload-123'
-  const userId = 1
 
   const mockParsedData = {
     individuals: [
@@ -60,18 +58,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
   ]
 
   beforeEach(async () => {
-    mockLocals = {
-      getSession: vi.fn(() =>
-        Promise.resolve({
-          user: {
-            id: userId,
-            email: 'test@example.com'
-          }
-        })
-      )
-    }
-
-    await storePreviewData(uploadId, userId, mockParsedData, mockDuplicates)
+    await storePreviewData(uploadId, mockParsedData, mockDuplicates)
   })
 
   it('should save resolution decisions for duplicates', async () => {
@@ -94,7 +81,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
 
     const response = await POST({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -105,7 +92,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
     expect(data.saved).toBe(1)
 
     // Verify decisions were saved
-    const savedDecisions = await getResolutionDecisions(uploadId, userId)
+    const savedDecisions = await getResolutionDecisions(uploadId)
     expect(savedDecisions).toHaveLength(1)
     expect(savedDecisions[0].gedcomId).toBe('@I001@')
     expect(savedDecisions[0].resolution).toBe('merge')
@@ -128,7 +115,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
 
     const response = await POST({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -152,7 +139,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
 
     const response = await POST({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -176,7 +163,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
 
     const response = await POST({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -201,7 +188,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
 
     const response = await POST({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -228,7 +215,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
 
     const response = await POST({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -248,7 +235,7 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
 
     const response = await POST({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
@@ -272,38 +259,10 @@ describe('POST /api/gedcom/preview/:uploadId/duplicates/resolve', () => {
 
     const response = await POST({
       request: mockRequest,
-      locals: mockLocals,
+      locals: {},
       params: mockParams
     })
 
     expect(response.status).toBe(404)
-  })
-
-  it('should require authentication', async () => {
-    const unauthenticatedLocals = {
-      getSession: vi.fn(() => Promise.resolve(null))
-    }
-
-    const decisions = [
-      { gedcomId: '@I001@', resolution: 'merge' }
-    ]
-
-    const mockRequest = new Request('http://localhost/api/gedcom/preview/test-upload-123/duplicates/resolve', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ decisions })
-    })
-
-    const mockParams = { uploadId }
-
-    const response = await POST({
-      request: mockRequest,
-      locals: unauthenticatedLocals,
-      params: mockParams
-    })
-
-    expect(response.status).toBe(401)
   })
 })

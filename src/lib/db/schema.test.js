@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { people, relationships, users, sessions } from './schema.js'
+import { people, relationships } from './schema.js'
 
 describe('Database Schema Definition', () => {
   describe('People Table Schema', () => {
@@ -129,194 +129,14 @@ describe('Database Schema Definition', () => {
 
       expect(foreignKeys).toBeDefined()
       expect(Array.isArray(foreignKeys)).toBe(true)
-      // Relationships table has 3 FKs: person1_id, person2_id (both to people), and user_id (to users)
-      expect(foreignKeys.length).toBe(3)
+      // Relationships table has 2 FKs: person1_id and person2_id (both to people)
+      expect(foreignKeys.length).toBe(2)
 
       // Verify all foreign keys have proper references
       foreignKeys.forEach(fk => {
         expect(fk.reference).toBeDefined()
         expect(typeof fk.reference).toBe('function')
       })
-    })
-  })
-
-  describe('Users Table Schema', () => {
-    test('should define users table with correct structure', () => {
-      // Test that users table exists
-      expect(users).toBeDefined()
-
-      // Test table name
-      expect(users[Symbol.for('drizzle:Name')]).toBe('users')
-    })
-
-    test('should have all required columns', () => {
-      const columns = users[Symbol.for('drizzle:Columns')]
-
-      expect(columns).toHaveProperty('id')
-      expect(columns).toHaveProperty('email')
-      expect(columns).toHaveProperty('name')
-      expect(columns).toHaveProperty('avatarUrl')
-      expect(columns).toHaveProperty('provider')
-      expect(columns).toHaveProperty('providerUserId')
-      expect(columns).toHaveProperty('emailVerified')
-      expect(columns).toHaveProperty('createdAt')
-      expect(columns).toHaveProperty('lastLoginAt')
-    })
-
-    test('should have correct column types', () => {
-      const columns = users[Symbol.for('drizzle:Columns')]
-
-      // ID should be integer primary key
-      expect(columns.id.dataType).toBe('number')
-      expect(columns.id.primary).toBe(true)
-
-      // Text columns
-      expect(columns.email.dataType).toBe('string')
-      expect(columns.name.dataType).toBe('string')
-      expect(columns.avatarUrl.dataType).toBe('string')
-      expect(columns.provider.dataType).toBe('string')
-      expect(columns.providerUserId.dataType).toBe('string')
-
-      // Boolean column (stored as integer in SQLite, but Drizzle reports as boolean)
-      expect(columns.emailVerified.dataType).toBe('boolean')
-
-      // Timestamp columns
-      expect(columns.createdAt.dataType).toBe('string')
-      expect(columns.lastLoginAt.dataType).toBe('string')
-    })
-
-    test('should have correct NOT NULL constraints', () => {
-      const columns = users[Symbol.for('drizzle:Columns')]
-
-      // Required fields
-      expect(columns.email.notNull).toBe(true)
-      expect(columns.provider.notNull).toBe(true)
-
-      // Optional fields
-      expect(columns.name.notNull).toBe(false)
-      expect(columns.avatarUrl.notNull).toBe(false)
-      expect(columns.providerUserId.notNull).toBe(false)
-      expect(columns.lastLoginAt.notNull).toBe(false)
-    })
-
-    test('should have unique constraint on email', () => {
-      const columns = users[Symbol.for('drizzle:Columns')]
-
-      // Email should be unique
-      expect(columns.email.isUnique).toBe(true)
-    })
-
-    test('should have default value for emailVerified', () => {
-      const columns = users[Symbol.for('drizzle:Columns')]
-
-      // emailVerified should default to true (1 in SQLite)
-      expect(columns.emailVerified.hasDefault).toBe(true)
-    })
-
-    test('should have index on email column', () => {
-      const builder = users[Symbol.for('drizzle:ExtraConfigBuilder')]
-      expect(builder).toBeDefined()
-      expect(typeof builder).toBe('function')
-
-      const config = builder(users[Symbol.for('drizzle:Columns')])
-      expect(config).toHaveProperty('emailIdx')
-      expect(config.emailIdx).toBeDefined()
-    })
-
-    test('should have index on providerUserId column', () => {
-      const builder = users[Symbol.for('drizzle:ExtraConfigBuilder')]
-      expect(builder).toBeDefined()
-
-      const config = builder(users[Symbol.for('drizzle:Columns')])
-      expect(config).toHaveProperty('providerUserIdIdx')
-      expect(config.providerUserIdIdx).toBeDefined()
-    })
-  })
-
-  describe('Sessions Table Schema', () => {
-    test('should define sessions table with correct structure', () => {
-      // Test that sessions table exists
-      expect(sessions).toBeDefined()
-
-      // Test table name
-      expect(sessions[Symbol.for('drizzle:Name')]).toBe('sessions')
-    })
-
-    test('should have all required columns', () => {
-      const columns = sessions[Symbol.for('drizzle:Columns')]
-
-      expect(columns).toHaveProperty('id')
-      expect(columns).toHaveProperty('userId')
-      expect(columns).toHaveProperty('expiresAt')
-      expect(columns).toHaveProperty('createdAt')
-      expect(columns).toHaveProperty('lastAccessedAt')
-    })
-
-    test('should have correct column types', () => {
-      const columns = sessions[Symbol.for('drizzle:Columns')]
-
-      // ID should be text primary key (UUID)
-      expect(columns.id.dataType).toBe('string')
-      expect(columns.id.primary).toBe(true)
-
-      // Foreign key column
-      expect(columns.userId.dataType).toBe('number')
-
-      // Timestamp columns
-      expect(columns.expiresAt.dataType).toBe('string')
-      expect(columns.createdAt.dataType).toBe('string')
-      expect(columns.lastAccessedAt.dataType).toBe('string')
-    })
-
-    test('should have correct NOT NULL constraints', () => {
-      const columns = sessions[Symbol.for('drizzle:Columns')]
-
-      // Required fields
-      expect(columns.id.notNull).toBe(true)
-      expect(columns.userId.notNull).toBe(true)
-      expect(columns.expiresAt.notNull).toBe(true)
-
-      // Optional field
-      expect(columns.lastAccessedAt.notNull).toBe(false)
-    })
-
-    test('should have foreign key reference to users table', () => {
-      const foreignKeys = sessions[Symbol.for('drizzle:SQLiteInlineForeignKeys')]
-
-      expect(foreignKeys).toBeDefined()
-      expect(Array.isArray(foreignKeys)).toBe(true)
-      expect(foreignKeys.length).toBe(1)
-
-      // Verify foreign key references the users table
-      const userFk = foreignKeys[0]
-      expect(userFk.reference).toBeDefined()
-      expect(typeof userFk.reference).toBe('function')
-    })
-
-    test('should have cascade delete on userId foreign key', () => {
-      const foreignKeys = sessions[Symbol.for('drizzle:SQLiteInlineForeignKeys')]
-
-      const userFk = foreignKeys[0]
-      expect(userFk.onDelete).toBe('cascade')
-    })
-
-    test('should have index on userId column', () => {
-      const builder = sessions[Symbol.for('drizzle:ExtraConfigBuilder')]
-      expect(builder).toBeDefined()
-      expect(typeof builder).toBe('function')
-
-      const config = builder(sessions[Symbol.for('drizzle:Columns')])
-      expect(config).toHaveProperty('userIdIdx')
-      expect(config.userIdIdx).toBeDefined()
-    })
-
-    test('should have index on expiresAt column', () => {
-      const builder = sessions[Symbol.for('drizzle:ExtraConfigBuilder')]
-      expect(builder).toBeDefined()
-
-      const config = builder(sessions[Symbol.for('drizzle:Columns')])
-      expect(config).toHaveProperty('expiresAtIdx')
-      expect(config.expiresAtIdx).toBeDefined()
     })
   })
 })
