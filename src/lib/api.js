@@ -1,6 +1,16 @@
 const API_BASE = '/api'
 
 /**
+ * Gets the base path for the application
+ * This handles GitHub Pages deployment at /familytree/ subpath
+ *
+ * @returns {string} Base path (e.g., '/familytree' or '')
+ */
+function getBasePath() {
+  return import.meta.env.VITE_BASE_PATH || ''
+}
+
+/**
  * Checks if the application is running in viewer mode (static site)
  * Story #148: Static Data Loader
  *
@@ -20,7 +30,8 @@ function isViewerMode() {
  */
 async function loadStaticData(filename) {
   try {
-    const response = await fetch(`/data/${filename}`)
+    const basePath = getBasePath()
+    const response = await fetch(`${basePath}/data/${filename}`)
 
     if (!response.ok) {
       if (response.status === 404) {

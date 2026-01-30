@@ -8,8 +8,16 @@ export default defineConfig(({ mode }) => {
   // Inject environment variables into process.env for server-side code
   process.env = { ...process.env, ...env };
 
+  // Determine base path for GitHub Pages deployment
+  const isGitHubPages = process.env.GITHUB_PAGES === 'true';
+  const basePath = isGitHubPages ? '/familytree' : '';
+
   return {
     plugins: [sveltekit()],
+    define: {
+      // Make base path available at runtime via import.meta.env.VITE_BASE_PATH
+      'import.meta.env.VITE_BASE_PATH': JSON.stringify(basePath)
+    },
     server: {
       port: 5173,
       fs: {
