@@ -184,8 +184,6 @@ See [CLAUDE.md](CLAUDE.md) for comprehensive architecture documentation, compone
 
 - [CLAUDE.md](CLAUDE.md) - Detailed architecture and development guide
 - [CHANGELOG.md](CHANGELOG.md) - Version history and release notes
-- [/plans/SVELTEKIT_DRIZZLE_MIGRATION.md](/plans/SVELTEKIT_DRIZZLE_MIGRATION.md) - Migration technical analysis
-- [/plans/MIGRATION_USER_STORIES.md](/plans/MIGRATION_USER_STORIES.md) - User stories and acceptance criteria
 
 ## Migration History
 
